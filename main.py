@@ -2,7 +2,7 @@
 
 from selenium import webdriver
 from rms_scraper import login_to_rms, fetch_invoice_rows
-from validator import validate_invoice
+from validator import validate_invoices
 from updater import update_invoice_status
 from reporter import save_snapshot_report
 from dateutil.parser import parse
