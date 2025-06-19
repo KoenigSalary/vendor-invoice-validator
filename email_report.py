@@ -4,12 +4,13 @@ from email.message import EmailMessage
 from email.utils import formataddr
 import os
 from datetime import datetime
+import pandas as pd
 
 load_dotenv()
 
 # === Email setup ===
 user = os.getenv("SMTP_USER")
-password = os.getenv("SMTP_PASS")  # From .env
+password = os.getenv("SMTP_PASS")
 to_list = ["ap@koenig-solutions.com"]
 cc_list = [
     "aditya.singh@koenig-solutions.com",
@@ -26,10 +27,16 @@ if not os.path.exists(file_path):
     print(f"❌ Report file not found: {file_path}")
     exit()
 
+# === Load summary from Excel ===
+df = pd.read_excel(file_path)
+total = len(df)
+flagged = df[df["Validation Status"] == "FLAGGED"].shape[0]
+changed = df[df["Validation Status"] == "CHANGED"].shape[0]
+
 # === Email Content ===
 msg = EmailMessage()
 msg["Subject"] = f"Vendor Invoice Validation Report – {today_str}"
-msg["From"] = formataddr(("Invoice Management Team", user))  # ✅ Corrected
+msg["From"] = formataddr(("Invoice Management Team", user))
 msg["To"] = ", ".join(to_list)
 msg["Cc"] = ", ".join(cc_list)
 
@@ -37,6 +44,10 @@ msg.set_content(f"""
 Dear Team,
 
 Please find attached the Vendor Invoice Validation Report for {today_str}.
+
+🔢 Total Invoices Checked: {total}
+🚩 Flagged: {flagged}
+✏️ Modified Since Last Check: {changed}
 
 Regards,  
 Invoice Management Team  
@@ -52,7 +63,7 @@ with open(file_path, "rb") as f:
 # === Send email ===
 with smtplib.SMTP("smtp.office365.com", 587) as smtp:
     smtp.starttls()
-    smtp.login(user, password)  # ✅ Fixed variable name
+    smtp.login(user, password)
     smtp.send_message(msg)
 
 print("✅ Email sent successfully.")

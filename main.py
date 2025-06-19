@@ -12,6 +12,9 @@ from invoice_tracker import save_invoice_snapshot, record_run_window, get_all_ru
 import pandas as pd
 import os
 
+from invoice_tracker import create_tables
+create_tables()
+
 # === Define main run logic ===
 def run_invoice_validation():
     today = datetime.today()
