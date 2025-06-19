@@ -30,8 +30,20 @@ if not os.path.exists(file_path):
 # === Load summary from Excel ===
 df = pd.read_excel(file_path)
 total = len(df)
-flagged = df[df["Validation Status"] == "FLAGGED"].shape[0]
-changed = df[df["Validation Status"] == "CHANGED"].shape[0]
+
+# Dynamically detect the column
+status_col = None
+for col in df.columns:
+    if "validation" in col.lower() and "status" in col.lower():
+        status_col = col
+        break
+
+if status_col:
+    flagged = df[df[status_col] == "FLAGGED"].shape[0]
+    changed = df[df[status_col] == "CHANGED"].shape[0]
+else:
+    flagged = changed = 0
+    print("⚠️ 'Validation Status' column not found. Skipping flagged/changed counts.")
 
 # === Email Content ===
 msg = EmailMessage()
@@ -40,7 +52,7 @@ msg["From"] = formataddr(("Invoice Management Team", user))
 msg["To"] = ", ".join(to_list)
 msg["Cc"] = ", ".join(cc_list)
 
-msg.set_content(f"""
+body = f"""
 Dear Team,
 
 Please find attached the Vendor Invoice Validation Report for {today_str}.
@@ -52,7 +64,9 @@ Please find attached the Vendor Invoice Validation Report for {today_str}.
 Regards,  
 Invoice Management Team  
 Koenig Solutions
-""")
+"""
+
+msg.set_content(body)
 
 # Attach report
 with open(file_path, "rb") as f:
