@@ -8,14 +8,41 @@ from reporter import save_snapshot_report
 from dateutil.parser import parse
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-from invoice_tracker import save_invoice_snapshot, record_run_window, get_all_run_windows
+from invoice_tracker import (
+    create_tables,
+    save_invoice_snapshot,
+    record_run_window,
+    get_all_run_windows
+)
 import pandas as pd
 import os
+import shutil
 
-from invoice_tracker import create_tables
+# === Initialize DB tables if not exists ===
 create_tables()
 
-# === Define main run logic ===
+# === Archive old delta reports (> 3 months) ===
+def archive_old_reports():
+    data_dir = "data"
+    archive_dir = os.path.join(data_dir, "archive")
+    if not os.path.exists(archive_dir):
+        os.makedirs(archive_dir)
+
+    cutoff_date = datetime.today() - timedelta(days=90)
+    for filename in os.listdir(data_dir):
+        if filename.startswith("delta_report_") and filename.endswith(".xlsx"):
+            date_str = filename.replace("delta_report_", "").replace(".xlsx", "")
+            try:
+                file_date = datetime.strptime(date_str, "%Y-%m-%d")
+                if file_date < cutoff_date:
+                    src = os.path.join(data_dir, filename)
+                    dst = os.path.join(archive_dir, filename)
+                    shutil.move(src, dst)
+                    print(f"📦 Archived old report: {filename}")
+            except Exception as e:
+                print(f"⚠️ Skipping file {filename}: {e}")
+
+# === Main run logic ===
 def run_invoice_validation():
     today = datetime.today()
     end_date = today - timedelta(days=1)
@@ -26,7 +53,7 @@ def run_invoice_validation():
 
     print(f"🔍 Validating invoices from {start_str} to {end_str}...")
 
-    # Step 1: Validate current 4-day window
+    # Step 1: Validate current window
     current_result, current_invoices = validate_invoices(start_str, end_str)
 
     # Step 2: Save validated snapshot
@@ -51,14 +78,17 @@ def run_invoice_validation():
     # Combine current + revalidation results
     full_report = current_result + cumulative_report
 
+    # Save report
     if not os.path.exists("data"):
         os.makedirs("data")
 
-    # Save report
     report_path = f"data/delta_report_{today.strftime('%Y-%m-%d')}.xlsx"
     df = pd.DataFrame(full_report)
     df.to_excel(report_path, index=False)
     print(f"✅ Delta report generated: {report_path}")
+
+    # Archive old reports
+    archive_old_reports()
 
 
 if __name__ == "__main__":
