@@ -23,8 +23,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 🏃 Run Invoice Validator
-        run: python main.py
+      - name: Run Invoice Validator
+        run: python run_validator.py
 
       - name: 📧 Email Report
         run: python email_report.py
