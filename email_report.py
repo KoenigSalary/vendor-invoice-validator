@@ -6,11 +6,12 @@ import os
 from datetime import datetime
 import pandas as pd
 
+# Load environment variables
 load_dotenv()
+SMTP_USER = os.getenv("SMTP_USER")
+SMTP_PASS = os.getenv("SMTP_PASS")
 
-# === Email setup ===
-user = os.getenv("SMTP_USER")
-password = os.getenv("SMTP_PASS")
+# Email recipients
 to_list = ["ap@koenig-solutions.com"]
 cc_list = [
     "aditya.singh@koenig-solutions.com",
@@ -18,37 +19,34 @@ cc_list = [
     "sunil.kushwaha@koenig-solutions.com"
 ]
 
-# === File path ===
+# File path and report name
 today_str = datetime.now().strftime('%Y-%m-%d')
 file_path = f"data/delta_report_{today_str}.xlsx"
 filename = f"delta_report_{today_str}.xlsx"
 
+# Check if file exists
 if not os.path.exists(file_path):
     print(f"❌ Report file not found: {file_path}")
     exit()
 
-# === Load summary from Excel ===
+# Load report and compute metrics
 df = pd.read_excel(file_path)
 total = len(df)
 
-# Dynamically detect the column
-status_col = None
-for col in df.columns:
-    if "validation" in col.lower() and "status" in col.lower():
-        status_col = col
-        break
+# Auto-detect validation status column
+status_col = next((col for col in df.columns if "validation" in col.lower() and "status" in col.lower()), None)
 
 if status_col:
-    flagged = df[df[status_col] == "FLAGGED"].shape[0]
-    changed = df[df[status_col] == "CHANGED"].shape[0]
+    flagged = df[df[status_col].str.upper() == "FLAGGED"].shape[0]
+    changed = df[df[status_col].str.upper() == "CHANGED"].shape[0]
 else:
     flagged = changed = 0
     print("⚠️ 'Validation Status' column not found. Skipping flagged/changed counts.")
 
-# === Email Content ===
+# Prepare email
 msg = EmailMessage()
 msg["Subject"] = f"Vendor Invoice Validation Report – {today_str}"
-msg["From"] = formataddr(("Invoice Management Team", user))
+msg["From"] = formataddr(("Invoice Management Team", SMTP_USER))
 msg["To"] = ", ".join(to_list)
 msg["Cc"] = ", ".join(cc_list)
 
@@ -68,16 +66,18 @@ Koenig Solutions
 
 msg.set_content(body)
 
-# Attach report
+# Attach the Excel file
 with open(file_path, "rb") as f:
     msg.add_attachment(f.read(), maintype="application",
                        subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                        filename=filename)
 
-# === Send email ===
-with smtplib.SMTP("smtp.office365.com", 587) as smtp:
-    smtp.starttls()
-    smtp.login(user, password)
-    smtp.send_message(msg)
-
-print("✅ Email sent successfully.")
+# Send email
+try:
+    with smtplib.SMTP("smtp.office365.com", 587) as smtp:
+        smtp.starttls()
+        smtp.login(SMTP_USER, SMTP_PASS)
+        smtp.send_message(msg)
+    print("✅ Email sent successfully.")
+except Exception as e:
+    print(f"❌ Failed to send email: {e}")
