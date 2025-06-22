@@ -31,11 +31,3 @@ jobs:
         env:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
-<<<<<<< HEAD
-
-=======
-<<<<<<< HEAD
-=======
-
->>>>>>> a3197a8 (✅ Streamlit dashboard with filters, metrics, export)
->>>>>>> d3bcf78 (🔧 Final Streamlit dashboard with filters, export, and status metrics)
