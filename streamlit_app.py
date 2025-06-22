@@ -4,9 +4,17 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 from io import BytesIO
+from PIL import Image
 
-st.set_page_config(page_title="Vendor Invoice Validation Dashboard", layout="wide")
-st.title("📋 Vendor Invoice Validation Dashboard")
+# Set page configuration
+st.set_page_config(page_title="Invoice Compliance Monitoring System", layout="wide")
+
+# Load and display logo on the top-left
+logo = Image.open("assets/koenig_logo.png")
+st.image(logo, width=250)  # Adjust width as needed
+
+# Dashboard title
+st.title("📋 Invoice Compliance Monitoring System")
 
 DATA_FOLDER = "./data"
 report_files = sorted([f for f in os.listdir(DATA_FOLDER) if f.startswith("delta_report_") and f.endswith(".xlsx")])
