@@ -10,13 +10,17 @@ from PIL import Image
 # Set page configuration
 st.set_page_config(page_title="Invoice Compliance Monitoring System", layout="wide")
 
-# Load and display logo on the top-left (safe fallback if missing)
+# ✅ Safe logo loader (avoids crash)
 logo_path = "assets/koenig_logo.png"
 
-if os.path.exists(logo_path):
-    st.image(Image.open(logo_path), width=200)
-else:
-    st.warning("⚠️ Logo not found at 'assets/koenig_logo.png'")
+try:
+    if os.path.exists(logo_path):
+        logo = Image.open(logo_path)
+        st.image(logo, width=200)
+    else:
+        st.warning("⚠️ Logo not found: assets/koenig_logo.png")
+except Exception as e:
+    st.warning(f"⚠️ Error loading logo: {e}")
 
 # Dashboard title
 st.title("📋 Invoice Compliance Monitoring System")
