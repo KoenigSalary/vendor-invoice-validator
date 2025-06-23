@@ -4,14 +4,19 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 from io import BytesIO
+from datetime import datetime
 from PIL import Image
 
 # Set page configuration
 st.set_page_config(page_title="Invoice Compliance Monitoring System", layout="wide")
 
-# Load and display logo on the top-left
-logo = Image.open("assets/koenig_logo.png")
-st.image(logo, width=275)  # Adjust width as needed
+# Load and display logo on the top-left (safe fallback if missing)
+logo_path = "assets/koenig_logo.png"
+if os.path.exists(logo_path):
+    logo = Image.open(logo_path)
+    st.image(logo, width=275)  # Adjust width as needed
+else:
+    st.warning("⚠️ Logo not found in 'assets' folder.")
 
 # Dashboard title
 st.title("📋 Invoice Compliance Monitoring System")
@@ -25,6 +30,13 @@ else:
     latest_file = report_files[-1]
     file_path = os.path.join(DATA_FOLDER, latest_file)
     df = pd.read_excel(file_path)
+
+if "Upload Date" in df.columns:
+    try:
+        df["Upload Date"] = pd.to_datetime(df["Upload Date"], errors='coerce')
+        df.sort_values(by="Upload Date", ascending=False, inplace=True)
+    except:
+        pass
 
     st.success(f"✅ Showing Delta Report for {latest_file.replace('delta_report_', '').replace('.xlsx', '')}")
 
@@ -43,9 +55,9 @@ else:
         status_filter = st.multiselect("Filter by Status", options=sorted(df["Validation Status"].dropna().unique().tolist()), default=sorted(df["Validation Status"].dropna().unique().tolist()))
 
     if vendor_filter != "All":
-        df = df[df["Vendor"] == vendor_filter]
+        df = df[df["Vendor"] == vendor_filter].copy()
     if status_filter:
-        df = df[df["Validation Status"].isin(status_filter)]
+        df = df[df["Validation Status"].isin(status_filter)].copy()
 
     # Dashboard metrics
     total = len(df)
@@ -73,6 +85,8 @@ else:
     ax.set_ylabel("Count")
     ax.grid(axis='y', linestyle='--', alpha=0.7)
     st.pyplot(fig)
+    fig.tight_layout()
+
 
     # Download filtered data
     output = BytesIO()
@@ -81,7 +95,7 @@ else:
     st.download_button(
         label="📥 Download Filtered Report",
         data=output,
-        file_name="filtered_invoice_report.xlsx",
+        file_name = f"filtered_invoice_report_{datetime.today().strftime('%Y-%m-%d')}.xlsx"
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
