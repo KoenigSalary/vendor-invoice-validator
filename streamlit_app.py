@@ -10,8 +10,8 @@ from PIL import Image
 st.set_page_config(page_title="Invoice Compliance Monitoring System", layout="wide")
 
 # Load and display logo on the top-left
-logo = Image.open("assets/koenig_logo_new.png")
-st.image(logo, width=250)  # Adjust width as needed
+logo = Image.open("assets/koenig_logo.png")
+st.image(logo, width=275)  # Adjust width as needed
 
 # Dashboard title
 st.title("📋 Invoice Compliance Monitoring System")
