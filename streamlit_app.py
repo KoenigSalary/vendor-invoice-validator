@@ -12,11 +12,11 @@ st.set_page_config(page_title="Invoice Compliance Monitoring System", layout="wi
 
 # Load and display logo on the top-left (safe fallback if missing)
 logo_path = "assets/koenig_logo.png"
+
 if os.path.exists(logo_path):
-    logo = Image.open(logo_path)
-    st.image(logo, width=275)  # Adjust width as needed
+    st.image(Image.open(logo_path), width=200)
 else:
-    st.warning("⚠️ Logo not found in 'assets' folder.")
+    st.warning("⚠️ Logo not found at 'assets/koenig_logo.png'")
 
 # Dashboard title
 st.title("📋 Invoice Compliance Monitoring System")
