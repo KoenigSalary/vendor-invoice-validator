@@ -91,18 +91,20 @@ if "Upload Date" in df.columns:
     st.pyplot(fig)
     fig.tight_layout()
 
+# Download filtered data
+output = BytesIO()
+df.to_excel(output, index=False, engine='openpyxl')
+output.seek(0)
 
-    # Download filtered data
-    output = BytesIO()
-    df.to_excel(output, index=False, engine='openpyxl')
-    output.seek(0)
-    st.download_button(
-        label="📥 Download Filtered Report",
-        data=output,
-        file_name = f"filtered_invoice_report_{datetime.today().strftime('%Y-%m-%d')}.xlsx"
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+file_name = f"filtered_invoice_report_{datetime.today().strftime('%Y-%m-%d')}.xlsx"
 
-    # Table
-    st.subheader("📑 Detailed Invoice Report")
-    st.dataframe(df, use_container_width=True)
+st.download_button(
+    label="📥 Download Filtered Report",
+    data=output,
+    file_name=file_name,
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+
+# Table
+st.subheader("📑 Detailed Invoice Report")
+st.dataframe(df, use_container_width=True)
