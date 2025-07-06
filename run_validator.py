@@ -93,33 +93,53 @@ def validate_invoices():
                 text = extract_text_from_file(fpath)
                 result, matched_row = match_fields(text, df, return_row=True)
                 
-                # Check if matched_row is None and set 'creator' accordingly
-                if matched_row is not None:
+                # Ensure matched_row is valid and a pandas.Series
+                if isinstance(matched_row, pd.Series):
                     creator = matched_row.get("Inv Created By", "Unknown")
+                    voucher_no = matched_row.get("VoucherNo", "")
+                    voucher_date = matched_row.get("VoucherDate", "")
+                    purchase_inv_no = matched_row.get("PurchaseInvNo", "")
+                    purchase_inv_date = matched_row.get("PurchaseInvDate", "")
+                    party_name = matched_row.get("PartyName", "")
+                    gstno = matched_row.get("GSTNO", "")
+                    vat_number = matched_row.get("VATNumber", "")
+                    taxable_value = matched_row.get("TaxableValue", "")
+                    currency = matched_row.get("Currency", "")
+                    igst_ledger = matched_row.get("IGST/VATInputLedger", "")
+                    igst_amt = matched_row.get("IGST/VATInputAmt", "")
+                    cgst_ledger = matched_row.get("CGSTInputLedger", "")
+                    cgst_amt = matched_row.get("CGSTInputAmt", "")
+                    sgst_ledger = matched_row.get("SGSTInputLedger", "")
+                    sgst_amt = matched_row.get("SGSTInputAmt", "")
+                    total = matched_row.get("Total", "")
+                    inv_id = matched_row.get("InvID", "")
+                    narration = matched_row.get("Narration", "")
                 else:
                     creator = "Unknown"
-                
-                # Append result
+                    voucher_no = voucher_date = purchase_inv_no = purchase_inv_date = party_name = ""
+                    gstno = vat_number = taxable_value = currency = igst_ledger = igst_amt = ""
+                    cgst_ledger = cgst_amt = sgst_ledger = sgst_amt = total = inv_id = narration = ""
+
                 results.append({
-                    "VoucherNo": matched_row.get("VoucherNo", "") if matched_row else "",
-                    "VoucherDate": matched_row.get("VoucherDate", "") if matched_row else "",
-                    "PurchaseInvNo": matched_row.get("PurchaseInvNo", "") if matched_row else "",
-                    "PurchaseInvDate": matched_row.get("PurchaseInvDate", "") if matched_row else "",
-                    "PartyName": matched_row.get("PartyName", "") if matched_row else "",
-                    "GSTNO": matched_row.get("GSTNO", "") if matched_row else "",
-                    "VATNumber": matched_row.get("VATNumber", "") if matched_row else "",
-                    "TaxableValue": matched_row.get("TaxableValue", "") if matched_row else "",
-                    "Currency": matched_row.get("Currency", "") if matched_row else "",
-                    "IGST/VATInputLedger": matched_row.get("IGST/VATInputLedger", "") if matched_row else "",
-                    "IGST/VATInputAmt": matched_row.get("IGST/VATInputAmt", "") if matched_row else "",
-                    "CGSTInputLedger": matched_row.get("CGSTInputLedger", "") if matched_row else "",
-                    "CGSTInputAmt": matched_row.get("CGSTInputAmt", "") if matched_row else "",
-                    "SGSTInputLedger": matched_row.get("SGSTInputLedger", "") if matched_row else "",
-                    "SGSTInputAmt": matched_row.get("SGSTInputAmt", "") if matched_row else "",
-                    "Total": matched_row.get("Total", "") if matched_row else "",
+                    "VoucherNo": voucher_no,
+                    "VoucherDate": voucher_date,
+                    "PurchaseInvNo": purchase_inv_no,
+                    "PurchaseInvDate": purchase_inv_date,
+                    "PartyName": party_name,
+                    "GSTNO": gstno,
+                    "VATNumber": vat_number,
+                    "TaxableValue": taxable_value,
+                    "Currency": currency,
+                    "IGST/VATInputLedger": igst_ledger,
+                    "IGST/VATInputAmt": igst_amt,
+                    "CGSTInputLedger": cgst_ledger,
+                    "CGSTInputAmt": cgst_amt,
+                    "SGSTInputLedger": sgst_ledger,
+                    "SGSTInputAmt": sgst_amt,
+                    "Total": total,
                     "Inv Created By": creator,
-                    "InvID": matched_row.get("InvID", "") if matched_row else "",
-                    "Narration": matched_row.get("Narration", "") if matched_row else "",
+                    "InvID": inv_id,
+                    "Narration": narration,
                     "Correct": "✅" if result == "✅ VALID" else "",
                     "Flagged": "🚩" if result == "❌ Not Matched" else "",
                     "Modified Since Last Check": "",  # Placeholder for future
