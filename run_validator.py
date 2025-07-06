@@ -78,7 +78,7 @@ def validate_invoices():
     # Step 3: Unzip invoices
     if os.path.exists(ZIP_PATH):
         with zipfile.ZipFile(ZIP_PATH, 'r') as zip_ref:
-             zip_ref.extractall(UNZIP_DIR)
+            zip_ref.extractall(UNZIP_DIR)
         print(f"✅ Unzipped: {ZIP_PATH} to {UNZIP_DIR}")
     else:
         print(f"❌ ZIP file not found: {ZIP_PATH}")
@@ -92,31 +92,38 @@ def validate_invoices():
                 fpath = os.path.join(root, fname)
                 text = extract_text_from_file(fpath)
                 result, matched_row = match_fields(text, df, return_row=True)
-                creator = matched_row["Inv Created By"] if matched_row is not None and "Inv Created By" in matched_row else "Unknown"
+                
+                # Check if matched_row is None and set 'creator' accordingly
+                if matched_row is not None:
+                    creator = matched_row.get("Inv Created By", "Unknown")
+                else:
+                    creator = "Unknown"
+                
+                # Append result
                 results.append({
-                    "VoucherNo": matched_row.get("VoucherNo", ""),
-                    "VoucherDate": matched_row.get("VoucherDate", ""),
-                    "PurchaseInvNo": matched_row.get("PurchaseInvNo", ""),
-                    "PurchaseInvDate": matched_row.get("PurchaseInvDate", ""),
-                    "PartyName": matched_row.get("PartyName", ""),
-                    "GSTNO": matched_row.get("GSTNO", ""),
-                    "VATNumber": matched_row.get("VATNumber", ""),
-                    "TaxableValue": matched_row.get("TaxableValue", ""),
-                    "Currency": matched_row.get("Currency", ""),
-                    "IGST/VATInputLedger": matched_row.get("IGST/VATInputLedger", ""),
-                    "IGST/VATInputAmt": matched_row.get("IGST/VATInputAmt", ""),
-                    "CGSTInputLedger": matched_row.get("CGSTInputLedger", ""),
-                    "CGSTInputAmt": matched_row.get("CGSTInputAmt", ""),
-                    "SGSTInputLedger": matched_row.get("SGSTInputLedger", ""),
-                    "SGSTInputAmt": matched_row.get("SGSTInputAmt", ""),
-                    "Total": matched_row.get("Total", ""),
+                    "VoucherNo": matched_row.get("VoucherNo", "") if matched_row else "",
+                    "VoucherDate": matched_row.get("VoucherDate", "") if matched_row else "",
+                    "PurchaseInvNo": matched_row.get("PurchaseInvNo", "") if matched_row else "",
+                    "PurchaseInvDate": matched_row.get("PurchaseInvDate", "") if matched_row else "",
+                    "PartyName": matched_row.get("PartyName", "") if matched_row else "",
+                    "GSTNO": matched_row.get("GSTNO", "") if matched_row else "",
+                    "VATNumber": matched_row.get("VATNumber", "") if matched_row else "",
+                    "TaxableValue": matched_row.get("TaxableValue", "") if matched_row else "",
+                    "Currency": matched_row.get("Currency", "") if matched_row else "",
+                    "IGST/VATInputLedger": matched_row.get("IGST/VATInputLedger", "") if matched_row else "",
+                    "IGST/VATInputAmt": matched_row.get("IGST/VATInputAmt", "") if matched_row else "",
+                    "CGSTInputLedger": matched_row.get("CGSTInputLedger", "") if matched_row else "",
+                    "CGSTInputAmt": matched_row.get("CGSTInputAmt", "") if matched_row else "",
+                    "SGSTInputLedger": matched_row.get("SGSTInputLedger", "") if matched_row else "",
+                    "SGSTInputAmt": matched_row.get("SGSTInputAmt", "") if matched_row else "",
+                    "Total": matched_row.get("Total", "") if matched_row else "",
                     "Inv Created By": creator,
-                    "InvID": matched_row.get("InvID", ""),
-                    "Narration": matched_row.get("Narration", ""),
+                    "InvID": matched_row.get("InvID", "") if matched_row else "",
+                    "Narration": matched_row.get("Narration", "") if matched_row else "",
                     "Correct": "✅" if result == "✅ VALID" else "",
                     "Flagged": "🚩" if result == "❌ Not Matched" else "",
-                    "Modified Since Last Check": "",  # For future enhancements
-                    "Late Upload": ""  # For future enhancements
+                    "Modified Since Last Check": "",  # Placeholder for future
+                    "Late Upload": ""  # Placeholder for future
                 })
 
     result_df = pd.DataFrame(results)
@@ -133,7 +140,6 @@ def validate_invoices():
     send_email_report(RESULT_PATH, ZIP_PATH, delta_report=delta_report)
 
     return RESULT_PATH
-
 
 # Run script
 if __name__ == "__main__":
