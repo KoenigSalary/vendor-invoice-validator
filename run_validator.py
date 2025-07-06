@@ -2,6 +2,7 @@ import os
 import zipfile
 import pandas as pd
 from datetime import datetime
+import fitz  # PyMuPDF for PDF extraction
 from snapshot_handler import compare_with_snapshot, save_snapshot
 from email_sender import send_email_report
 
@@ -83,7 +84,7 @@ def validate_invoices():
         print(f"❌ ZIP file not found: {ZIP_PATH}")
         return None
 
-# Step 4: Validate invoices
+    # Step 4: Validate invoices
     results = []
     for root, _, files in os.walk(UNZIP_DIR):
         for fname in files:
@@ -91,32 +92,35 @@ def validate_invoices():
                 fpath = os.path.join(root, fname)
                 text = extract_text_from_file(fpath)
                 result, matched_row = match_fields(text, df, return_row=True)
-                creator = matched_row["Inv Created By"] if matched_row is not None and "Inv Created By" in matched_row else "Unknown"
-                results.append({
-                    "VoucherNo": matched_row.get("VoucherNo", ""),
-                    "VoucherDate": matched_row.get("VoucherDate", ""),
-                    "PurchaseInvNo": matched_row.get("PurchaseInvNo", ""),
-                    "PurchaseInvDate": matched_row.get("PurchaseInvDate", ""),
-                    "PartyName": matched_row.get("PartyName", ""),
-                    "GSTNO": matched_row.get("GSTNO", ""),
-                    "VATNumber": matched_row.get("VATNumber", ""),
-                    "TaxableValue": matched_row.get("TaxableValue", ""),
-                    "Currency": matched_row.get("Currency", ""),
-                    "IGST/VATInputLedger": matched_row.get("IGST/VATInputLedger", ""),
-                    "IGST/VATInputAmt": matched_row.get("IGST/VATInputAmt", ""),
-                    "CGSTInputLedger": matched_row.get("CGSTInputLedger", ""),
-                    "CGSTInputAmt": matched_row.get("CGSTInputAmt", ""),
-                    "SGSTInputLedger": matched_row.get("SGSTInputLedger", ""),
-                    "SGSTInputAmt": matched_row.get("SGSTInputAmt", ""),
-                    "Total": matched_row.get("Total", ""),
-                    "Inv Created By": creator,
-                    "InvID": matched_row.get("InvID", ""),
-                    "Narration": matched_row.get("Narration", ""),
-                    "Correct": "✅" if result == "✅ VALID" else "",
-                    "Flagged": "🚩" if result == "❌ Not Matched" else "",
-                    "Modified Since Last Check": "",  # Placeholder for future
-                    "Late Upload": ""  # Placeholder for future
-                })
+                if matched_row is not None:
+                    creator = matched_row["Inv Created By"] if "Inv Created By" in matched_row else "Unknown"
+                    results.append({
+                        "VoucherNo": matched_row.get("VoucherNo", ""),
+                        "VoucherDate": matched_row.get("VoucherDate", ""),
+                        "PurchaseInvNo": matched_row.get("PurchaseInvNo", ""),
+                        "PurchaseInvDate": matched_row.get("PurchaseInvDate", ""),
+                        "PartyName": matched_row.get("PartyName", ""),
+                        "GSTNO": matched_row.get("GSTNO", ""),
+                        "VATNumber": matched_row.get("VATNumber", ""),
+                        "TaxableValue": matched_row.get("TaxableValue", ""),
+                        "Currency": matched_row.get("Currency", ""),
+                        "IGST/VATInputLedger": matched_row.get("IGST/VATInputLedger", ""),
+                        "IGST/VATInputAmt": matched_row.get("IGST/VATInputAmt", ""),
+                        "CGSTInputLedger": matched_row.get("CGSTInputLedger", ""),
+                        "CGSTInputAmt": matched_row.get("CGSTInputAmt", ""),
+                        "SGSTInputLedger": matched_row.get("SGSTInputLedger", ""),
+                        "SGSTInputAmt": matched_row.get("SGSTInputAmt", ""),
+                        "Total": matched_row.get("Total", ""),
+                        "Inv Created By": creator,
+                        "InvID": matched_row.get("InvID", ""),
+                        "Narration": matched_row.get("Narration", ""),
+                        "Correct": "✅" if result == "✅ VALID" else "",
+                        "Flagged": "🚩" if result == "❌ Not Matched" else "",
+                        "Modified Since Last Check": "",  # Placeholder for future
+                        "Late Upload": ""  # Placeholder for future
+                    })
+                else:
+                    print(f"❌ No match found for {fname}")
 
     result_df = pd.DataFrame(results)
     result_df.to_excel(RESULT_PATH, index=False)
