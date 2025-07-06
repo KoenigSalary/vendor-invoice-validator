@@ -1,0 +1,126 @@
+VoucherNo	Voucherdate	PurchaseInvNo	PurchaseInvDate	OrderNo	OrderDate	VoucherTypeName	PartyName	GSTNO	State	PurchaseLEDGER	VAT	TaxableValue	NonTax	Total	VATNumber	Currency	IGST/VATInputLedger	IGST/VATInputAmt	CGSTInputLedger	CGSTInputAmt	SGSTInputLedger	SGSTInputAmt	OtherLedger1	OtherLedgerAmt1	Dr/Cr1	OtherLedger2	OtherLedgerAnt2	Dr/Cr2	OtherLedger3	OtherLedgerAmt3	Dr/Cr3	PaytyAmt	Narration	TDS	InvID
+1		NH95103411519452	04-Jul-2025	 0		Purchase	make my trip			Accommodation Charges	0.00	0.00	7962.00	7962.00		INR		0.00		0.00		0.00										7,962		0.00	83479
+2		2025-100288	04-Jul-2025	 633372		Purchase	ITpreneurs Nederland B.V			Exam Fee	0.00	0.00	647.00	647.00		USD		0.00		0.00		0.00										647		0.00	83488
+3		2025-100290	04-Jul-2025	 633376		Purchase	ITpreneurs Nederland B.V			Exam Fee	0.00	0.00	647.00	647.00		USD		0.00		0.00		0.00										647		0.00	83499
+4		2025-100289	04-Jul-2025	 635070		Purchase	ITpreneurs Nederland B.V			Exam Fee	0.00	0.00	421.00	421.00		USD		0.00		0.00		0.00										421		0.00	83500
+5		2984	04-Jul-2025	 0		Purchase	Manoj jaiswal technical services llc			Guest House Expenses	60.00	1200.00	0.00	1260.00	104097113500003	AED		0.00		0.00		0.00										1,200		0.00	83504
+6		6006401400072507041028	04-Jul-2025	 0		Purchase	CARREFOUR	0		Printing & Stationery Expenses	0.91	18.20	-0.20	18.91		AED		0.00		0.00		0.00										18		0.00	83511
+7		C360799T25024012	04-Jul-2025	 628466		Purchase	Zomato Hyperpure Private Limited	06AAACZ8867B1Z4		Student Lunch	0.00	0.00	1081.00	1081.00		INR		0.00		0.00		0.00										1,081		0.00	83519
+8		IN2025-1798550	04-Jul-2025	 0		Purchase	Udemy India LLP	06AAFFU9763M1ZE		Trainer Investment	0.00	0.00	677.00	677.00		USD		121.88		0.00		0.00										677		0.00	83480
+9		2718705362	04-Jul-2025	 0		Purchase	IRCTC	07AAAGM0289C1ZL		Traveling	0.00	0.00	1071.00	1071.00		INR		0.00		0.00		0.00										1,071		0.00	83502
+10		4321616395	04-Jul-2025	 0		Purchase	IRCTC	07AAAGM0289C1ZL		Traveling	0.00	0.00	991.00	991.00		INR		0.00		0.00		0.00										991		0.00	83503
+11		511112056128	03-Jul-2025	 0		Purchase	Linkedin			Invoice	0.00	0.00	9912.00	9912.00		INR		0.00		0.00		0.00										9,912		0.00	83466
+12		VMP229PI7ZZX	03-Jul-2025	 636822		Purchase	VMEdu			Courseware	0.00	0.00	126.00	126.00		USD		0.00		0.00		0.00										126		0.00	83457
+13		SERV25- GB03132	03-Jul-2025	 0		Purchase	Peoplecert			Trainer Investment	0.00	0.00	230.00	230.00		GBP		0.00		0.00		0.00										230		0.00	83471
+14		5XGJD-NYS2Y-FOSYX-DYS2Y	03-Jul-2025	 631790		Purchase	ISACA			Courseware	0.00	0.00	875.00	875.00		USD		0.00		0.00		0.00										875		0.00	83409
+15		ZXN25-2EJ4B-AORJ4-CMDVL	03-Jul-2025	 634846		Purchase	ISACA			Courseware	0.00	0.00	875.00	875.00		USD		0.00		0.00		0.00										875		0.00	83412
+16		JJD7G-UGGVK-IVMD6-4XGUG	03-Jul-2025	 634437		Purchase	ISACA			Courseware	0.00	0.00	230.00	230.00		USD		0.00		0.00		0.00										230		0.00	83423
+17		CHM73-KJVQM-ITQD2-4K4K4	03-Jul-2025	 636376		Purchase	ISACA			Courseware	0.00	0.00	875.00	875.00		USD		0.00		0.00		0.00										875		0.00	83433
+18		7TXXW-6ZBUE-BHEQC-H44UW	03-Jul-2025	 632073		Purchase	ISACA			Courseware	0.00	0.00	1750.00	1750.00		USD		0.00		0.00		0.00										1,750		0.00	83439
+19		2025-100284	03-Jul-2025	 633376		Purchase	ITpreneurs Nederland B.V			Courseware	0.00	0.00	0.00	0.00		USD		0.00		0.00		0.00												0.00	83443
+20		2025-100285	03-Jul-2025	 635070		Purchase	ITpreneurs Nederland B.V			Courseware	0.00	0.00	0.00	0.00		USD		0.00		0.00		0.00												0.00	83445
+21		2025-100286	03-Jul-2025	 633372		Purchase	ITpreneurs Nederland B.V			Courseware	0.00	0.00	0.00	0.00		USD		0.00		0.00		0.00												0.00	83447
+22		RS/25-26/300	03-Jul-2025	 0		Purchase	Manish Sharma			Lab Cost	0.00	0.00	50000.00	50000.00		INR		0.00		0.00		0.00										50,000		0.00	83467
+23		DNK14335469349180	03-Jul-2025	 627999		Purchase	VITAL SOURCE			Courseware	0.00	0.00	4617.00	4617.00		INR		0.00		0.00		0.00										4,617		0.00	83454
+24		CRB70839139349183	03-Jul-2025	 0		Purchase	VITAL SOURCE			Courseware	0.00	0.00	4617.00	4617.00		INR		0.00		0.00		0.00										4,617		0.00	83455
+25		2609261	03-Jul-2025	 635426		Purchase	Gilmore Global Logistic, CANADA			Courseware	0.00	0.00	135.00	135.00		USD		0.00		0.00		0.00										135		0.00	83448
+26		2609273	03-Jul-2025	 635891		Purchase	Gilmore Global Logistic, CANADA			Courseware	0.00	0.00	323.00	323.00		USD		0.00		0.00		0.00										323		0.00	83460
+27		2025-009	03-Jul-2025	 630597		Purchase	MINERVA Trainingen			Freelancer	0.00	0.00	300.00	300.00		EUR		0.00		0.00		0.00										300		0.00	81315
+28		2025-010	03-Jul-2025	 630603		Purchase	MINERVA Trainingen			Freelancer	0.00	0.00	300.00	300.00		EUR		0.00		0.00		0.00										300		0.00	81316
+29		081	03-Jul-2025	 0		Purchase	Sakshi Laundromat @ Drycleaners			Trainers Apt	0.00	0.00	2250.00	2250.00		INR		0.00		0.00		0.00										2,250		0.00	83462
+30		COMP-INV045244	03-Jul-2025	 628996		Purchase	CompTIA INC USA			Exam	0.00	0.00	219.00	219.00		USD		0.00		0.00		0.00										219		0.00	83446
+31		4591	03-Jul-2025	 0		Purchase	al naqi stationary			Printing & Stationery Expenses	7.14	142.80	0.20	150.14		AED		0.00		0.00		0.00										143		0.00	83510
+32		4653-2025-362INV	03-Jul-2025	 635651		Purchase	Regus - Riyadh			Inter Bank Transfer	201.83	4036.60	-2690.60	1547.83	311104485500003	SAR		0.00		0.00		0.00										1,346		0.00	83465
+33		INV0024328	03-Jul-2025	 636261		Purchase	FutureSpace 61 Katherine (Pty) Ltd			Student Accommodation	8691.00	173820.00	-115880.00	66631.00	4740196920	RAND		0.00		0.00		0.00										57,940		0.00	83459
+34		20-005002	03-Jul-2025	 636586		Purchase	International Information Systems Security Certification Consortium, Ltd			Courseware	0.00	0.00	487.00	487.00	GB830914636	USD		0.00		0.00		0.00										487		0.00	83477
+35		20-005002-1	03-Jul-2025	 636586		Purchase	International Information Systems Security Certification Consortium, Ltd			Exam	0.00	0.00	749.00	749.00	GB830914636	USD		0.00		0.00		0.00										749		0.00	83506
+36		20-005003	03-Jul-2025	 629657		Purchase	International Information Systems Security Certification Consortium, Ltd			Courseware	0.00	0.00	881.00	881.00	GB830914636	USD		0.00		0.00		0.00										881		0.00	83516
+37		INV422743	03-Jul-2025	 636406		Purchase	BCS Learning and Development Ltd	0		Exam	0.00	0.00	495.00	495.00		GBP		0.00		0.00		0.00										495		0.00	83505
+38		FDLA-10220	03-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										20,997		0.00	83495
+39		Jul-97846-ORGNL	03-Jul-2025	 0		Purchase	Yaj Filling Station	06ACOPY7978H1Z1		Cab Expenses	0.00	0.00	2100.00	2100.00		INR		0.00		0.00		0.00										2,100		0.00	83450
+40		DSL/T/25-26/423	03-Jul-2025	 0		Purchase	D SUCCEED LEARNERS PVT. LTD	07AABCK9007D3ZS		Exam	0.00	0.00	32000.00	32000.00		INR		0.00		2880.00		2880.00										32,000		0.00	83469
+41		2025-26/20	03-Jul-2025	 0		Purchase	Kartavya Enterprises	07AKNPG4566C1Z6		Office Expenses	0.00	0.00	25600.00	25600.00		INR		4608.00		0.00		0.00										25,600		0.00	83475
+42		PAPPL25-26/36	03-Jul-2025	 0		Purchase	Alwarpet Properties Private Limited	33AAMCA6104A1ZA		Electricity and Water Charges	0.00	0.00	145815.00	145815.00		INR		0.00		13123.41		13123.41										145,815		0.00	83497
+43		6401350	03-Jul-2025	 628048		Purchase	NCS PEARSON, IN C	33AAMCA6104A1ZC		Exam	0.00	0.00	140.00	140.00		USD		0.00		0.00		0.00										140		0.00	83395
+44		0076-3198-8577	03-Jul-2025	 584500		Purchase	NCS PEARSON, IN C	33AAMCA6104A1ZC		Exam	25.20	504.00	-364.00	165.20		USD		0.00		0.00		0.00										140		0.00	83481
+45		0076-3199-3144	03-Jul-2025	 0		Purchase	NCS PEARSON, IN C	33AAMCA6104A1ZC		Exam	25.20	504.00	-364.00	165.20		USD		0.00		0.00		0.00										140		0.00	83482
+46		109118394739	03-Jul-2025	 0		Purchase	LinkedIn Singapore Pte. Ltd	9917SGP29002OSR		Recruitment Expenses	0.00	0.00	120.00	120.00		USD		0.00		0.00		0.00										120		0.00	83470
+47		0000001747	02-Jul-2025	 630606		Purchase	Course Dot OOD			Freelancer	0.00	0.00	460.00	460.00		EUR		0.00		0.00		0.00										460		0.00	80921
+48		DUW01-2025255794	02-Jul-2025	 0		Purchase	ORIENT INSURANCE PJSC			Insuarnce	9.33	186.60	0.40	196.33		AED		0.00		0.00		0.00										187		0.00	83359
+49		A00092	02-Jul-2025	 631611		Purchase	Aradhana Kumari			Lab Cost	0.00	0.00	350000.00	350000.00		INR		0.00		0.00		0.00										350,000		7000.00	83320
+50		15159	02-Jul-2025	 0		Purchase	Pioneer Medicines			Medical Expenses for Staff	0.00	0.00	650.00	650.00		INR		0.00		0.00		0.00										650		0.00	83451
+51		INV00817360	02-Jul-2025	 0		Purchase	ISO			Trainer Investment	0.00	0.00	132.00	132.00		CHF		0.00		0.00		0.00										132		0.00	83394
+52		690080	02-Jul-2025	 622678		Purchase	Mirantis, Inc.			Exam	0.00	0.00	199.00	199.00		USD		0.00		0.00		0.00										199		0.00	83387
+53		120525	02-Jul-2025	 0		Purchase	Best Home Deep Cleaner			Office Expenses	0.00	0.00	3500.00	3500.00		INR		0.00		0.00		0.00										3,500		0.00	83463
+54		ORD-1751456520800	02-Jul-2025	 631438		Purchase	Global Skills Development Council			Courseware	0.00	0.00	300.00	300.00		USD		0.00		0.00		0.00										300		0.00	83392
+55		2BLKXIVF0001	02-Jul-2025	 0		Purchase	OpenRouter, Inc			Office Expenses	0.00	0.00	21.00	21.00		USD		0.00		0.00		0.00										21		0.00	83517
+56		4653-2025-361INV	02-Jul-2025	 633024		Purchase	Regus - Riyadh			Inter Bank Transfer	201.83	4036.60	-2690.60	1547.83	311104485500003	SAR		0.00		0.00		0.00										1,346		0.00	83464
+57		20-005001	02-Jul-2025	 636749		Purchase	International Information Systems Security Certification Consortium, Ltd			Exam	0.00	0.00	599.00	599.00	GB830914636	USD		0.00		0.00		0.00										599		0.00	83474
+58		6007302400892507021320	02-Jul-2025	 0		Purchase	CARREFOUR	0		Guest House Expenses	8.06	161.20	-0.20	169.06		AED		0.00		0.00		0.00										161		0.00	83444
+59		IN-46891	02-Jul-2025	 0		Purchase	Amazon	03AOAPK1699H1Z1		Rohit Sir	0.00	0.00	21770.00	21770.00		INR		0.00		0.00		0.00										21,770		0.00	83295
+60		WBL9-474	02-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										2,678		0.00	83405
+61		WBL9-475	02-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										2,678		0.00	83491
+62		BLR7-113968	02-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										1,905		0.00	83492
+63		IN-57391	02-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										3,790		0.00	83493
+64		IN-57906	02-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										997		0.00	83494
+65		BR7LR/60265	02-Jul-2025	 0		Purchase	Bloomrooms @ Link Road	07AABCI6836L1Z8		Accommodation Charges	0.00	0.00	12600.00	12600.00		INR		0.00		756.00		756.00										12,600		0.00	83338
+66		DSL/T/25-26/421	02-Jul-2025	 633640		Purchase	D SUCCEED LEARNERS PVT. LTD	07AABCK9007D3ZS		Exam	0.00	0.00	12500.00	12500.00		INR		0.00		1125.00		1125.00										12,500		0.00	83452
+67		DSL/T/25-26/422	02-Jul-2025	 0		Purchase	D SUCCEED LEARNERS PVT. LTD	07AABCK9007D3ZS		Exam	0.00	0.00	32000.00	32000.00		INR		0.00		2880.00		2880.00										32,000		0.00	83453
+68		INV-KA25260014	02-Jul-2025	 0		Purchase	CHERISE (INDIA) PRIVATE LIMITED	27AAHCC8654L1Z2		Office Expenses	0.00	0.00	1180.00	1180.00		INR		0.00		0.00		0.00										1,180		0.00	83383
+69		7071209532	02-Jul-2025	 636769		Purchase	SAP India Private limited	29AACCS7483E1Z1		Courseware	0.00	0.00	202860.00	202860.00		INR		36514.80		0.00		0.00										202,860		0.00	83478
+70		WBL9-474	02-Jul-2025	 0		Purchase	Amazon Wholesale (India) Private Limited	29AAMCA0671Q1Z0		WFH Infra	0.00	0.00	2270.00	2270.00		INR		408.61		0.00		0.00										2,270		0.00	83402
+71		WBL9-475	02-Jul-2025	 0		Purchase	Amazon Wholesale (India) Private Limited	29AAMCA0671Q1Z0		WFH Infra	0.00	0.00	2270.00	2270.00		INR		0.00		204.30		204.30										2,270		0.00	83407
+72		BV94320724	02-Jul-2025	 0		Purchase	Verifone Payments BV dba 2Checkout	9918ANT29001OSQ		Trainer Investment	0.00	0.00	1000.00	1000.00		USD		0.00		0.00		0.00										1,000		0.00	83393
+73		COMP-INV044494	02-Jul-2025	 0		Purchase	CompTIA	9918USA29031OSC		Courseware	0.00	0.00	544.00	544.00		USD		0.00		0.00		0.00										544		0.00	83339
+74		INV311835701	01-Jul-2025	 0		Purchase	Zoom Video Communications Inc.			IT Subscription	0.00	0.00	16.00	16.00		USD		15.99		0.00		0.00										16		0.00	83501
+75		CCSK-D62B0A9F98	01-Jul-2025	 633960		Purchase	CSA			Exam	0.00	0.00	445.00	445.00		USD		0.00		0.00		0.00										445		0.00	83328
+76		011	01-Jul-2025	 633161		Purchase	Gurleen Kaur			Freelancer	0.00	0.00	128000.00	128000.00		INR		0.00		0.00		0.00										128,000		12800.00	81911
+77		44406	01-Jul-2025	 0		Purchase	Certified Wireless Network Professional			Exam	23.62	472.40	-123.40	372.62		USD		0.00		0.00		0.00										349		0.00	83329
+78		DUW01-2025254800	01-Jul-2025	 0		Purchase	ORIENT INSURANCE PJSC			Insuarnce	51.53	1030.60	0.40	1082.53		AED		0.00		0.00		0.00										1,031		0.00	83322
+79		202500004384	01-Jul-2025	 0		Purchase	NYC office suites			Student Accommodation	0.00	0.00	1910.00	1910.00		USD		0.00		0.00		0.00										1,910		0.00	82656
+80		MP/25-26/0302A and RS/25-26/159	01-Jul-2025	 635268		Purchase	Mahendra Pandey			Freelancer	0.00	0.00	250000.00	250000.00		INR		0.00		0.00		0.00										250,000		25000.00	82560
+81		COMP-INV043056	01-Jul-2025	 0		Purchase	CompTIA INC USA			Exam	0.00	0.00	128.00	128.00		USD		0.00		0.00		0.00										128		0.00	83284
+82		124567	01-Jul-2025	 0		Purchase	Rajeev Kumar (Information Security Consultant)			Invoice	0.00	0.00	600.00	600.00		USD		0.00		0.00		0.00										600		0.00	83476
+83		2025/050	01-Jul-2025	 0		Purchase	SAHII DAAM (OPC) PRIVATE LIMITED			Office Expenses	0.00	0.00	25000.00	25000.00		INR		0.00		0.00		0.00										25,000		0.00	83486
+84		6007301300532507011243	01-Jul-2025	 0		Purchase	CARREFOUR	0		Guest House Expenses	31.10	622.00	0.00	653.10		AED		0.00		0.00		0.00										622		0.00	83358
+85		FDLA-10064	01-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										20,997		0.00	83346
+86		FDLA-10108	01-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										20,997		0.00	83347
+87		IN-57035	01-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										5,994		0.00	83348
+88		IN-56506	01-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										2,999		0.00	83397
+89		IN-56538	01-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										5,998		0.00	83398
+90		IN-56716	01-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										79,690		0.00	83399
+91		IN-56544	01-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										5,989		0.00	83400
+92		IN-56539	01-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										2,599		0.00	83401
+93		IN-57031	01-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										79,690		0.00	83403
+94		IN-57033	01-Jul-2025			Purchase	Amazon	03AOAPK1699H1Z1		Invoice						INR		0.00		0.00		0.00										67,990		0.00	83404
+95		LTPL/24-25/01609	01-Jul-2025	 0		Purchase	Linkwave Technologies	05AADCL1855G1ZP		Internet Expense	0.00	0.00	11000.00	11000.00		INR		0.00		990.00		990.00										11,000		0.00	83384
+96		826	01-Jul-2025	 0		Purchase	Capital Traders	05AHXPT4569R3ZU		Office Equipment	0.00	0.00	5469.00	5469.00		INR		0.00		0.00		0.00										5,469		0.00	83321
+97		FDLA-10064	01-Jul-2025	 0		Purchase	Darshita Aashiyana Private Limited	06AAFCD6883Q1ZU		WFH Infra	0.00	0.00	2542.00	2542.00		INR		457.47		0.00		0.00										2,542		0.00	83350
+98		DEL5-445	01-Jul-2025	 0		Purchase	R S FOODS	06AAWFR8205J1ZN		WFH Infra	0.00	0.00	610.00	610.00		INR		73.18		0.00		0.00										610		0.00	83342
+99		MAA/APS/252614	01-Jul-2025	 0		Purchase	Ace Professional Services	07AJAPB5573A2ZS		Annual Vendor Payment	0.00	0.00	40000.00	40000.00		INR		0.00		0.00		0.00										40,000		7200.00	83386
+100		INV/1251	01-Jul-2025	 0		Purchase	Blgmovers	07COHPG8704G1ZY		Cab Expenses	0.00	0.00	19000.00	19000.00		INR		3060.00		0.00		0.00										19,000		0.00	83293
+101		IN-7903	01-Jul-2025	 0		Purchase	Bluewud Concepts Pvt Ltd	09AAECR6642Q1ZM		WFH Infra	0.00	0.00	3305.00	3305.00		INR		594.92		0.00		0.00										3,305		0.00	83434
+102		FDLA-10108	01-Jul-2025	 0		Purchase	Darshita Aashiyana Private Limited	09AAFCD6883Q1ZO		WFH Infra	0.00	0.00	17794.00	17794.00		INR		0.00		1601.47		1601.47										17,794		0.00	83410
+103		IN-245	01-Jul-2025	 0		Purchase	SANN INDIA	09ALTPM5651P1Z1		WFH Infra	0.00	0.00	17187.00	17187.00		INR		4812.28		0.00		0.00										17,187		0.00	83408
+104		BCC-72768	01-Jul-2025	 634746		Purchase	ibis Bengaluru City Centre	29AABCI2732H1ZO		Student Accommodation	0.00	0.00	75000.00	75000.00		INR		0.00		4500.00		4500.00										75,000		0.00	83229
+105		LCPL / 25-26 / 0083	01-Jul-2025	 633161		Purchase	Lavi Carz Private Limited	29AABCL8180G		cab charges	0.00	0.00	1860.00	1860.00		INR		0.00		0.00		0.00										1,860		0.00	83360
+106		KA-B1-147728632	01-Jul-2025	 0		Purchase	ACT Fibernet	29AACCA8907B1ZU		Internet Expense	0.00	0.00	10620.00	10620.00		INR		0.00		0.00		0.00										10,620		0.00	83298
+107		7071209530	01-Jul-2025	 636767		Purchase	SAP India Private limited	29AACCS7483E1Z1		Courseware	0.00	0.00	180320.00	180320.00		INR		32457.60		0.00		0.00										180,320		0.00	83303
+108		IN-57031	01-Jul-2025	 0		Purchase	Amazon Wholesale (India) Private Limited	29AAMCA0671Q1Z0		WFH Infra	0.00	0.00	67534.00	67534.00		INR		12156.10		0.00		0.00										67,534		0.00	83341
+109		IN-56539	01-Jul-2025	 0		Purchase	Amazon Wholesale (India) Private Limited	29AAMCA0671Q1Z0		WFH Infra	0.00	0.00	2203.00	2203.00		INR		396.46		0.00		0.00										2,203		0.00	83349
+110		IN-56538	01-Jul-2025	 0		Purchase	Amazon Wholesale (India) Private Limited	29AAMCA0671Q1Z0		WFH Infra	0.00	0.00	5083.00	5083.00		INR		914.95		0.00		0.00										5,083		0.00	83351
+111		IN-56547	01-Jul-2025	 0		Purchase	Amazon Wholesale (India) Private Limited	29AAMCA0671Q1Z0		WFH Infra	0.00	0.00	5075.00	5075.00		INR		913.58		0.00		0.00										5,075		0.00	83353
+112		IN-57035	01-Jul-2025	 0		Purchase	Amazon Wholesale (India) Private Limited	29AAMCA0671Q1Z0		WFH Infra	0.00	0.00	5080.00	5080.00		INR		0.00		457.17		457.17										5,080		0.00	83435
+113		IN-57145	01-Jul-2025	 0		Purchase	Amazon Wholesale (India) Private Limited	29AAMCA0671Q1Z0		WFH Infra	0.00	0.00	10592.00	10592.00		INR		1906.63		0.00		0.00										10,592		0.00	83436
+114		IN-57033	01-Jul-2025	 0		Purchase	Amazon Wholesale (India) Private Limited	29AAMCA0671Q1Z0		WFH Infra	0.00	0.00	57619.00	57619.00		INR		10371.36		0.00		0.00										57,619		0.00	83437
+115		IN-56544	01-Jul-2025	 0		Purchase	Amazon Wholesale (India) Private Limited	29AAMCA0671Q1Z0		WFH Infra	0.00	0.00	5075.00	5075.00		INR		913.58		0.00		0.00										5,075		0.00	83441
+116		# MCS/25-26/520	01-Jul-2025	 628717		Purchase	Mankind Consulting Services LLP	29AAXFM5424D2ZW		Freelancer	0.00	0.00	671576.00	671576.00		INR		120883.64		0.00		0.00										671,576		67157.58	80016
+117		# MCS/25-26/519	01-Jul-2025	 633405		Purchase	Mankind Consulting Services LLP	29AAXFM5424D2ZW		Freelancer	0.00	0.00	380000.00	380000.00		INR		68400.00		0.00		0.00										380,000		38000.00	81898
+118		# MCS/25-26/521	01-Jul-2025	 631442		Purchase	Mankind Consulting Services LLP	29AAXFM5424D2ZW		FL Tech Call	0.00	0.00	20000.00	20000.00		INR		3600.00		0.00		0.00										20,000		2000.00	83283
+119		# MCS/25-26/522	01-Jul-2025	 0		Purchase	Mankind Consulting Services LLP	29AAXFM5424D2ZW		Freelancer	0.00	0.00	2000.00	2000.00		INR		360.00		0.00		0.00										2,000		200.00	83324
+120		648	01-Jul-2025	 0		Purchase	Vu Care Services Bangalore	29NDAPS3815M1ZS		Office Expenses	0.00	0.00	3200.00	3200.00		INR		0.00		288.00		288.00										3,200		0.00	83355
+121		6397121	01-Jul-2025	 0		Purchase	NCS PEARSON, IN C	33AAMCA6104A1ZC		Exam	0.00	0.00	500.00	500.00		USD		0.00		0.00		0.00										500		0.00	83297
+122		6397276	01-Jul-2025	 628048		Purchase	NCS PEARSON, IN C	33AAMCA6104A1ZC		Exam	0.00	0.00	140.00	140.00		USD		0.00		0.00		0.00										140		0.00	83318
+123		6396840	01-Jul-2025	 636723		Purchase	NCS PEARSON, IN C	33AAMCA6104A1ZC		Exam	0.00	0.00	755.00	755.00		USD		0.00		0.00		0.00										755		0.00	83319
+124		PRTK25-26/44	01-Jul-2025	 0		Purchase	Olympia Property Services Pvt Ltd (Formerly ABC property services pvt ltd)	33AAOCA2321F2Z4		AC Repair & Maintenance 	0.00	0.00	13000.00	13000.00		INR		0.00		13221.00		13221.00										13,000		0.00	83498
+125		34F707B40004	01-Jul-2025	 0		Purchase	OpenAI, LLC	9921USA29044OSI		Office Expenses	0.00	0.00	200.00	200.00		USD		0.00		0.00		0.00										200		0.00	83332

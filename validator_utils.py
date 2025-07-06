@@ -1,88 +1,140 @@
-# run_validator.py
 import os
-import shutil
 import pandas as pd
 from datetime import datetime, timedelta
-from validator_utils import validate_invoices, save_snapshot, load_snapshot, get_all_snapshot_ranges
+import glob
+import zipfile
 
-# === Date Window ===
-from_date = datetime(2025, 6, 18).strftime('%Y-%m-%d')
-to_date = datetime(2025, 6, 21).strftime('%Y-%m-%d')
-today_str = to_date
+def try_read_file(file_path):
+    try:
+        # Try as proper Excel
+        if file_path.endswith('.xlsx'):
+            return pd.read_excel(file_path, engine='openpyxl')
 
-# === Run validation ===
-results, _ = validate_invoices(from_date, to_date)
-df = pd.DataFrame(results)
+        elif file_path.endswith('.xls'):
+            try:
+                return pd.read_excel(file_path, engine='xlrd')
+            except Exception:
+                print(f"⚠️ Not a real Excel: {file_path}, trying as text fallback")
 
-# === Paths ===
-data_folder = "data"
-archive_folder = os.path.join(data_folder, "archive")
-os.makedirs(archive_folder, exist_ok=True)
+                # Try decoding content
+                with open(file_path, 'rb') as f:
+                    content = f.read(2048)
+                    try:
+                        sample = content.decode('utf-8')
+                    except UnicodeDecodeError:
+                        sample = content.decode('latin1')
 
-# === Save snapshot ===
-save_snapshot(df, from_date, to_date)
+                if '\t' in sample:
+                    print("🔄 Detected TSV format")
+                    return pd.read_csv(file_path, sep='\t', encoding='latin1', engine='python')
+                else:
+                    print("🔄 Detected CSV format")
+                    return pd.read_csv(file_path, encoding='latin1', engine='python')
 
-# === Save delta report ===
-delta_path = f"{data_folder}/delta_report_{today_str}.xlsx"
-df.to_excel(delta_path, index=False)
+        elif file_path.endswith('.csv'):
+            return pd.read_csv(file_path, encoding='utf-8', engine='python')
 
-# === Archive old delta reports (> 3 months) ===
-today = datetime.now()
-for filename in os.listdir(data_folder):
-    if filename.startswith("delta_report_") and filename.endswith(".xlsx"):
+        elif file_path.endswith('.tsv'):
+            return pd.read_csv(file_path, sep='\t', encoding='utf-8', engine='python')
+
+        else:
+            raise ValueError("Unsupported file format")
+
+    except Exception as e:
+        raise ValueError(f"❌ Failed to read {file_path}: {str(e)}")
+
+def scan_invoice_files(base_folder='data'):
+    print("\n🔍 Scanning invoice files in 'data/' and subfolders...\n")
+    
+    today = datetime.today()
+    start_date = today - timedelta(days=3)
+
+    found_files = glob.glob(os.path.join(base_folder, '**/*.*'), recursive=True)
+    valid_dataframes = []
+
+    # Rename unexpected RMS download to invoice_download.xls
+    for file in found_files:
+        if file.endswith(".xls") and "invoice" in os.path.basename(file).lower() and "download" not in os.path.basename(file).lower():
+            target = os.path.join(os.path.dirname(file), "invoice_download.xls")
+            os.rename(file, target)
+            print(f"📂 Renamed file to: {target}")
+
         try:
-            file_date = datetime.strptime(filename.replace("delta_report_", "").replace(".xlsx", ""), "%Y-%m-%d")
-            if today - file_date > timedelta(days=90):
-                shutil.move(os.path.join(data_folder, filename), os.path.join(archive_folder, filename))
-        except:
+            df = try_read_file(file)
+            print(f"✅ Loaded file: {file} — Rows: {df.shape[0]}, Columns: {list(df.columns)}\n")
+            
+            if 'PurchaseInvDate' not in df.columns:
+                print(f"❌ Skipping {file}: 'PurchaseInvDate' column missing.\n")
+                continue
+
+            df["ParsedInvoiceDate"] = pd.to_datetime(df["PurchaseInvDate"], errors='coerce')
+            filtered_df = df[
+                (df["ParsedInvoiceDate"] >= start_date) &
+                (df["ParsedInvoiceDate"] <= today)
+            ]
+
+            if not filtered_df.empty:
+                print(f"✅ Invoices in range {start_date.date()} to {today.date()}: {len(filtered_df)}\n")
+                valid_dataframes.append(filtered_df)
+
+        except Exception as e:
+            print(f"❌ Error reading {file}: {str(e)}\n")
+
+    if not valid_dataframes:
+        print("⚠️ No valid invoice files found.")
+        return pd.DataFrame()
+
+    return pd.concat(valid_dataframes, ignore_index=True)
+
+def validate_invoices(df):
+    print(f"\n✅ Total invoices to validate: {len(df)}")
+    issues = []
+    rows_with_issues = pd.DataFrame()
+
+    required_fields = ['PurchaseInvNo', 'PurchaseInvDate', 'PartyName', 'GSTNO', 'Total']
+
+    print("\n🔍 Checking for missing columns and values...")
+    for field in required_fields:
+        if field not in df.columns:
+            issues.append(f"❌ Missing column: '{field}'")
             continue
 
-# === Load and update master log ===
-master_log_path = os.path.join(data_folder, "master_invoice_log.xlsx")
-if os.path.exists(master_log_path):
-    master_df = pd.read_excel(master_log_path)
-else:
-    master_df = pd.DataFrame(columns=df.columns)
+        missing = df[df[field].isna()]
+        if not missing.empty:
+            issues.append(f"❌ {len(missing)} rows missing values in '{field}'")
+            rows_with_issues = pd.concat([rows_with_issues, missing])
 
-# === Detect modifications and deletions ===
-df["Key"] = df["Invoice No"] + "|" + df["GSTIN"]
-master_df["Key"] = master_df["Invoice No"] + "|" + master_df["GSTIN"]
+    if 'PurchaseInvNo' in df.columns:
+        duplicates = df[df.duplicated('PurchaseInvNo', keep=False)]
+        if not duplicates.empty:
+            dup_list = duplicates['PurchaseInvNo'].unique().tolist()
+            issues.append(f"⚠️ Duplicate invoice numbers found: {len(duplicates)} rows → {dup_list}")
+            rows_with_issues = pd.concat([rows_with_issues, duplicates])
 
-# Deleted
-deleted_keys = set(master_df["Key"]) - set(df["Key"])
-deleted_df = master_df[master_df["Key"].isin(deleted_keys)]
-deleted_df["Validation Status"] = "DELETED"
+    # Drop exact duplicate rows
+    rows_with_issues = rows_with_issues.drop_duplicates()
 
-# Modified
-modified_keys = []
-common_keys = set(master_df["Key"]) & set(df["Key"])
-for key in common_keys:
-    old_row = master_df[master_df["Key"] == key].iloc[0]
-    new_row = df[df["Key"] == key].iloc[0]
-    if any(old_row[col] != new_row[col] for col in ["Vendor", "Amount", "Validation Status"]):
-        modified_keys.append(key)
-        df.loc[df["Key"] == key, "Validation Status"] = "MODIFIED"
+    if issues:
+        print("\n🚨 Validation Issues Found:")
+        for issue in issues:
+            print(" -", issue)
+    else:
+        print("\n✅ All invoices passed basic validation checks.")
 
-# Add deleted to current df
-final_df = pd.concat([df, deleted_df], ignore_index=True)
+    print(f"\n🧾 Validation Summary: {len(issues)} issue(s) found.")
+    return issues, rows_with_issues
 
-# === Update master log ===
-updated_master = pd.concat([master_df[~master_df["Key"].isin(df["Key"])] , df])
-updated_master.drop(columns=["Key"], inplace=True)
-updated_master.to_excel(master_log_path, index=False)
+def unzip_files(zip_path, extract_to='data'):
+    """Unzip .zip files to the data directory"""
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(extract_to)
+    print(f"✅ Unzipped: {zip_path} to {extract_to}")
 
-# === Dashboard Summary ===
-total = len(final_df)
-valid = (final_df["Validation Status"] == "VALID").sum()
-flagged = (final_df["Validation Status"] == "FLAGGED").sum()
-changed = (final_df["Validation Status"] == "CHANGED").sum()
-modified = (final_df["Validation Status"] == "MODIFIED").sum()
-deleted = (final_df["Validation Status"] == "DELETED").sum()
+def extract_text_from_file(file_path):
+    """Stub for future OCR or text extraction logic"""
+    return f"Text content of {file_path}"
 
-print("\n📋 Vendor Invoice Validation Dashboard")
-print(f"✅ Showing Delta Report for {today_str}")
-print(f"\n📦 Total Invoices\t{total}")
-print(f"✅ Valid\t\t{valid}")
-print(f"⚠️ Flagged\t\t{flagged}")
-print(f"✏️ Modified\t\t{modified}")
-print(f"❌ Deleted\t\t{deleted}")
+def match_fields(extracted_text, reference_df, return_row=False):
+    """Stub to simulate field matching from extracted text"""
+    dummy_row = reference_df.iloc[0] if not reference_df.empty else None
+    return ("✅ Valid", dummy_row) if return_row else "✅ Valid"

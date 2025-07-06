@@ -15,10 +15,30 @@ st.set_page_config(page_title="Vendor Invoice Validation Dashboard", layout="wid
 logo_path = "assets/koenig_logo.png"
 if os.path.exists(logo_path):
     logo = Image.open(logo_path)
-    st.image(logo, width=200)
+    st.image(logo, width=275)
 
 # Dashboard title
 st.title("📋 Vendor Invoice Validation Dashboard")
+
+# === Trigger Validator Script ===
+st.markdown("---")
+st.subheader("⚙️ Run or Email Validator")
+
+col_run, col_email = st.columns(2)
+
+with col_run:
+    if st.button("▶️ Run Validator Now"):
+        with st.spinner("Running validation..."):
+            result = os.popen("python run_validator.py").read()
+        st.success("✅ Validation completed.")
+        st.text_area("📋 Output Log", result, height=250)
+
+with col_email:
+    if st.button("📧 Email Summary Now"):
+        with st.spinner("Sending email..."):
+            result = os.popen("python email_report.py").read()
+        st.success("✅ Email sent.")
+        st.text_area("📋 Email Log", result, height=250)
 
 # === Load Latest Delta Report ===
 DATA_FOLDER = "./data"

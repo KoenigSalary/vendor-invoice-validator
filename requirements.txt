@@ -5,4 +5,7 @@ openpyxl
 python-dateutil
 streamlit
 matplotlib
+xlrd
+colorama
+
 

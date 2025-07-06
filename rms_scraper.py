@@ -1,82 +1,150 @@
+import os
+import time
+import glob
+import csv
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
+from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
-import os
-import pandas as pd
 
-def login_to_rms(driver, username, password):
-    driver.get("https://rms.koenig-solutions.com/")
-    
-    WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "txtUser")))
-    driver.find_element(By.ID, "txtUser").send_keys(username)
-    driver.find_element(By.ID, "txtPwd").send_keys(password)
-    driver.find_element(By.ID, "btnSubmit").click()
+# Load .env credentials
+load_dotenv()
+USERNAME = os.getenv("RMS_USER")
+PASSWORD = os.getenv("RMS_PASS")
 
-    time.sleep(3)
-    print("✅ Logged into RMS. Proceeding to Invoice List...")
+def rms_download(start_date, end_date):
+    today_str = datetime.today().strftime("%Y-%m-%d")
+    download_dir = os.path.join("data", today_str)
+    os.makedirs(download_dir, exist_ok=True)
+    download_dir_abs = os.path.abspath(download_dir)
 
-def fetch_invoice_rows(driver, start_date, end_date):
-    from selenium.common.exceptions import TimeoutException
+    chrome_options = Options()
+    chrome_options.add_experimental_option("prefs", {
+        "download.default_directory": download_dir_abs,
+        "download.prompt_for_download": False,
+        "directory_upgrade": True,
+        "safebrowsing.enabled": True
+    })
+    driver = webdriver.Chrome(options=chrome_options)
+    wait = WebDriverWait(driver, 15)
 
     try:
-        # Navigate to Invoice List page
-        driver.get("https://rms.koenig-solutions.com/Accounts/InvoiceList.aspx")
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.ID, "cphMainContent_mainContent_txtDateFrom"))
-        )
+        # 1. Login
+        driver.get("https://rms.koenig-solutions.com/")
+        wait.until(EC.presence_of_element_located((By.ID, "txtUser"))).send_keys(USERNAME)
+        driver.find_element(By.ID, "txtPwd").send_keys(PASSWORD)
+        driver.find_element(By.ID, "btnSubmit").click()
+        time.sleep(3)
 
-        # Fill From and To dates
+        # 2. Go to Invoice List page
+        driver.get("https://rms.koenig-solutions.com/Accounts/InvoiceList.aspx")
+        wait.until(EC.presence_of_element_located((By.ID, "cphMainContent_mainContent_txtDateFrom")))
+
+        # 3. Fill date range
         driver.find_element(By.ID, "cphMainContent_mainContent_txtDateFrom").clear()
         driver.find_element(By.ID, "cphMainContent_mainContent_txtDateFrom").send_keys(start_date.strftime("%d-%b-%Y"))
+
         driver.find_element(By.ID, "cphMainContent_mainContent_txtDateTo").clear()
         driver.find_element(By.ID, "cphMainContent_mainContent_txtDateTo").send_keys(end_date.strftime("%d-%b-%Y"))
 
-        # Select invoice date and Combine (paid+unpaid)
-        driver.find_element(By.ID, "cphMainContent_mainContent_rbDateChange_0").click()
-        driver.find_element(By.ID, "cphMainContent_mainContent_rbPaidUnPaid_2").click()
-
-        # Click Search
+        # 4. Set filters
+        driver.find_element(By.ID, "cphMainContent_mainContent_rbDateChange_0").click()  # Invoice Date
+        driver.find_element(By.ID, "cphMainContent_mainContent_rbPaidUnPaid_2").click()  # Combined
         driver.find_element(By.ID, "cphMainContent_mainContent_btnSearch").click()
         time.sleep(3)
 
-        # Remove any existing Excel file
-        downloads_path = os.path.expanduser("~/Downloads")
-        file_path = os.path.join(downloads_path, "InvoiceList.xls")
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        # 5. Extract "Inv Created By" for each invoice
+        print("🔍 Extracting Inv Created By for each invoice...")
+        inv_data = []
 
-        # Click Export to Excel
-        driver.find_element(By.ID, "cphMainContent_mainContent_ExportToExcel").click()
-        time.sleep(5)
-
-        # Check if file exists now
-        if not os.path.exists(file_path):
-            print("❌ Excel file not found after export.")
-            return []
-
-        # Load the Excel file
-        df = pd.read_excel(file_path)
-
-        invoices = []
-        for _, row in df.iterrows():
+        rows = driver.find_elements(By.XPATH, "//table[@id='cphMainContent_mainContent_rptShowAss']/tbody/tr")
+        for row in rows:
             try:
-                invoices.append({
-                    "invoice_no": str(row.get("Invoice No", "")).strip(),
-                    "vendor": str(row.get("Vendor Name", "")).strip(),
-                    "invoice_date": row.get("Invoice Date"),
-                    "upload_date": row.get("Upload Date"),
-                    "gstin": str(row.get("GSTIN", "")).strip(),
-                    "pan": str(row.get("PAN", "")).strip(),
-                    "amount": float(row.get("Amount", 0.0)),
-                })
+                cells = row.find_elements(By.TAG_NAME, "td")
+                if len(cells) < 8:
+                    continue  # Skip headers or malformed rows
+                inv_no = cells[2].text.strip()
+                inv_created_by = cells[7].text.strip()
+                if inv_no:  # Avoid blank lines
+                    inv_data.append((inv_no, inv_created_by))
             except Exception as e:
-                print(f"⚠️ Error parsing row: {e}")
+                print(f"⚠️ Row parse error: {e}")
 
-        print(f"✅ Parsed {len(invoices)} invoices from Excel.")
-        return invoices
+        # Save to CSV
+        map_file = os.path.join(download_dir_abs, "inv_created_by_map.csv")
+        with open(map_file, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Invoice No", "Inv Created By"])
+            writer.writerows(inv_data)
+        print(f"📁 Saved Inv Created By map: {map_file}")
 
-    except TimeoutException:
-        driver.save_screenshot("invoice_list_timeout.png")
-        print("⚠️ Timeout while loading invoice list page. Screenshot saved.")
-        return []
+        # 6. Select all invoices (header checkbox)
+        try:
+            checkbox = driver.find_element(By.ID, "cphMainContent_mainContent_rptShowAss_chkHeader")
+            if not checkbox.is_selected():
+                checkbox.click()
+            time.sleep(1)
+        except Exception as e:
+            print(f"⚠️ Header checkbox issue: {e}")
+
+        # 7. Click ZIP Download
+        try:
+            driver.find_element(By.ID, "cphMainContent_mainContent_btnDownload").click()
+            print("📥 ZIP download triggered.")
+        except Exception as e:
+            print(f"❌ ZIP download error: {e}")
+
+        # 8. Export Excel
+        try:
+            export_btn = driver.find_element(By.ID, "cphMainContent_mainContent_ExportToExcel")
+            driver.execute_script("arguments[0].click();", export_btn)
+            print("📄 Excel export triggered.")
+        except Exception as e:
+            print(f"⚠️ Excel export failed: {e}")
+
+        # 9. Wait for downloads
+        print("⏳ Waiting for ZIP and XLS...")
+        xls_file = None
+        zip_file = None
+        for _ in range(60):
+            files = os.listdir(download_dir_abs)
+            zip_matches = [f for f in files if f.endswith(".zip")]
+            xls_matches = glob.glob(os.path.join(download_dir_abs, "*.xls"))
+
+            if zip_matches and not zip_file:
+                zip_file = zip_matches[0]
+            if xls_matches and not xls_file:
+                xls_file = xls_matches[0]
+
+            if zip_file and xls_file:
+                break
+            time.sleep(1)
+
+        # 10. Rename
+        if zip_file:
+            os.rename(os.path.join(download_dir_abs, zip_file),
+                      os.path.join(download_dir_abs, "invoices.zip"))
+            print("✅ Saved ZIP as invoices.zip")
+        else:
+            print("❌ ZIP not downloaded.")
+
+        if xls_file:
+            os.rename(xls_file, os.path.join(download_dir_abs, "invoice_download.xls"))
+            print("✅ Saved XLS as invoice_download.xls")
+        else:
+            print("❌ XLS not downloaded.")
+
+    except Exception as e:
+        print(f"❌ Error: {e}")
+
+    finally:
+        driver.quit()
+
+# Run
+if __name__ == "__main__":
+    end_date = datetime.today()
+    start_date = end_date - timedelta(days=4)
+    rms_download(start_date, end_date)

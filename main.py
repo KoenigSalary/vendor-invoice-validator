@@ -1,11 +1,9 @@
 # main.py
 
-from selenium import webdriver
-from rms_scraper import login_to_rms, fetch_invoice_rows
-from validator import validate_invoices
+from rms_scraper import rms_download
+from validator_utils import validate_invoices
 from updater import update_invoice_status
 from reporter import save_snapshot_report
-from dateutil.parser import parse
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from invoice_tracker import (
@@ -30,8 +28,8 @@ def archive_old_reports():
 
     cutoff_date = datetime.today() - timedelta(days=90)
     for filename in os.listdir(data_dir):
-        if filename.startswith("delta_report_") and filename.endswith(".xlsx"):
-            date_str = filename.replace("delta_report_", "").replace(".xlsx", "")
+        if filename.startswith("delta_report_") and filename.endswith(".xls"):
+            date_str = filename.replace("delta_report_", "").replace(".xls", "")
             try:
                 file_date = datetime.strptime(date_str, "%Y-%m-%d")
                 if file_date < cutoff_date:
@@ -53,16 +51,24 @@ def run_invoice_validation():
 
     print(f"🔍 Validating invoices from {start_str} to {end_str}...")
 
-    # Step 1: Validate current window
-    current_result, current_invoices = validate_invoices(start_str, end_str)
+    # Step 1: Download invoice data from RMS
+    invoice_path = rms_download(start_date, end_date)
+    if not invoice_path or not os.path.exists(invoice_path):
+        print("❌ No invoice file downloaded. Aborting.")
+        return
 
-    # Step 2: Save validated snapshot
+    df = pd.read_excel(invoice_path)
+
+    # Step 2: Validate current window
+    current_result, current_invoices = validate_invoices(df, start_str, end_str)
+
+    # Step 3: Save validated snapshot
     save_invoice_snapshot(current_invoices, run_date=end_str)
 
-    # Step 3: Record this run window
+    # Step 4: Record this run window
     record_run_window(start_str, end_str)
 
-    # Step 4: Revalidate all previous windows
+    # Step 5: Revalidate all previous windows
     print("🔁 Revalidating previous invoice windows...")
     all_windows = get_all_run_windows()
     cumulative_report = []
@@ -70,10 +76,13 @@ def run_invoice_validation():
     for window in all_windows:
         window_start, window_end = window
         if window_start == start_str and window_end == end_str:
-            continue  # already validated
+            continue  # skip current window
+
         print(f"🔄 Rechecking window {window_start} to {window_end}...")
-        result, _ = validate_invoices(window_start, window_end)
-        cumulative_report.extend(result)
+
+        # Load existing snapshot if available (assumed implemented inside validate_invoices)
+        _, past_invoices = validate_invoices(None, window_start, window_end)
+        cumulative_report.extend(past_invoices)
 
     # Combine current + revalidation results
     full_report = current_result + cumulative_report
@@ -82,7 +91,7 @@ def run_invoice_validation():
     if not os.path.exists("data"):
         os.makedirs("data")
 
-    report_path = f"data/delta_report_{today.strftime('%Y-%m-%d')}.xlsx"
+    report_path = f"data/delta_report_{today.strftime('%Y-%m-%d')}.xls"
     df = pd.DataFrame(full_report)
     df.to_excel(report_path, index=False)
     print(f"✅ Delta report generated: {report_path}")

@@ -3,7 +3,7 @@ import datetime
 
 def should_run_today():
     today = datetime.date.today()
-    start_date = datetime.date(2025, 6, 15)  # ✅ First run reference
+    start_date = datetime.date(2025, 7, 4)  # ✅ First run reference
     delta = (today - start_date).days
     return delta % 4 == 0
 
