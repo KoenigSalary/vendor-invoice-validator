@@ -1,37 +1,41 @@
+# snapshot_handler.py
+
 import os
 import pandas as pd
+from datetime import datetime
 
-def get_snapshot_path(snapshot_dir, date_str):
-    return os.path.join(snapshot_dir, f"snapshot_{date_str}.xlsx")
+def compare_with_snapshot(df, snapshot_dir, today):
+    """
+    Compares the current dataframe (df) with the snapshot from the previous run
+    and generates a delta report.
+    """
+    snapshot_path = os.path.join(snapshot_dir, f"snapshot_{today}.xlsx")
 
-def save_snapshot(df, snapshot_dir, date_str):
-    path = get_snapshot_path(snapshot_dir, date_str)
-    df.to_excel(path, index=False)
+    # If the snapshot file exists, compare it with the current data
+    if os.path.exists(snapshot_path):
+        previous_df = pd.read_excel(snapshot_path)
+        added = df.loc[~df['InvID'].isin(previous_df['InvID'])]
+        modified = df.loc[df['InvID'].isin(previous_df['InvID']) & (df != previous_df).any(axis=1)]
+        deleted = previous_df.loc[~previous_df['InvID'].isin(df['InvID'])]
 
-def compare_with_snapshot(current_df, snapshot_dir, today_str):
-    # Load the latest snapshot if exists
-    files = sorted([f for f in os.listdir(snapshot_dir) if f.endswith(".xlsx")])
-    if not files:
-        return None
-    latest_snapshot_path = os.path.join(snapshot_dir, files[-1])
-    old_df = pd.read_excel(latest_snapshot_path)
+        return {
+            "added": added,
+            "modified": modified,
+            "deleted": deleted
+        }
+    else:
+        # If no snapshot exists, treat everything as added
+        return {
+            "added": df,
+            "modified": pd.DataFrame(),
+            "deleted": pd.DataFrame()
+        }
 
-    current_ids = set(current_df["InvID"])
-    old_ids = set(old_df["InvID"])
-
-    deleted = old_ids - current_ids
-    added = current_ids - old_ids
-    modified = []
-
-    common_ids = old_ids & current_ids
-    for inv_id in common_ids:
-        old_row = old_df[old_df["InvID"] == inv_id].fillna("").astype(str)
-        new_row = current_df[current_df["InvID"] == inv_id].fillna("").astype(str)
-        if not old_row.equals(new_row):
-            modified.append(inv_id)
-
-    return {
-        "deleted": list(deleted),
-        "added": list(added),
-        "modified": modified
-    }
+def save_snapshot(df, snapshot_dir, today):
+    """
+    Saves the current dataframe as a snapshot for future comparison.
+    """
+    os.makedirs(snapshot_dir, exist_ok=True)
+    snapshot_path = os.path.join(snapshot_dir, f"snapshot_{today}.xlsx")
+    df.to_excel(snapshot_path, index=False)
+    print(f"✅ Snapshot saved to: {snapshot_path}")

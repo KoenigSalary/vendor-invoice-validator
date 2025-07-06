@@ -2,9 +2,8 @@ import os
 import zipfile
 import pandas as pd
 from datetime import datetime
-import fitz  # PyMuPDF
-from openpyxl import Workbook
-from email_sender import send_email_report  # Import your email sending function
+from snapshot_handler import compare_with_snapshot, save_snapshot
+from email_sender import send_email_report
 
 # Paths
 DOWNLOAD_FOLDER = "data"
@@ -84,7 +83,7 @@ def validate_invoices():
         print(f"❌ ZIP file not found: {ZIP_PATH}")
         return None
 
-    # Step 4: Validate invoices
+# Step 4: Validate invoices
     results = []
     for root, _, files in os.walk(UNZIP_DIR):
         for fname in files:
@@ -92,54 +91,27 @@ def validate_invoices():
                 fpath = os.path.join(root, fname)
                 text = extract_text_from_file(fpath)
                 result, matched_row = match_fields(text, df, return_row=True)
-                
-                # Ensure matched_row is valid and a pandas.Series
-                if isinstance(matched_row, pd.Series):
-                    creator = matched_row.get("Inv Created By", "Unknown")
-                    voucher_no = matched_row.get("VoucherNo", "")
-                    voucher_date = matched_row.get("VoucherDate", "")
-                    purchase_inv_no = matched_row.get("PurchaseInvNo", "")
-                    purchase_inv_date = matched_row.get("PurchaseInvDate", "")
-                    party_name = matched_row.get("PartyName", "")
-                    gstno = matched_row.get("GSTNO", "")
-                    vat_number = matched_row.get("VATNumber", "")
-                    taxable_value = matched_row.get("TaxableValue", "")
-                    currency = matched_row.get("Currency", "")
-                    igst_ledger = matched_row.get("IGST/VATInputLedger", "")
-                    igst_amt = matched_row.get("IGST/VATInputAmt", "")
-                    cgst_ledger = matched_row.get("CGSTInputLedger", "")
-                    cgst_amt = matched_row.get("CGSTInputAmt", "")
-                    sgst_ledger = matched_row.get("SGSTInputLedger", "")
-                    sgst_amt = matched_row.get("SGSTInputAmt", "")
-                    total = matched_row.get("Total", "")
-                    inv_id = matched_row.get("InvID", "")
-                    narration = matched_row.get("Narration", "")
-                else:
-                    creator = "Unknown"
-                    voucher_no = voucher_date = purchase_inv_no = purchase_inv_date = party_name = ""
-                    gstno = vat_number = taxable_value = currency = igst_ledger = igst_amt = ""
-                    cgst_ledger = cgst_amt = sgst_ledger = sgst_amt = total = inv_id = narration = ""
-
+                creator = matched_row["Inv Created By"] if matched_row is not None and "Inv Created By" in matched_row else "Unknown"
                 results.append({
-                    "VoucherNo": voucher_no,
-                    "VoucherDate": voucher_date,
-                    "PurchaseInvNo": purchase_inv_no,
-                    "PurchaseInvDate": purchase_inv_date,
-                    "PartyName": party_name,
-                    "GSTNO": gstno,
-                    "VATNumber": vat_number,
-                    "TaxableValue": taxable_value,
-                    "Currency": currency,
-                    "IGST/VATInputLedger": igst_ledger,
-                    "IGST/VATInputAmt": igst_amt,
-                    "CGSTInputLedger": cgst_ledger,
-                    "CGSTInputAmt": cgst_amt,
-                    "SGSTInputLedger": sgst_ledger,
-                    "SGSTInputAmt": sgst_amt,
-                    "Total": total,
+                    "VoucherNo": matched_row.get("VoucherNo", ""),
+                    "VoucherDate": matched_row.get("VoucherDate", ""),
+                    "PurchaseInvNo": matched_row.get("PurchaseInvNo", ""),
+                    "PurchaseInvDate": matched_row.get("PurchaseInvDate", ""),
+                    "PartyName": matched_row.get("PartyName", ""),
+                    "GSTNO": matched_row.get("GSTNO", ""),
+                    "VATNumber": matched_row.get("VATNumber", ""),
+                    "TaxableValue": matched_row.get("TaxableValue", ""),
+                    "Currency": matched_row.get("Currency", ""),
+                    "IGST/VATInputLedger": matched_row.get("IGST/VATInputLedger", ""),
+                    "IGST/VATInputAmt": matched_row.get("IGST/VATInputAmt", ""),
+                    "CGSTInputLedger": matched_row.get("CGSTInputLedger", ""),
+                    "CGSTInputAmt": matched_row.get("CGSTInputAmt", ""),
+                    "SGSTInputLedger": matched_row.get("SGSTInputLedger", ""),
+                    "SGSTInputAmt": matched_row.get("SGSTInputAmt", ""),
+                    "Total": matched_row.get("Total", ""),
                     "Inv Created By": creator,
-                    "InvID": inv_id,
-                    "Narration": narration,
+                    "InvID": matched_row.get("InvID", ""),
+                    "Narration": matched_row.get("Narration", ""),
                     "Correct": "✅" if result == "✅ VALID" else "",
                     "Flagged": "🚩" if result == "❌ Not Matched" else "",
                     "Modified Since Last Check": "",  # Placeholder for future
