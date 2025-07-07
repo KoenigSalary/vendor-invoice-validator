@@ -1,5 +1,3 @@
-# streamlit_app.py
-
 import streamlit as st
 import pandas as pd
 import os
@@ -7,37 +5,40 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 from datetime import datetime
 from PIL import Image
-
-# Trigger Streamlit Cloud to rebuild
+import base64
 
 # === Page Config ===
 st.set_page_config(page_title="Vendor Invoice Validation Dashboard", layout="wide")
 
-# === Logo and Title (centered vertically) ===
+# === Colors ===
+PRIMARY_COLOR = "#003366"
+ACCENT_COLOR = "#0077CC"
+ERROR_COLOR = "#FF4B4B"
+INFO_COLOR = "#F5F7FA"
+
+# === Centered Logo and Title ===
 logo_path = "assets/koenig_logo.png"
-
-# Center alignment using HTML
-centered_logo_title = """
-<div style='text-align: center;'>
-    {logo_html}
-    <h1 style='margin-top: 10px;'>📋 Vendor Invoice Validation Dashboard</h1>
-</div>
-"""
-
 if os.path.exists(logo_path):
-    # Convert logo to base64 and embed via HTML to center it
-    import base64
-    from io import BytesIO
     buffer = BytesIO()
     Image.open(logo_path).save(buffer, format="PNG")
     encoded = base64.b64encode(buffer.getvalue()).decode()
-    logo_html = f"<img src='data:image/png;base64,{encoded}' width='225'/>"
-    st.markdown(centered_logo_title.format(logo_html=logo_html), unsafe_allow_html=True)
+    logo_html = f"<img src='data:image/png;base64,{encoded}' width='180'/>"
 else:
-    st.warning("⚠️ Logo not found at assets/koenig_logo.png")
+    logo_html = "<p style='color: red;'>Logo not found</p>"
 
-# === Trigger Validator Script ===
-st.markdown("---")
+st.markdown(
+    f"""
+    <div style='text-align: center;'>
+        {logo_html}
+        <h1 style='margin-top: 12px; color: {PRIMARY_COLOR};'>📋 Vendor Invoice Validation Dashboard</h1>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown("<hr>", unsafe_allow_html=True)
+
+# === Trigger Buttons (optional) ===
 st.subheader("⚙️ Run or Email Validator")
 
 col_run, col_email = st.columns(2)
@@ -56,7 +57,7 @@ with col_email:
         st.success("✅ Email sent.")
         st.text_area("📋 Email Log", result, height=250)
 
-# === Load Latest Delta Report ===
+# === Load Latest Report ===
 DATA_FOLDER = "./data"
 report_files = sorted([f for f in os.listdir(DATA_FOLDER) if f.startswith("delta_report_") and f.endswith(".xlsx")])
 
@@ -68,13 +69,12 @@ latest_file = report_files[-1]
 file_path = os.path.join(DATA_FOLDER, latest_file)
 df = pd.read_excel(file_path)
 
-# === Format Upload Date ===
 if "Upload Date" in df.columns:
     df["Upload Date"] = pd.to_datetime(df["Upload Date"], errors='coerce')
 
 st.success(f"✅ Showing Delta Report for {latest_file.replace('delta_report_', '').replace('.xlsx', '')}")
 
-# === Fill Missing Columns ===
+# === Fill Required Columns if Missing ===
 required_cols = [
     "Validation Status", "Vendor", "Amount", "Invoice No", "GSTIN",
     "Modification Reason", "Rate of Product", "SGST", "CGST", "IGST",
@@ -102,7 +102,7 @@ if invoice_search:
     filtered_df = filtered_df[filtered_df["Invoice No"].astype(str).str.contains(invoice_search, case=False, na=False) |
                               filtered_df["GSTIN"].astype(str).str.contains(invoice_search, case=False, na=False)]
 
-# === Dashboard Metrics ===
+# === Metrics Summary ===
 total = len(df)
 valid = (df["Validation Status"].str.upper() == "VALID").sum()
 flagged = (df["Validation Status"].str.upper() == "FLAGGED").sum()
@@ -122,7 +122,7 @@ col6.metric("❌ Deleted", deleted)
 st.subheader("📊 Validation Status Breakdown")
 chart_data = filtered_df["Validation Status"].value_counts()
 fig, ax = plt.subplots(figsize=(6, 3))
-chart_data.plot(kind="bar", ax=ax, color='#3498db', edgecolor='black')
+chart_data.plot(kind="bar", ax=ax, color=ACCENT_COLOR, edgecolor='black')
 ax.set_title("Validation Status", fontsize=12)
 ax.set_xlabel("Status")
 ax.set_ylabel("Count")
