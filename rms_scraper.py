@@ -22,12 +22,16 @@ def rms_download(start_date, end_date):
     download_dir_abs = os.path.abspath(download_dir)
 
     chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_experimental_option("prefs", {
         "download.default_directory": download_dir_abs,
         "download.prompt_for_download": False,
         "directory_upgrade": True,
         "safebrowsing.enabled": True
     })
+
     driver = webdriver.Chrome(options=chrome_options)
     wait = WebDriverWait(driver, 15)
 
@@ -59,16 +63,15 @@ def rms_download(start_date, end_date):
         # 5. Extract "Inv Created By" for each invoice
         print("🔍 Extracting Inv Created By for each invoice...")
         inv_data = []
-
         rows = driver.find_elements(By.XPATH, "//table[@id='cphMainContent_mainContent_rptShowAss']/tbody/tr")
         for row in rows:
             try:
                 cells = row.find_elements(By.TAG_NAME, "td")
                 if len(cells) < 8:
-                    continue  # Skip headers or malformed rows
+                    continue
                 inv_no = cells[2].text.strip()
                 inv_created_by = cells[7].text.strip()
-                if inv_no:  # Avoid blank lines
+                if inv_no:
                     inv_data.append((inv_no, inv_created_by))
             except Exception as e:
                 print(f"⚠️ Row parse error: {e}")
@@ -81,7 +84,7 @@ def rms_download(start_date, end_date):
             writer.writerows(inv_data)
         print(f"📁 Saved Inv Created By map: {map_file}")
 
-        # 6. Select all invoices (header checkbox)
+        # 6. Select all invoices
         try:
             checkbox = driver.find_element(By.ID, "cphMainContent_mainContent_rptShowAss_chkHeader")
             if not checkbox.is_selected():
@@ -143,7 +146,7 @@ def rms_download(start_date, end_date):
     finally:
         driver.quit()
 
-# Run
+# Run manually
 if __name__ == "__main__":
     end_date = datetime.today()
     start_date = end_date - timedelta(days=4)
