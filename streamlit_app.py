@@ -72,26 +72,19 @@ for col in required_cols:
 with st.expander("🔎 Filters"):
     vendor_filter = st.selectbox("Filter by Vendor", options=["All"] + sorted(df["Vendor"].dropna().unique().tolist()))
     status_filter = st.multiselect("Filter by Status", options=sorted(df["Validation Status"].dropna().unique().tolist()), default=sorted(df["Validation Status"].dropna().unique().tolist()))
+    date_filter = st.date_input("Filter by Upload Date (optional)", value=None)
+    invoice_search = st.text_input("🔍 Search by Invoice No or GSTIN")
 
-with st.expander("🔍 Search Invoice"):
-    invoice_search = st.text_input("Search by Invoice No")
-
-if invoice_search:
-    df = df[df["Invoice No"].astype(str).str.contains(invoice_search, case=False)]
-
+filtered_df = df.copy()
 if vendor_filter != "All":
-    df = df[df["Vendor"] == vendor_filter]
+    filtered_df = filtered_df[filtered_df["Vendor"] == vendor_filter]
 if status_filter:
-    df = df[df["Validation Status"].isin(status_filter)]
-
-# === Date Range Filter ===
-if "Upload Date" in df.columns:
-    with st.expander("📅 Date Filter"):
-        min_date = df["Upload Date"].min()
-        max_date = df["Upload Date"].max()
-        start_date, end_date = st.date_input("Select date range", [min_date, max_date])
-
-        df = df[(df["Upload Date"] >= pd.to_datetime(start_date)) & (df["Upload Date"] <= pd.to_datetime(end_date))]
+    filtered_df = filtered_df[filtered_df["Validation Status"].isin(status_filter)]
+if date_filter:
+    filtered_df = filtered_df[filtered_df["Upload Date"] == pd.to_datetime(date_filter)]
+if invoice_search:
+    filtered_df = filtered_df[filtered_df["Invoice No"].astype(str).str.contains(invoice_search, case=False, na=False) |
+                              filtered_df["GSTIN"].astype(str).str.contains(invoice_search, case=False, na=False)]
 
 # === Dashboard Metrics ===
 total = len(df)
@@ -111,16 +104,9 @@ col6.metric("❌ Deleted", deleted)
 
 # === Chart ===
 st.subheader("📊 Validation Status Breakdown")
-chart_data = df["Validation Status"].value_counts()
+chart_data = filtered_df["Validation Status"].value_counts()
 fig, ax = plt.subplots(figsize=(6, 3))
-color_map = {
-    "VALID": "green",
-    "FLAGGED": "orange",
-    "CHANGED": "blue",
-    "MODIFIED": "purple",
-    "DELETED": "red"
-}
-chart_data.plot(kind="bar", ax=ax, color=[color_map.get(x.upper(), "grey") for x in chart_data.index], edgecolor='black')
+chart_data.plot(kind="bar", ax=ax, color='skyblue', edgecolor='black')
 ax.set_title("Validation Status", fontsize=12)
 ax.set_xlabel("Status")
 ax.set_ylabel("Count")
@@ -129,8 +115,9 @@ st.pyplot(fig)
 
 # === Download Filtered Report ===
 output = BytesIO()
-df.to_excel(output, index=False, engine='openpyxl')
+filtered_df.to_excel(output, index=False, engine='openpyxl')
 output.seek(0)
+
 file_name = f"filtered_invoice_report_{datetime.today().strftime('%Y-%m-%d')}.xlsx"
 
 st.download_button(
@@ -140,13 +127,6 @@ st.download_button(
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
-# === Optional: Download ZIP if exists ===
-today = datetime.today().strftime('%Y-%m-%d')
-zip_path = f"data/invoices_{today}.zip"
-if os.path.exists(zip_path):
-    with open(zip_path, "rb") as f:
-        st.download_button("🗜️ Download Invoice ZIP", f, file_name=f"invoices_{today}.zip")
-
 # === Table ===
 st.subheader("📑 Detailed Invoice Report")
-st.dataframe(df, use_container_width=True)
+st.dataframe(filtered_df, use_container_width=True)
