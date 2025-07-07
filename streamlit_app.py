@@ -10,18 +10,24 @@ from PIL import Image
 
 # Trigger Streamlit Cloud to rebuild
 
-# Set page configuration
+# === Page Config ===
 st.set_page_config(page_title="Vendor Invoice Validation Dashboard", layout="wide")
 
 # === Logo and Title ===
-col_logo, col_title = st.columns([1, 6])
-with col_logo:
+col1, col2, col3 = st.columns([1, 4, 1])
+
+with col2:
     logo_path = "assets/koenig_logo.png"
     if os.path.exists(logo_path):
         logo = Image.open(logo_path)
-        st.image(logo, width=250)
+        st.image(logo, width=180)
     else:
         st.warning("⚠️ Logo not found at assets/koenig_logo.png")
+    
+    st.markdown(
+        "<h1 style='text-align: center; padding-top: 10px;'>📋 Vendor Invoice Validation Dashboard</h1>",
+        unsafe_allow_html=True
+    )
 
 with col_title:
     st.markdown("<h1 style='padding-top: 15px;'>📋 Vendor Invoice Validation Dashboard</h1>", unsafe_allow_html=True)
