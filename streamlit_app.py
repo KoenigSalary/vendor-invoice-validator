@@ -19,7 +19,7 @@ with col_logo:
     logo_path = "assets/koenig_logo.png"
     if os.path.exists(logo_path):
         logo = Image.open(logo_path)
-        st.image(logo, width=180)
+        st.image(logo, width=250)
     else:
         st.warning("⚠️ Logo not found at assets/koenig_logo.png")
 
