@@ -48,11 +48,23 @@ def run_invoice_validation():
 
     start_str = start_date.strftime("%Y-%m-%d")
     end_str = end_date.strftime("%Y-%m-%d")
+    today_str = today.strftime("%Y-%m-%d")
 
     print(f"🔍 Validating invoices from {start_str} to {end_str}...")
 
     # Step 1: Download invoice data from RMS
     invoice_path = rms_download(start_date, end_date)
+
+    # 🔄 Move downloaded files into today's folder
+    os.makedirs(f"data/{today_str}", exist_ok=True)
+    for fname in ["invoice_download.xls", "invoices.zip"]:
+        if os.path.exists(fname):
+            dest = f"data/{today_str}/{fname}"
+            shutil.move(fname, dest)
+            print(f"📁 Moved {fname} → {dest}")
+        else:
+            print(f"⚠️ {fname} not found in root.")
+
     if not invoice_path or not os.path.exists(invoice_path):
         print("❌ No invoice file downloaded. Aborting.")
         return
@@ -80,7 +92,7 @@ def run_invoice_validation():
 
         print(f"🔄 Rechecking window {window_start} to {window_end}...")
 
-        # Load existing snapshot if available (assumed implemented inside validate_invoices)
+        # Load existing snapshot if available
         _, past_invoices = validate_invoices(None, window_start, window_end)
         cumulative_report.extend(past_invoices)
 
@@ -88,17 +100,13 @@ def run_invoice_validation():
     full_report = current_result + cumulative_report
 
     # Save report
-    if not os.path.exists("data"):
-        os.makedirs("data")
-
-    report_path = f"data/delta_report_{today.strftime('%Y-%m-%d')}.xls"
-    df = pd.DataFrame(full_report)
-    df.to_excel(report_path, index=False)
+    os.makedirs("data", exist_ok=True)
+    report_path = f"data/delta_report_{today_str}.xls"
+    pd.DataFrame(full_report).to_excel(report_path, index=False)
     print(f"✅ Delta report generated: {report_path}")
 
-    # Optional: Also copy to validation_result.xlsx for dashboard compatibility
-    dashboard_path = f"data/{today.strftime('%Y-%m-%d')}/validation_result.xlsx"
-    os.makedirs(os.path.dirname(dashboard_path), exist_ok=True)
+    # Also copy to dashboard path
+    dashboard_path = f"data/{today_str}/validation_result.xlsx"
     shutil.copy(report_path, dashboard_path)
     print(f"📋 Copied report for dashboard: {dashboard_path}")
 
