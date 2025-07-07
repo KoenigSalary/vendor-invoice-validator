@@ -8,10 +8,13 @@ from io import BytesIO
 from datetime import datetime
 from PIL import Image
 
+# Trigger Streamlit Cloud to rebuild
+
 # Set page configuration
 st.set_page_config(page_title="Vendor Invoice Validation Dashboard", layout="wide")
 
 # === Logo and Title ===
+st.write("🔍 Current working directory:", os.getcwd())
 col_logo, col_title = st.columns([1, 6])
 with col_logo:
     logo_path = "assets/koenig_logo.png"
