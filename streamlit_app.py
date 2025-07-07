@@ -11,7 +11,7 @@ from PIL import Image
 # Trigger Streamlit Cloud to rebuild
 
 # Set page configuration
-st.set_page_config(page_title="Vendor Invoice Validation Dashboard", layout="narrow")
+st.set_page_config(page_title="Vendor Invoice Validation Dashboard", layout="wide")
 
 # === Logo and Title ===
 col_logo, col_title = st.columns([1, 6])
@@ -24,7 +24,7 @@ with col_logo:
         st.warning("⚠️ Logo not found at assets/koenig_logo.png")
 
 with col_title:
-    st.markdown("<h1 style='padding-top: 25px;'>📋 Vendor Invoice Validation Dashboard</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='padding-top: 20px;'>📋 Vendor Invoice Validation Dashboard</h1>", unsafe_allow_html=True)
 
 # === Trigger Validator Script ===
 st.markdown("---")
