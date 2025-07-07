@@ -96,9 +96,14 @@ def run_invoice_validation():
     df.to_excel(report_path, index=False)
     print(f"✅ Delta report generated: {report_path}")
 
+    # Optional: Also copy to validation_result.xlsx for dashboard compatibility
+    dashboard_path = f"data/{today.strftime('%Y-%m-%d')}/validation_result.xlsx"
+    os.makedirs(os.path.dirname(dashboard_path), exist_ok=True)
+    shutil.copy(report_path, dashboard_path)
+    print(f"📋 Copied report for dashboard: {dashboard_path}")
+
     # Archive old reports
     archive_old_reports()
-
 
 if __name__ == "__main__":
     run_invoice_validation()

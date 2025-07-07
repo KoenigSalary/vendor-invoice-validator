@@ -16,46 +16,36 @@ ACCENT_COLOR = "#0077CC"
 ERROR_COLOR = "#FF4B4B"
 INFO_COLOR = "#F5F7FA"
 
-# === Centered Logo and Title ===
+# === Centered Logo and Title with Style ===
 logo_path = "assets/koenig_logo.png"
 if os.path.exists(logo_path):
     buffer = BytesIO()
     Image.open(logo_path).save(buffer, format="PNG")
     encoded = base64.b64encode(buffer.getvalue()).decode()
-    logo_html = f"<img src='data:image/png;base64,{encoded}' width='180'/>"
+    logo_html = f"<img src='data:image/png;base64,{encoded}' width='160' style='margin-bottom: 10px;'/>"
 else:
     logo_html = "<p style='color: red;'>Logo not found</p>"
 
 st.markdown(
     f"""
-    <div style='text-align: center;'>
+    <div style='
+        background-color: {INFO_COLOR};
+        padding: 30px 10px 20px;
+        border-radius: 15px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        margin-bottom: 25px;
+    '>
         {logo_html}
-        <h1 style='margin-top: 12px; color: {PRIMARY_COLOR};'>📋 Vendor Invoice Validation Dashboard</h1>
+        <h1 style='
+            color: {PRIMARY_COLOR};
+            font-size: 28px;
+            margin-top: 10px;
+        '>📋 Vendor Invoice Validation Dashboard</h1>
     </div>
     """,
     unsafe_allow_html=True,
 )
-
-st.markdown("<hr>", unsafe_allow_html=True)
-
-# === Trigger Buttons (optional) ===
-st.subheader("⚙️ Run or Email Validator")
-
-col_run, col_email = st.columns(2)
-
-with col_run:
-    if st.button("▶️ Run Validator Now"):
-        with st.spinner("Running validation..."):
-            result = os.popen("python run_validator.py").read()
-        st.success("✅ Validation completed.")
-        st.text_area("📋 Output Log", result, height=250)
-
-with col_email:
-    if st.button("📧 Email Summary Now"):
-        with st.spinner("Sending email..."):
-            result = os.popen("python email_report.py").read()
-        st.success("✅ Email sent.")
-        st.text_area("📋 Email Log", result, height=250)
 
 # === Load Latest Report ===
 DATA_FOLDER = "./data"
@@ -102,7 +92,7 @@ if invoice_search:
     filtered_df = filtered_df[filtered_df["Invoice No"].astype(str).str.contains(invoice_search, case=False, na=False) |
                               filtered_df["GSTIN"].astype(str).str.contains(invoice_search, case=False, na=False)]
 
-# === Metrics Summary ===
+# === Metrics Summary (Styled) ===
 total = len(df)
 valid = (df["Validation Status"].str.upper() == "VALID").sum()
 flagged = (df["Validation Status"].str.upper() == "FLAGGED").sum()
@@ -110,6 +100,7 @@ changed = (df["Validation Status"].str.upper() == "CHANGED").sum()
 modified = (df["Validation Status"].str.upper() == "MODIFIED").sum()
 deleted = (df["Validation Status"].str.upper() == "DELETED").sum()
 
+st.markdown("### 📊 Summary Overview")
 col1, col2, col3, col4, col5, col6 = st.columns(6)
 col1.metric("📦 Total", total)
 col2.metric("✅ Valid", valid)
@@ -118,8 +109,23 @@ col4.metric("🔁 Changed", changed)
 col5.metric("✏️ Modified", modified)
 col6.metric("❌ Deleted", deleted)
 
+# === Tabbed View ===
+tab1, tab2, tab3 = st.tabs(["📋 All Invoices", "🚩 Flagged", "✏️ Modified"])
+
+with tab1:
+    st.subheader("📑 All Validated Invoices")
+    st.dataframe(filtered_df, use_container_width=True)
+
+with tab2:
+    st.subheader("🚩 Flagged Invoices")
+    st.dataframe(filtered_df[filtered_df["Validation Status"].str.upper() == "FLAGGED"], use_container_width=True)
+
+with tab3:
+    st.subheader("✏️ Modified Invoices")
+    st.dataframe(filtered_df[filtered_df["Validation Status"].str.upper() == "MODIFIED"], use_container_width=True)
+
 # === Chart ===
-st.subheader("📊 Validation Status Breakdown")
+st.markdown("### 📈 Validation Status Breakdown")
 chart_data = filtered_df["Validation Status"].value_counts()
 fig, ax = plt.subplots(figsize=(6, 3))
 chart_data.plot(kind="bar", ax=ax, color=ACCENT_COLOR, edgecolor='black')
@@ -143,6 +149,8 @@ st.download_button(
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
-# === Table ===
-st.subheader("📑 Detailed Invoice Report")
-st.dataframe(filtered_df, use_container_width=True)
+# === Footer ===
+st.markdown(
+    "<hr><p style='text-align: center; color: grey;'>© 2025 Koenig Solutions | Vendor Invoice Validator</p>",
+    unsafe_allow_html=True
+)

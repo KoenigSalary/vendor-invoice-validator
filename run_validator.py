@@ -6,27 +6,25 @@ import fitz  # PyMuPDF for PDF extraction
 from snapshot_handler import compare_with_snapshot, save_snapshot
 from email_sender import send_email_report
 
-# Helpers
 def get_latest_data_folder(base="data"):
     folders = [f for f in os.listdir(base) if f.startswith("2025-")]
     folders.sort(reverse=True)
     return os.path.join(base, folders[0]) if folders else None
 
-# Step 1: Get today’s folder or fallback
+# === Step 1: Set base paths ===
 DOWNLOAD_FOLDER = "data"
 TODAY_FOLDER = datetime.today().strftime("%Y-%m-%d")
 base_dir = os.path.join(DOWNLOAD_FOLDER, TODAY_FOLDER)
 
 if not os.path.exists(base_dir):
-    print(f"⚠️ Folder for today ({TODAY_FOLDER}) not found. Trying fallback...")
+    print(f"[INFO] Today's folder '{TODAY_FOLDER}' not found. Looking for latest available data...")
     base_dir = get_latest_data_folder(DOWNLOAD_FOLDER)
     if not base_dir:
-        print("❌ No previous data folder found. Exiting.")
+        print("[ERROR] No previous data folder found. Aborting validation.")
         exit(1)
-    else:
-        print(f"✅ Fallback to: {base_dir}")
+    print(f"[INFO] Using fallback folder: {base_dir}")
 
-# Step 2: Define paths
+# === Step 2: Define paths ===
 XLS_PATH = os.path.join(base_dir, "invoice_download.xls")
 ZIP_PATH = os.path.join(base_dir, "invoices.zip")
 UNZIP_DIR = os.path.join(base_dir, "unzipped")
@@ -34,7 +32,7 @@ VALIDATED_DIR = os.path.join(base_dir, "validated_invoices")
 RESULT_PATH = os.path.join(base_dir, "validation_result.xlsx")
 INV_CREATOR_MAP_PATH = os.path.join(base_dir, "inv_created_by_map.csv")
 
-# Ensure folders
+# === Ensure folders ===
 os.makedirs(UNZIP_DIR, exist_ok=True)
 os.makedirs(VALIDATED_DIR, exist_ok=True)
 
@@ -45,7 +43,7 @@ def read_invoice_excel(path):
         try:
             return pd.read_csv(path, sep=None, engine="python")
         except Exception as e:
-            print(f"❌ Failed to read invoice file: {e}")
+            print(f"[ERROR] Failed to read invoice file: {e}")
             return None
 
 def extract_text_from_file(file_path):
@@ -56,7 +54,7 @@ def extract_text_from_file(file_path):
                 text += page.get_text()
         return text
     except Exception as e:
-        print(f"❌ Failed to extract text from {file_path}: {e}")
+        print(f"[ERROR] Failed to extract text from {file_path}: {e}")
         return ""
 
 def match_fields(text, df, return_row=False):
@@ -67,16 +65,15 @@ def match_fields(text, df, return_row=False):
     return ("❌ Not Matched", None) if return_row else "❌ Not Matched"
 
 def validate_invoices():
-    # Load invoice sheet
     if not os.path.exists(XLS_PATH):
-        print(f"❌ Missing invoice sheet: {XLS_PATH}")
+        print(f"[ERROR] Invoice sheet not found at {XLS_PATH}")
         return None
     df = read_invoice_excel(XLS_PATH)
     if df is None:
         return None
-    print(f"✅ Invoice sheet loaded. Rows: {len(df)}, Columns: {list(df.columns)}")
+    print(f"[INFO] Invoice sheet loaded: {len(df)} rows.")
 
-    # Load uploader mapping
+    # === Load mapping file (if exists) ===
     if os.path.exists(INV_CREATOR_MAP_PATH):
         df_map = pd.read_csv(INV_CREATOR_MAP_PATH)
         if "InvID" not in df_map.columns:
@@ -84,25 +81,25 @@ def validate_invoices():
             if possible_col:
                 df_map = df_map.rename(columns={possible_col[0]: "InvID"})
             else:
-                print("❌ 'InvID' column missing in map. Defaulting.")
+                print("[WARN] 'InvID' column not found in map. Assigning Unknown.")
                 df["Inv Created By"] = "Unknown"
                 df_map = pd.DataFrame(columns=["InvID", "Inv Created By"])
         df = df.merge(df_map, on="InvID", how="left")
-        print(f"✅ 'Inv Created By' mapping loaded from: {INV_CREATOR_MAP_PATH}")
+        print(f"[INFO] Uploader mapping loaded from: {INV_CREATOR_MAP_PATH}")
     else:
-        print("⚠️ inv_created_by_map.csv not found. Defaulting.")
+        print("[WARN] inv_created_by_map.csv not found. Assigning all as Unknown.")
         df["Inv Created By"] = "Unknown"
 
-    # Unzip invoices
+    # === Unzip invoices ===
     if os.path.exists(ZIP_PATH):
         with zipfile.ZipFile(ZIP_PATH, 'r') as zip_ref:
             zip_ref.extractall(UNZIP_DIR)
-        print(f"✅ Unzipped: {ZIP_PATH} to {UNZIP_DIR}")
+        print(f"[INFO] Invoices unzipped to: {UNZIP_DIR}")
     else:
-        print(f"❌ ZIP file not found: {ZIP_PATH}")
+        print(f"[ERROR] Invoices ZIP file not found: {ZIP_PATH}")
         return None
 
-    # Validate invoices
+    # === Validate invoices ===
     results = []
     for root, _, files in os.walk(UNZIP_DIR):
         for fname in files:
@@ -138,23 +135,23 @@ def validate_invoices():
                         "Late Upload": ""
                     })
                 else:
-                    print(f"❌ No match found for {fname}")
+                    print(f"[WARN] Invoice PDF unmatched: {fname}")
 
     result_df = pd.DataFrame(results)
     result_df.to_excel(RESULT_PATH, index=False)
-    print(f"✅ Validation complete. Report saved to: {RESULT_PATH}")
+    print(f"[INFO] Validation complete. Report saved to: {RESULT_PATH}")
 
-    # Delta + Snapshot
+    # === Snapshot & Delta Check ===
     snapshot_dir = os.path.join("snapshots")
     os.makedirs(snapshot_dir, exist_ok=True)
     delta_report = compare_with_snapshot(result_df, snapshot_dir, TODAY_FOLDER)
     save_snapshot(result_df, snapshot_dir, TODAY_FOLDER)
 
-    # Email report
+    # === Email the result ===
     send_email_report(RESULT_PATH, ZIP_PATH, delta_report=delta_report)
 
     return RESULT_PATH
 
-# Run when executed directly
+# === Run Automatically if script executed directly ===
 if __name__ == "__main__":
     validate_invoices()

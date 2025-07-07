@@ -138,3 +138,23 @@ def match_fields(extracted_text, reference_df, return_row=False):
     """Stub to simulate field matching from extracted text"""
     dummy_row = reference_df.iloc[0] if not reference_df.empty else None
     return ("✅ Valid", dummy_row) if return_row else "✅ Valid"
+
+def copy_validation_result_for_dashboard():
+    """Copy validation_result.xlsx of today to delta_report_YYYY-MM-DD.xlsx for dashboard."""
+    from datetime import datetime
+    import shutil
+    import os
+
+    today_str = datetime.today().strftime("%Y-%m-%d")
+    source_file = f"data/{today_str}/validation_result.xlsx"
+    target_file = f"data/delta_report_{today_str}.xlsx"
+
+    if os.path.exists(source_file):
+        try:
+            shutil.copy(source_file, target_file)
+            print(f"📋 Copied validation_result.xlsx to {target_file} for dashboard.")
+        except Exception as e:
+            print(f"❌ Failed to copy dashboard file: {str(e)}")
+    else:
+        print("⚠️ validation_result.xlsx not found. Skipping dashboard update.")
+
