@@ -16,6 +16,8 @@ logo_path = "assets/koenig_logo.png"
 if os.path.exists(logo_path):
     logo = Image.open(logo_path)
     st.image(logo, width=275)
+else:
+    st.warning("⚠️ Logo not found at assets/koenig_logo.png")
 
 # Dashboard title
 st.title("📋 Vendor Invoice Validation Dashboard")
