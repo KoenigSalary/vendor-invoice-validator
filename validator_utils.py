@@ -45,24 +45,38 @@ def try_read_file(file_path):
 
 def scan_invoice_files(base_folder='data'):
     print("\n🔍 Scanning invoice files in 'data/' and subfolders...\n")
-    
+
     today = datetime.today()
     start_date = today - timedelta(days=3)
 
     found_files = glob.glob(os.path.join(base_folder, '**/*.*'), recursive=True)
     valid_dataframes = []
 
-    # Rename unexpected RMS download to invoice_download.xls
     for file in found_files:
+        # Skip temporary/incomplete downloads
+        if file.endswith(".crdownload"):
+            print(f"⏳ Skipping temp download file: {file}")
+            continue
+
+        # Rename if it's a likely invoice XLS file but misnamed
         if file.endswith(".xls") and "invoice" in os.path.basename(file).lower() and "download" not in os.path.basename(file).lower():
             target = os.path.join(os.path.dirname(file), "invoice_download.xls")
-            os.rename(file, target)
-            print(f"📂 Renamed file to: {target}")
+            try:
+                os.rename(file, target)
+                print(f"📂 Renamed file to: {target}")
+                file = target  # update reference
+            except Exception as e:
+                print(f"⚠️ Could not rename file {file}: {e}")
+                continue
+
+        # Skip non-XLS/XLSX/CSV files
+        if not any(file.lower().endswith(ext) for ext in [".xls", ".xlsx", ".csv"]):
+            continue
 
         try:
             df = try_read_file(file)
             print(f"✅ Loaded file: {file} — Rows: {df.shape[0]}, Columns: {list(df.columns)}\n")
-            
+
             if 'PurchaseInvDate' not in df.columns:
                 print(f"❌ Skipping {file}: 'PurchaseInvDate' column missing.\n")
                 continue
