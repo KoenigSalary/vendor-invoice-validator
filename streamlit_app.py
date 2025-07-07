@@ -31,7 +31,7 @@ if os.path.exists(logo_path):
     buffer = BytesIO()
     Image.open(logo_path).save(buffer, format="PNG")
     encoded = base64.b64encode(buffer.getvalue()).decode()
-    logo_html = f"<img src='data:image/png;base64,{encoded}' width='180'/>"
+    logo_html = f"<img src='data:image/png;base64,{encoded}' width='225'/>"
     st.markdown(centered_logo_title.format(logo_html=logo_html), unsafe_allow_html=True)
 else:
     st.warning("⚠️ Logo not found at assets/koenig_logo.png")
