@@ -8,29 +8,25 @@ from io import BytesIO
 from datetime import datetime
 from PIL import Image
 
-# Set page configuration
+# Page config
 st.set_page_config(page_title="Vendor Invoice Validation Dashboard", layout="wide")
 
-# ✅ Load logo
-logo_path = "assets/koenig_logo.png"
-
-if os.path.exists(logo_path):
-    logo = Image.open(logo_path)
-    st.image(logo, width=275)
-else:
-    st.warning("⚠️ Logo not found at assets/koenig_logo.png")
-    if os.path.exists("assets"):
-        st.text(f"Available files in assets/: {os.listdir('assets')}")
+# === Load Logo & Title ===
+col_logo, col_title = st.columns([1, 6])
+with col_logo:
+    logo_path = "assets/koenig_logo.png"
+    if os.path.exists(logo_path):
+        logo = Image.open(logo_path)
+        st.image(logo, width=180)
     else:
-        st.text("❌ 'assets' folder not found.")
+        st.warning("⚠️ Logo not found at assets/koenig_logo.png")
 
-# Dashboard title
-st.title("📋 Vendor Invoice Validation Dashboard")
+with col_title:
+    st.markdown("<h1 style='padding-top: 25px;'>📋 Vendor Invoice Validation Dashboard</h1>", unsafe_allow_html=True)
 
-# === Trigger Validator Script ===
+# === Controls ===
 st.markdown("---")
 st.subheader("⚙️ Run or Email Validator")
-
 col_run, col_email = st.columns(2)
 
 with col_run:
@@ -93,7 +89,7 @@ if invoice_search:
     filtered_df = filtered_df[filtered_df["Invoice No"].astype(str).str.contains(invoice_search, case=False, na=False) |
                               filtered_df["GSTIN"].astype(str).str.contains(invoice_search, case=False, na=False)]
 
-# === Dashboard Metrics ===
+# === Metrics ===
 total = len(df)
 valid = (df["Validation Status"].str.upper() == "VALID").sum()
 flagged = (df["Validation Status"].str.upper() == "FLAGGED").sum()
@@ -109,22 +105,21 @@ col4.metric("🔁 Changed", changed)
 col5.metric("✏️ Modified", modified)
 col6.metric("❌ Deleted", deleted)
 
-# === Chart ===
+# === Bar Chart ===
 st.subheader("📊 Validation Status Breakdown")
 chart_data = filtered_df["Validation Status"].value_counts()
 fig, ax = plt.subplots(figsize=(6, 3))
-chart_data.plot(kind="bar", ax=ax, color='skyblue', edgecolor='black')
+chart_data.plot(kind="bar", ax=ax, color='#3498db', edgecolor='black')
 ax.set_title("Validation Status", fontsize=12)
 ax.set_xlabel("Status")
 ax.set_ylabel("Count")
-ax.grid(axis='y', linestyle='--', alpha=0.7)
+ax.grid(axis='y', linestyle='--', alpha=0.6)
 st.pyplot(fig)
 
-# === Download Filtered Report ===
+# === Download Button ===
 output = BytesIO()
 filtered_df.to_excel(output, index=False, engine='openpyxl')
 output.seek(0)
-
 file_name = f"filtered_invoice_report_{datetime.today().strftime('%Y-%m-%d')}.xlsx"
 
 st.download_button(
@@ -134,6 +129,6 @@ st.download_button(
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
-# === Table ===
+# === Final Table ===
 st.subheader("📑 Detailed Invoice Report")
 st.dataframe(filtered_df, use_container_width=True)
