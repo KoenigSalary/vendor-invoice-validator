@@ -13,21 +13,28 @@ from PIL import Image
 # === Page Config ===
 st.set_page_config(page_title="Vendor Invoice Validation Dashboard", layout="wide")
 
-# === Logo and Title ===
-col1, col2, col3 = st.columns([1, 4, 1])
+# === Logo and Title (centered vertically) ===
+logo_path = "assets/koenig_logo.png"
 
-with col2:
-    logo_path = "assets/koenig_logo.png"
-    if os.path.exists(logo_path):
-        logo = Image.open(logo_path)
-        st.image(logo, width=180)
-    else:
-        st.warning("⚠️ Logo not found at assets/koenig_logo.png")
-    
-    st.markdown(
-        "<h1 style='text-align: center; padding-top: 10px;'>📋 Vendor Invoice Validation Dashboard</h1>",
-        unsafe_allow_html=True
-    )
+# Center alignment using HTML
+centered_logo_title = """
+<div style='text-align: center;'>
+    {logo_html}
+    <h1 style='margin-top: 10px;'>📋 Vendor Invoice Validation Dashboard</h1>
+</div>
+"""
+
+if os.path.exists(logo_path):
+    # Convert logo to base64 and embed via HTML to center it
+    import base64
+    from io import BytesIO
+    buffer = BytesIO()
+    Image.open(logo_path).save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode()
+    logo_html = f"<img src='data:image/png;base64,{encoded}' width='180'/>"
+    st.markdown(centered_logo_title.format(logo_html=logo_html), unsafe_allow_html=True)
+else:
+    st.warning("⚠️ Logo not found at assets/koenig_logo.png")
 
 # === Trigger Validator Script ===
 st.markdown("---")
