@@ -15,18 +15,24 @@ load_dotenv()
 USERNAME = os.getenv("RMS_USER")
 PASSWORD = os.getenv("RMS_PASS")
 
-chrome_options = Options()
-chrome_options.add_argument("--headless")  # You can temporarily comment this for testing
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
 
-chrome_options.add_experimental_option("prefs", {
-    "download.default_directory": download_dir_abs,
-    "download.prompt_for_download": False,
-    "directory_upgrade": True,
-    "safebrowsing.enabled": True,
-    "profile.default_content_setting_values.automatic_downloads": 1  # ✅ This line is critical
-})
+def rms_download(start_date, end_date):
+    today_str = datetime.today().strftime("%Y-%m-%d")
+    download_dir = os.path.join("data", today_str)
+    os.makedirs(download_dir, exist_ok=True)
+    download_dir_abs = os.path.abspath(download_dir)
+
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Optional: comment out to see browser
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_experimental_option("prefs", {
+        "download.default_directory": download_dir_abs,
+        "download.prompt_for_download": False,
+        "directory_upgrade": True,
+        "safebrowsing.enabled": True,
+        "profile.default_content_setting_values.automatic_downloads": 1
+    })
 
     driver = webdriver.Chrome(options=chrome_options)
     wait = WebDriverWait(driver, 15)
@@ -39,24 +45,24 @@ chrome_options.add_experimental_option("prefs", {
         driver.find_element(By.ID, "btnSubmit").click()
         time.sleep(3)
 
-        # 2. Go to Invoice List page
+        # 2. Invoice List page
         driver.get("https://rms.koenig-solutions.com/Accounts/InvoiceList.aspx")
         wait.until(EC.presence_of_element_located((By.ID, "cphMainContent_mainContent_txtDateFrom")))
 
-        # 3. Fill date range
+        # 3. Date Range
         driver.find_element(By.ID, "cphMainContent_mainContent_txtDateFrom").clear()
         driver.find_element(By.ID, "cphMainContent_mainContent_txtDateFrom").send_keys(start_date.strftime("%d-%b-%Y"))
 
         driver.find_element(By.ID, "cphMainContent_mainContent_txtDateTo").clear()
         driver.find_element(By.ID, "cphMainContent_mainContent_txtDateTo").send_keys(end_date.strftime("%d-%b-%Y"))
 
-        # 4. Set filters
-        driver.find_element(By.ID, "cphMainContent_mainContent_rbDateChange_0").click()  # Invoice Date
-        driver.find_element(By.ID, "cphMainContent_mainContent_rbPaidUnPaid_2").click()  # Combined
+        # 4. Filters
+        driver.find_element(By.ID, "cphMainContent_mainContent_rbDateChange_0").click()
+        driver.find_element(By.ID, "cphMainContent_mainContent_rbPaidUnPaid_2").click()
         driver.find_element(By.ID, "cphMainContent_mainContent_btnSearch").click()
         time.sleep(3)
 
-        # 5. Extract "Inv Created By" for each invoice
+        # 5. Extract Inv Created By
         print("🔍 Extracting Inv Created By for each invoice...")
         inv_data = []
         rows = driver.find_elements(By.XPATH, "//table[@id='cphMainContent_mainContent_rptShowAss']/tbody/tr")
@@ -72,7 +78,7 @@ chrome_options.add_experimental_option("prefs", {
             except Exception as e:
                 print(f"⚠️ Row parse error: {e}")
 
-        # Save to CSV
+        # Save map
         map_file = os.path.join(download_dir_abs, "inv_created_by_map.csv")
         with open(map_file, "w", newline="") as f:
             writer = csv.writer(f)
@@ -80,7 +86,7 @@ chrome_options.add_experimental_option("prefs", {
             writer.writerows(inv_data)
         print(f"📁 Saved Inv Created By map: {map_file}")
 
-        # 6. Select all invoices
+        # 6. Select All
         try:
             checkbox = driver.find_element(By.ID, "cphMainContent_mainContent_rptShowAss_chkHeader")
             if not checkbox.is_selected():
@@ -89,14 +95,14 @@ chrome_options.add_experimental_option("prefs", {
         except Exception as e:
             print(f"⚠️ Header checkbox issue: {e}")
 
-        # 7. Click ZIP Download
+        # 7. ZIP Download
         try:
             driver.find_element(By.ID, "cphMainContent_mainContent_btnDownload").click()
             print("📥 ZIP download triggered.")
         except Exception as e:
             print(f"❌ ZIP download error: {e}")
 
-        # 8. Export Excel
+        # 8. Excel Export
         try:
             export_btn = driver.find_element(By.ID, "cphMainContent_mainContent_ExportToExcel")
             driver.execute_script("arguments[0].click();", export_btn)
@@ -104,7 +110,7 @@ chrome_options.add_experimental_option("prefs", {
         except Exception as e:
             print(f"⚠️ Excel export failed: {e}")
 
-        # 9. Wait for downloads
+        # 9. Wait for Downloads
         print("⏳ Waiting for ZIP and XLS...")
         xls_file = None
         zip_file = None
@@ -124,8 +130,7 @@ chrome_options.add_experimental_option("prefs", {
 
         # 10. Rename
         if zip_file:
-            os.rename(os.path.join(download_dir_abs, zip_file),
-                      os.path.join(download_dir_abs, "invoices.zip"))
+            os.rename(os.path.join(download_dir_abs, zip_file), os.path.join(download_dir_abs, "invoices.zip"))
             print("✅ Saved ZIP as invoices.zip")
         else:
             print("❌ ZIP not downloaded.")
@@ -138,9 +143,9 @@ chrome_options.add_experimental_option("prefs", {
 
     except Exception as e:
         print(f"❌ Error: {e}")
-
     finally:
         driver.quit()
+
 
 # Run manually
 if __name__ == "__main__":
