@@ -29,9 +29,6 @@ with col2:
         unsafe_allow_html=True
     )
 
-with col_title:
-    st.markdown("<h1 style='padding-top: 15px;'>📋 Vendor Invoice Validation Dashboard</h1>", unsafe_allow_html=True)
-
 # === Trigger Validator Script ===
 st.markdown("---")
 st.subheader("⚙️ Run or Email Validator")
