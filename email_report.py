@@ -1,10 +1,7 @@
-# email_report.py
-
 import os
 import smtplib
 import pandas as pd
 from email.message import EmailMessage
-from email.utils import formataddr
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -18,17 +15,17 @@ def send_email_report(report_path, zip_path):
         print("❌ No report found to email.")
         return
 
-    # Load report
+    # Load report to generate summary
     try:
         df = pd.read_excel(report_path)
     except Exception as e:
         print(f"❌ Failed to read report: {e}")
         return
 
-    # Summary counts
-    col_candidates = [col for col in df.columns if "validation" in col.lower()]
+    # Identify validation column
+    col_candidates = [col for col in df.columns if "validation" in col.lower() or "correct" in col.lower()]
     if not col_candidates:
-        print("❌ No 'Validation' column found.")
+        print("❌ No validation column found.")
         return
 
     validation_col = col_candidates[0]
@@ -38,12 +35,14 @@ def send_email_report(report_path, zip_path):
     modified = df[df[validation_col].astype(str).str.startswith("✏️", na=False)].shape[0]
     late = df[df[validation_col].astype(str).str.contains("Late Upload", na=False)].shape[0]
 
-    # Compose email
+    # Prepare email
     today_str = datetime.now().strftime("%Y-%m-%d")
     msg = EmailMessage()
     msg["Subject"] = f"Vendor Invoice Validation Report - {today_str}"
-    msg["From"] = formataddr(("Invoice Management Team", SMTP_USER))
+    msg["From"] = SMTP_USER
     msg["To"] = "tax@koenig-solutions.com"
+    # Optional test copy
+    # msg["Cc"] = "your.email@koenig-solutions.com"
 
     body = f"""Dear Team,
 
@@ -54,7 +53,10 @@ Please find attached the Vendor Invoice Validation Report for {today_str}.
 🚩 Flagged: {flagged}
 ✏️ Modified Since Last Check: {modified}
 📌 Late Uploads: {late}
-2. 📦 Zip file of invoice PDFs
+
+Attachments:
+1. 📊 Excel Report (validation_result.xlsx)
+2. 📦 Zipped Invoices (invoices.koenigzip)
 
 Regards,  
 Invoice Management Team  
@@ -62,26 +64,31 @@ Koenig Solutions
 """
     msg.set_content(body)
 
-    # Attach Excel
+    # Attach Excel report
     with open(report_path, "rb") as f:
-        msg.add_attachment(f.read(), maintype="application",
+        msg.add_attachment(f.read(),
+                           maintype="application",
                            subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                            filename="validation_result.xlsx")
 
-    # Attach ZIP
+    # Attach renamed ZIP file
     if os.path.exists(zip_path):
         with open(zip_path, "rb") as f:
-            msg.add_attachment(f.read(), maintype="application",
-                               subtype="zip", filename="invoices.zip")
+            msg.add_attachment(f.read(),
+                               maintype="application",
+                               subtype="octet-stream",
+                               filename="invoices.koenigzip")
+        print("📎 ZIP file attached as invoices.koenigzip")
     else:
-        print("⚠️ Zip file not found, sending only report.")
+        print("⚠️ ZIP file not found, only report will be sent.")
 
     # Send email
     try:
+        print("📨 Connecting to Office365 SMTP...")
         with smtplib.SMTP("smtp.office365.com", 587) as server:
             server.starttls()
             server.login(SMTP_USER, SMTP_PASS)
             server.send_message(msg)
-        print("📧 Email sent successfully to tax@koenig-solutions.com")
+        print(f"📧 Email sent successfully to {msg['To']}")
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
