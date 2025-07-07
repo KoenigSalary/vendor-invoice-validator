@@ -15,22 +15,18 @@ load_dotenv()
 USERNAME = os.getenv("RMS_USER")
 PASSWORD = os.getenv("RMS_PASS")
 
-def rms_download(start_date, end_date):
-    today_str = datetime.today().strftime("%Y-%m-%d")
-    download_dir = os.path.join("data", today_str)
-    os.makedirs(download_dir, exist_ok=True)
-    download_dir_abs = os.path.abspath(download_dir)
+chrome_options = Options()
+chrome_options.add_argument("--headless")  # You can temporarily comment this for testing
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
 
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_experimental_option("prefs", {
-        "download.default_directory": download_dir_abs,
-        "download.prompt_for_download": False,
-        "directory_upgrade": True,
-        "safebrowsing.enabled": True
-    })
+chrome_options.add_experimental_option("prefs", {
+    "download.default_directory": download_dir_abs,
+    "download.prompt_for_download": False,
+    "directory_upgrade": True,
+    "safebrowsing.enabled": True,
+    "profile.default_content_setting_values.automatic_downloads": 1  # ✅ This line is critical
+})
 
     driver = webdriver.Chrome(options=chrome_options)
     wait = WebDriverWait(driver, 15)
