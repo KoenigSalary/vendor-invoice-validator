@@ -11,7 +11,7 @@ from PIL import Image
 # Trigger Streamlit Cloud to rebuild
 
 # Set page configuration
-st.set_page_config(page_title="Vendor Invoice Validation Dashboard", layout="wide")
+st.set_page_config(page_title="Vendor Invoice Validation Dashboard", layout="narrow")
 
 # === Logo and Title ===
 col_logo, col_title = st.columns([1, 6])
