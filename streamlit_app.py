@@ -13,11 +13,16 @@ st.set_page_config(page_title="Vendor Invoice Validation Dashboard", layout="wid
 
 # ✅ Load logo
 logo_path = "assets/koenig_logo.png"
+
 if os.path.exists(logo_path):
     logo = Image.open(logo_path)
     st.image(logo, width=275)
 else:
     st.warning("⚠️ Logo not found at assets/koenig_logo.png")
+    if os.path.exists("assets"):
+        st.text(f"Available files in assets/: {os.listdir('assets')}")
+    else:
+        st.text("❌ 'assets' folder not found.")
 
 # Dashboard title
 st.title("📋 Vendor Invoice Validation Dashboard")
