@@ -40,7 +40,6 @@ def archive_old_reports():
             except Exception as e:
                 print(f"⚠️ Skipping file {filename}: {e}")
 
-# === Main run logic ===
 def run_invoice_validation():
     today = datetime.today()
     end_date = today - timedelta(days=1)
@@ -65,26 +64,37 @@ def run_invoice_validation():
             print(f"⚠️ {fname} not found in {download_dir}")
 
     # 🛑 Step 3: Exit if download failed
-    invoice_file = os.path.join("data", today_str, "invoice_download.xls")
+    invoice_file = os.path.join(download_dir, "invoice_download.xls")
     if not os.path.exists(invoice_file):
         print("❌ No invoice file downloaded. Aborting.")
         return
 
-    df = pd.read_html(invoice_file, flavor='lxml')[0]
+    # ✅ Step 4: Parse invoice file with fallback
+    try:
+        print("📄 Trying to read invoice file as HTML...")
+        df = pd.read_html(invoice_file, flavor='lxml')[0]
+        print("✅ Successfully read as HTML.")
+    except ValueError:
+        print("⚠️ HTML parsing failed. Trying to read as Excel...")
+        df = pd.read_excel(invoice_file, engine='xlrd')
+        print("✅ Successfully read as Excel.")
+    
+    # ➕ (Continue your logic with the DataFrame `df`)
+    # e.g., validate_invoices(df)
 
-    # ✅ Step 4: Continue validation
+    # ✅ Step 5: Continue validation
     df = pd.read_excel(invoice_path)
 
-    # Step 5: Validate current window
+    # Step 6: Validate current window
     current_result, current_invoices = validate_invoices(df, start_str, end_str)
 
-    # Step 6: Save validated snapshot
+    # Step 7: Save validated snapshot
     save_invoice_snapshot(current_invoices, run_date=end_str)
 
-    # Step 7: Record this run window
+    # Step 8: Record this run window
     record_run_window(start_str, end_str)
 
-    # Step 8: Revalidate all previous windows
+    # Step 9: Revalidate all previous windows
     print("🔁 Revalidating previous invoice windows...")
     all_windows = get_all_run_windows()
     cumulative_report = []
