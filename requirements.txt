@@ -8,5 +8,6 @@ matplotlib
 xlrd
 colorama
 PyMuPDF
+lxml
 
 
