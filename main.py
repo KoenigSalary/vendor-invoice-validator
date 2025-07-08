@@ -55,20 +55,22 @@ def run_invoice_validation():
     # ✅ Step 1: Download invoice data from RMS
     invoice_path = rms_download(start_date, end_date)
 
-    # 🔄 Step 2: Move downloaded files into today's folder
-    os.makedirs(f"data/{today_str}", exist_ok=True)
+    # ✅ Step 2: Verify downloaded files in today's folder
+    download_dir = os.path.join("data", today_str)
     for fname in ["invoice_download.xls", "invoices.zip"]:
-        if os.path.exists(fname):
-            dest = f"data/{today_str}/{fname}"
-            shutil.move(fname, dest)
-            print(f"📁 Moved {fname} → {dest}")
+        file_path = os.path.join(download_dir, fname)
+        if os.path.exists(file_path):
+            print(f"✅ Found {fname} in {download_dir}")
         else:
-            print(f"⚠️ {fname} not found in root.")
+            print(f"⚠️ {fname} not found in {download_dir}")
 
     # 🛑 Step 3: Exit if download failed
-    if not invoice_path or not os.path.exists(invoice_path):
+    invoice_file = os.path.join("data", today_str, "invoice_download.xls")
+    if not os.path.exists(invoice_file):
         print("❌ No invoice file downloaded. Aborting.")
         return
+
+    df = pd.read_excel(invoice_file)
 
     # ✅ Step 4: Continue validation
     df = pd.read_excel(invoice_path)
