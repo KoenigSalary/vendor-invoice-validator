@@ -52,10 +52,10 @@ def run_invoice_validation():
 
     print(f"🔍 Validating invoices from {start_str} to {end_str}...")
 
-    # Step 1: Download invoice data from RMS
+    # ✅ Step 1: Download invoice data from RMS
     invoice_path = rms_download(start_date, end_date)
 
-    # 🔄 Move downloaded files into today's folder
+    # 🔄 Step 2: Move downloaded files into today's folder
     os.makedirs(f"data/{today_str}", exist_ok=True)
     for fname in ["invoice_download.xls", "invoices.zip"]:
         if os.path.exists(fname):
@@ -65,22 +65,24 @@ def run_invoice_validation():
         else:
             print(f"⚠️ {fname} not found in root.")
 
+    # 🛑 Step 3: Exit if download failed
     if not invoice_path or not os.path.exists(invoice_path):
         print("❌ No invoice file downloaded. Aborting.")
         return
 
+    # ✅ Step 4: Continue validation
     df = pd.read_excel(invoice_path)
 
-    # Step 2: Validate current window
+    # Step 5: Validate current window
     current_result, current_invoices = validate_invoices(df, start_str, end_str)
 
-    # Step 3: Save validated snapshot
+    # Step 6: Save validated snapshot
     save_invoice_snapshot(current_invoices, run_date=end_str)
 
-    # Step 4: Record this run window
+    # Step 7: Record this run window
     record_run_window(start_str, end_str)
 
-    # Step 5: Revalidate all previous windows
+    # Step 8: Revalidate all previous windows
     print("🔁 Revalidating previous invoice windows...")
     all_windows = get_all_run_windows()
     cumulative_report = []
