@@ -9,5 +9,4 @@ xlrd
 colorama
 PyMuPDF
 lxml
-
-
+html5lib  # 🔥 ADD THIS LINE
