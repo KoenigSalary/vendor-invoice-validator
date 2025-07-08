@@ -70,7 +70,7 @@ def run_invoice_validation():
         print("❌ No invoice file downloaded. Aborting.")
         return
 
-    df = pd.read_excel(invoice_file)
+    df = pd.read_html(invoice_file)[0]
 
     # ✅ Step 4: Continue validation
     df = pd.read_excel(invoice_path)
