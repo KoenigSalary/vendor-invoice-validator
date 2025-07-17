@@ -1,0 +1,23 @@
+*.DS_Store
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore directories and files from IDEs or text editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.env
+.cache/
+.config/
+
+# Ignore Python bytecode
+*.pyc
+*.pyo
+
+# Ignore other unnecessary files
+.bash_history
+.bash_profile
+.ssh/
+
