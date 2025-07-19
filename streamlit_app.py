@@ -49,20 +49,25 @@ st.markdown(
 
 # === Load Latest Report ===
 DATA_FOLDER = "./data"
-report_files = sorted([f for f in os.listdir(DATA_FOLDER) if f.startswith("delta_report_") and f.endswith(".xlsx")])
+os.makedirs(DATA_FOLDER, exist_ok=True)
 
+# List all delta reports
+report_files = sorted([
+    f for f in os.listdir(DATA_FOLDER)
+    if f.startswith("delta_report_") and f.endswith(".xlsx")
+])
+
+# ⛔ Fallback if no reports found
 if not report_files:
-    st.error("❌ No delta report found. Please run the validator first.")
+    st.warning("⚠️ No delta reports found in the 'data' folder. Please run the validator first.")
     st.stop()
 
+# Get the latest report
 latest_file = report_files[-1]
 file_path = os.path.join(DATA_FOLDER, latest_file)
+
+# Read the report data
 df = pd.read_excel(file_path)
-
-if "Upload Date" in df.columns:
-    df["Upload Date"] = pd.to_datetime(df["Upload Date"], errors='coerce')
-
-st.success(f"✅ Showing Delta Report for {latest_file.replace('delta_report_', '').replace('.xlsx', '')}")
 
 # === Fill Required Columns if Missing ===
 required_cols = [
@@ -73,6 +78,8 @@ required_cols = [
 for col in required_cols:
     if col not in df.columns:
         df[col] = ""
+
+st.success(f"✅ Showing Delta Report for {latest_file.replace('delta_report_', '').replace('.xlsx', '')}")
 
 # === Filters ===
 with st.expander("🔎 Filters"):

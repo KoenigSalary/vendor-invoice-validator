@@ -38,13 +38,11 @@ os.makedirs(VALIDATED_DIR, exist_ok=True)
 
 def read_invoice_excel(path):
     try:
-        return pd.read_excel(path)
-    except:
-        try:
-            return pd.read_csv(path, sep=None, engine="python")
-        except Exception as e:
-            print(f"[ERROR] Failed to read invoice file: {e}")
-            return None
+        # Specify the engine explicitly (use openpyxl for .xlsx files)
+        return pd.read_excel(path, engine="openpyxl")
+    except Exception as e:
+        print(f"[ERROR] Failed to read invoice file: {e}")
+        return None
 
 def extract_text_from_file(file_path):
     try:
@@ -68,9 +66,11 @@ def validate_invoices():
     if not os.path.exists(XLS_PATH):
         print(f"[ERROR] Invoice sheet not found at {XLS_PATH}")
         return None
+
     df = read_invoice_excel(XLS_PATH)
     if df is None:
         return None
+
     print(f"[INFO] Invoice sheet loaded: {len(df)} rows.")
 
     # === Load mapping file (if exists) ===
@@ -90,11 +90,28 @@ def validate_invoices():
         print("[WARN] inv_created_by_map.csv not found. Assigning all as Unknown.")
         df["Inv Created By"] = "Unknown"
 
+def is_valid_zip(zip_path):
+    """Checks if the file is a valid zip file."""
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            # Attempt to list the files in the ZIP to check if it's a valid zip file
+            zip_ref.testzip()
+        return True
+    except zipfile.BadZipFile:
+        return False
+
+    # === Step 1: Define paths ===
+    ZIP_PATH = os.path.join(base_dir, "invoices.zip")
+
     # === Unzip invoices ===
     if os.path.exists(ZIP_PATH):
-        with zipfile.ZipFile(ZIP_PATH, 'r') as zip_ref:
-            zip_ref.extractall(UNZIP_DIR)
-        print(f"[INFO] Invoices unzipped to: {UNZIP_DIR}")
+        if is_valid_zip(ZIP_PATH):  # Check if the ZIP file is valid
+            with zipfile.ZipFile(ZIP_PATH, 'r') as zip_ref:
+                zip_ref.extractall(UNZIP_DIR)
+            print(f"[INFO] Invoices unzipped to: {UNZIP_DIR}")
+        else:
+            print(f"[ERROR] The file at {ZIP_PATH} is not a valid ZIP file.")
+            return None  # Exit function if the ZIP file is invalid
     else:
         print(f"[ERROR] Invoices ZIP file not found: {ZIP_PATH}")
         return None
