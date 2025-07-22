@@ -13,67 +13,38 @@ st.set_page_config(
 
 # Company Logo at the top center
 try:
-    # Load and display the company logo
     from PIL import Image
     import os
     
     logo_path = "assets/koenig_logo.png"
     
     if os.path.exists(logo_path):
-        # Custom CSS for logo container
-        st.markdown("""
-        <style>
-            .logo-container {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                padding: 20px 0 30px 0;
-                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                border-radius: 15px;
-                margin-bottom: 30px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        # Logo container
-        st.markdown('<div class="logo-container">', unsafe_allow_html=True)
-        
-        # Display logo centered with updated parameter
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            logo = Image.open(logo_path)
-            st.image(logo, width=300)  # ✅ Fixed width, no deprecation
+        # Create a container for the logo
+        with st.container():
+            # Use columns with equal spacing
+            col1, col2, col3 = st.columns([2, 3, 2])  # Middle column wider for logo
             
-        st.markdown('</div>', unsafe_allow_html=True)
+            with col2:
+                logo = Image.open(logo_path)
+                st.image(logo, use_container_width=True)
+                
+                # Centered company tagline
+                st.markdown("""
+                <div style="text-align: center; margin-top: 15px;">
+                    <h3 style="color: #2E86C1; margin: 0; font-weight: 600;">
+                        Professional Training & IT Solutions
+                    </h3>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        # Add spacing after logo
+        st.markdown("<br><br>", unsafe_allow_html=True)
         
     else:
-        # Fallback if logo file not found
-        st.markdown("""
-        <div style="text-align: center; padding: 20px 0 10px 0; margin-bottom: 20px;">
-            <h1 style="color: #2E86C1; font-size: 3em; margin: 0; font-weight: bold;">
-                🏢 Koenig Solutions
-            </h1>
-            <p style="color: #666; margin: 10px 0 0 0; font-size: 1.1em;">
-                Professional Training & IT Solutions Pvt. Ltd.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        st.warning("⚠️ Logo file not found at assets/koenig_logo.png - using text fallback")
-
+        st.error("⚠️ Logo file not found at assets/koenig_logo.png")
+        
 except Exception as e:
-    # Fallback in case of any errors
-    st.markdown("""
-    <div style="text-align: center; padding: 20px 0 10px 0; margin-bottom: 20px;">
-        <h1 style="color: #2E86C1; font-size: 3em; margin: 0; font-weight: bold;">
-            🏢 Koenig Solutions
-        </h1>
-        <p style="color: #666; margin: 10px 0 0 0; font-size: 1.1em;">
-            Professional Training & IT Solutions Pvt. Ltd.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    st.error(f"⚠️ Error loading logo: {str(e)} - using text fallback")
+    st.error(f"⚠️ Error loading logo: {str(e)}")
 
 # Custom CSS
 st.markdown("""
