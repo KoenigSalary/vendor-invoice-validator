@@ -140,26 +140,19 @@ st.markdown("""
 <style>
     .main-header {
         background: linear-gradient(90deg, #2E86C1 0%, #F39C12 100%);
+        color: white;
         padding: 1rem;
         border-radius: 10px;
+        text-align: center;
         margin-bottom: 2rem;
     }
+    
     .metric-card {
         background: white;
         padding: 1rem;
         border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         border-left: 4px solid #2E86C1;
-        margin: 0.5rem 0;
-    }
-    .status-success { color: #27AE60; font-weight: bold; }
-    .status-warning { color: #F39C12; font-weight: bold; }
-    .status-error { color: #E74C3C; font-weight: bold; }
-    .info-box {
-        background: #EBF3FD;
-        border: 1px solid #2E86C1;
-        border-radius: 8px;
-        padding: 1rem;
-        margin: 1rem 0;
     }
 </style>
 """, unsafe_allow_html=True)
