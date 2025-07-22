@@ -22,16 +22,17 @@ try:
         # Create a container for the logo
         with st.container():
             # Use columns with equal spacing
-            col1, col2, col3 = st.columns([2, 3, 2])  # Middle column wider for logo
+            col1, col2, col3 = st.columns([2, 3, 2])
             
             with col2:
                 logo = Image.open(logo_path)
-                st.image(logo, use_container_width=True)
+                # Control exact logo size
+                st.image(logo, width=200)  # ✅ Fixed width - adjust this number
                 
                 # Centered company tagline
                 st.markdown("""
                 <div style="text-align: center; margin-top: 15px;">
-                    <h3 style="color: #2E86C1; margin: 0; font-weight: 300;">
+                    <h3 style="color: #2E86C1; margin: 0; font-weight: 600;">
                         Professional Training & IT Solutions
                     </h3>
                 </div>
