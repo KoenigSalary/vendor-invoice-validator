@@ -10,8 +10,10 @@ st.set_page_config(
     page_icon="📊",
     layout="wide"
 )
-# Company Logo Section - Very Top
+
+# Company Logo at the top center
 try:
+    # Load and display the company logo
     from PIL import Image
     import os
     
@@ -37,20 +39,41 @@ try:
         # Logo container
         st.markdown('<div class="logo-container">', unsafe_allow_html=True)
         
-        # Display logo centered
+        # Display logo centered with updated parameter
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             logo = Image.open(logo_path)
-            st.image(logo, use_column_width=True)
+            st.image(logo, width=300)  # ✅ Fixed width, no deprecation
             
         st.markdown('</div>', unsafe_allow_html=True)
         
     else:
-        # Text fallback
-        st.error("⚠️ Logo file not found at assets/koenig_logo.png")
-        
+        # Fallback if logo file not found
+        st.markdown("""
+        <div style="text-align: center; padding: 20px 0 10px 0; margin-bottom: 20px;">
+            <h1 style="color: #2E86C1; font-size: 3em; margin: 0; font-weight: bold;">
+                🏢 Koenig Solutions
+            </h1>
+            <p style="color: #666; margin: 10px 0 0 0; font-size: 1.1em;">
+                Professional Training & IT Solutions Pvt. Ltd.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.warning("⚠️ Logo file not found at assets/koenig_logo.png - using text fallback")
+
 except Exception as e:
-    st.error(f"⚠️ Error loading logo: {str(e)}")
+    # Fallback in case of any errors
+    st.markdown("""
+    <div style="text-align: center; padding: 20px 0 10px 0; margin-bottom: 20px;">
+        <h1 style="color: #2E86C1; font-size: 3em; margin: 0; font-weight: bold;">
+            🏢 Koenig Solutions
+        </h1>
+        <p style="color: #666; margin: 10px 0 0 0; font-size: 1.1em;">
+            Professional Training & IT Solutions Pvt. Ltd.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    st.error(f"⚠️ Error loading logo: {str(e)} - using text fallback")
 
 # Custom CSS
 st.markdown("""
