@@ -1,4 +1,4 @@
-streamlit_app.py (Minimal version - no extra dependencies)
+#streamlit_app.py (Minimal  version - no extra dependencies)
 
 import streamlit as st
 import pandas as pd
@@ -9,6 +9,10 @@ from datetime import datetime, timedelta
 from PIL import Image
 import base64
 import json
+
+# Define colors
+PRIMARY_COLOR = "#2E86C1"  # Professional blue
+ACCENT_COLOR = "#F39C12"   # Professional orange
 
 #Page Config
 st.set_page_config(
