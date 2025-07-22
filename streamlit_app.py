@@ -22,7 +22,7 @@ try:
         # Create a container for the logo
         with st.container():
             # Use columns with equal spacing
-            col1, col2, col3 = st.columns([2, 2, 3])
+            col1, col2, col3 = st.columns([3, 2, 2])
             
             with col2:
                 logo = Image.open(logo_path)
