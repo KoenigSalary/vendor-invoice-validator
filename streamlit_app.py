@@ -10,6 +10,38 @@ st.set_page_config(
     page_icon="📊",
     layout="wide"
 )
+# Company Logo Section - Very Top
+st.markdown("""
+<style>
+    .company-logo-top {
+        text-align: center;
+        padding: 25px 0 15px 0;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 3px solid #2E86C1;
+        margin-bottom: 30px;
+    }
+    
+    .logo-main {
+        font-size: 3.5em;
+        font-weight: bold;
+        color: #2E86C1;
+        margin: 0;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .logo-subtitle {
+        font-size: 1.2em;
+        color: #666;
+        margin: 15px 0 0 0;
+        font-weight: 300;
+    }
+</style>
+
+<div class="company-logo-top">
+    <h1 class="logo-main">🏢 Koenig Solutions</h1>
+    <p class="logo-subtitle">Professional Training & IT Solutions Pvt. Ltd.</p>
+</div>
+""", unsafe_allow_html=True)
 
 # Custom CSS
 st.markdown("""
