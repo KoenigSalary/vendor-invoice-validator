@@ -24,10 +24,10 @@ try:
             # Use columns with equal spacing
             col1, col2, col3 = st.columns([2, 3, 2])
             
-            with col2:
+            with col3:
                 logo = Image.open(logo_path)
                 # Control exact logo size
-                st.image(logo, width=200)  # ✅ Fixed width - adjust this number
+                st.image(logo, width=300)  # ✅ Fixed width - adjust this number
                 
                 # Centered company tagline
                 st.markdown("""
