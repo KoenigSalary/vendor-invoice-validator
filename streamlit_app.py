@@ -1,4 +1,4 @@
-# streamlit_app.py (Minimal version - no extra dependencies)
+streamlit_app.py (Minimal version - no extra dependencies)
 
 import streamlit as st
 import pandas as pd
@@ -28,7 +28,7 @@ INFO_COLOR = "#F5F7FA"
 # Set matplotlib style
 plt.style.use('default')
 
-Custom CSS
+# Custom CSS
 st.markdown(f"""
 <style>
     .main-header {{
