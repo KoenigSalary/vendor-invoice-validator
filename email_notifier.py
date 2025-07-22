@@ -44,68 +44,131 @@ class EmailNotifier:
             print(f"❌ Failed to create zip file: {str(e)}")
             return None
     
-    def send_validation_report(self, report_date, recipients, issues_found=0):
-        """Send validation report with attachments"""
-        try:
-            # Create ZIP file
-            zip_file = self.create_validation_zip(report_date)
-            
-            # Prepare email
-            msg = MIMEMultipart()
-            msg['From'] = self.from_email
-            msg['To'] = ", ".join(recipients)
-            msg['Subject'] = f"Invoice Validation Report - {report_date}"
-            
-            # Email body
-            body = f"""
-Dear Team,
+def send_validation_report(self, report_date, recipients, issues_found=0):
+    """Send validation report with exact formatting"""
+    try:
+        # Calculate dates
+        from datetime import datetime, timedelta
+        validation_date = datetime.strptime(report_date, "%Y-%m-%d")
+        formatted_date = validation_date.strftime("%d %B %Y")
+        deadline_date = (validation_date + timedelta(days=4)).strftime("%d %B %Y")
+        
+        # Create ZIP file
+        zip_file = self.create_validation_zip(report_date)
+    
+        # Prepare email
+        msg = MIMEMultipart()
+        msg['From'] = self.from_email
+        msg['To'] = ", ".join(recipients)
+        msg['Subject'] = f"📄 Invoice Validation Report – {formatted_date}"
+    
+        # Email body - Exact format as specified
+        body = f"""Dear Team,
 
-Please find the automated invoice validation report for {report_date}.
+📌 Please find attached the automated invoice validation report for {formatted_date}.
 
-Summary:
-- Validation Date: {report_date}
-- Issues Found: {issues_found}
-- Report Period: Last 4 days
-- Past Data Check: Last 3 months
+🔍 Validation Summary
+🗓️ Validation Date: {formatted_date}
+📊 Report Period: Last 4 days
+🧾 Past Data Check: Last 3 months
+⚠️ Issues Detected: {issues_found} invoices flagged for review
 
-The attached ZIP file contains:
-- Detailed validation report (Excel format)
-- Original invoice files from RMS system
+📎 Attachments
+✅ Invoice Validation Report (Excel format)
+🗂️ Invoice Files from RMS (ZIP folder)
 
-Please review the findings and take necessary actions for any identified issues.
+⏳ Action Required
+Please review and rectify all flagged invoices by {deadline_date} (EOD) to ensure timely compliance and data accuracy.
+
+Failure to address the discrepancies by the above deadline may result in reporting delays or escalations.
+
+For any clarification or assistance, feel free to reach out to the Finance or Accounts Team.
 
 Best regards,
-Invoice Validation System
-            """
-            
-            msg.attach(MIMEText(body, 'plain'))
-            
-            # Attach ZIP file
-            if zip_file and os.path.exists(zip_file):
-                with open(zip_file, "rb") as attachment:
-                    part = MIMEBase('application', 'octet-stream')
-                    part.set_payload(attachment.read())
-                    
-                encoders.encode_base64(part)
-                part.add_header(
-                    'Content-Disposition',
-                    f'attachment; filename= invoice_validation_{report_date}.zip'
-                )
-                msg.attach(part)
-            
-            # Send email
-            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
-            server.starttls()
-            server.login(self.username, self.password)
-            server.send_message(msg)
-            server.quit()
-            
-            print(f"✅ Validation report sent to: {', '.join(recipients)}")
-            return True
-            
-        except Exception as e:
-            print(f"❌ Failed to send validation report: {str(e)}")
-            return False
+🧠 Invoice Validation System
+Koenig Solutions Pvt. Ltd.
+"""
+        msg.attach(MIMEText(body, 'plain'))
+    
+        # Attach ZIP file
+        if zip_file and os.path.exists(zip_file):
+            with open(zip_file, "rb") as attachment:
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload(attachment.read())
+        
+            encoders.encode_base64(part)
+            part.add_header(
+                'Content-Disposition',
+                f'attachment; filename= invoice_validation_{report_date}.zip'
+            )
+            msg.attach(part)
+
+        # Send email
+        server = smtplib.SMTP(self.smtp_server, self.smtp_port)   
+        server.starttls()
+        server.login(self.username, self.password)
+        server.send_message(msg)
+        server.quit()
+
+        print(f"✅ Validation report sent to: {', '.join(recipients)}")
+        return True
+
+    except Exception as e:
+        print(f"❌ Failed to send validation report: {str(e)}")
+        return False
+
+def send_late_upload_alert(self, late_invoices, recipients):
+    """Send late upload alert email"""
+    try:
+        from datetime import datetime
+        current_date = datetime.now().strftime("%d %B %Y")
+        
+        # Prepare email
+        msg = MIMEMultipart()
+        msg['From'] = self.from_email
+        msg['To'] = ", ".join(recipients)
+        msg['Subject'] = f"⚠️ Late Invoice Upload Alert – {current_date}"
+        
+        late_count = len(late_invoices)
+        invoice_list = "\n".join([f"• {invoice}" for invoice in late_invoices[:10]])
+        
+        # Email body
+        body = f"""Dear HR Team,
+
+🚨 URGENT: Late invoice uploads detected in the system.
+
+🔍 Alert Summary
+🗓️ Alert Date: {current_date}
+📊 Late Uploads: {late_count} invoices
+⏰ Status: Overdue for upload
+
+📋 Late Invoice List
+{invoice_list}
+{f"... and {late_count - 10} more invoices" if late_count > 10 else ""}
+
+⏳ Immediate Action Required
+Please follow up with respective teams to ensure immediate upload of pending invoices.
+
+Best regards,
+🧠 Invoice Validation System
+Koenig Solutions Pvt. Ltd.
+"""
+        
+        msg.attach(MIMEText(body, 'plain'))
+        
+        # Send email
+        server = smtplib.SMTP(self.smtp_server, self.smtp_port)   
+        server.starttls()
+        server.login(self.username, self.password)
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"✅ Late upload alert sent to: {', '.join(recipients)}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Failed to send late upload alert: {str(e)}")
+        return False
 
 # Test function
 if __name__ == "__main__":
@@ -115,3 +178,4 @@ if __name__ == "__main__":
     print(f"SMTP Server: {notifier.smtp_server}:{notifier.smtp_port}")
     print(f"Username: {notifier.username}")
     print(f"From: {notifier.from_email}")
+
