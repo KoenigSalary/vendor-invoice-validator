@@ -11,37 +11,46 @@ st.set_page_config(
     layout="wide"
 )
 # Company Logo Section - Very Top
-st.markdown("""
-<style>
-    .company-logo-top {
-        text-align: center;
-        padding: 25px 0 15px 0;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border-bottom: 3px solid #2E86C1;
-        margin-bottom: 30px;
-    }
+try:
+    from PIL import Image
+    import os
     
-    .logo-main {
-        font-size: 3.5em;
-        font-weight: bold;
-        color: #2E86C1;
-        margin: 0;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-    }
+    logo_path = "assets/koenig_logo.png"
     
-    .logo-subtitle {
-        font-size: 1.2em;
-        color: #666;
-        margin: 15px 0 0 0;
-        font-weight: 300;
-    }
-</style>
-
-<div class="company-logo-top">
-    <h1 class="logo-main">🏢 Koenig Solutions</h1>
-    <p class="logo-subtitle">Professional Training & IT Solutions Pvt. Ltd.</p>
-</div>
-""", unsafe_allow_html=True)
+    if os.path.exists(logo_path):
+        # Custom CSS for logo container
+        st.markdown("""
+        <style>
+            .logo-container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px 0 30px 0;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border-radius: 15px;
+                margin-bottom: 30px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Logo container
+        st.markdown('<div class="logo-container">', unsafe_allow_html=True)
+        
+        # Display logo centered
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            logo = Image.open(logo_path)
+            st.image(logo, use_column_width=True)
+            
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    else:
+        # Text fallback
+        st.error("⚠️ Logo file not found at assets/koenig_logo.png")
+        
+except Exception as e:
+    st.error(f"⚠️ Error loading logo: {str(e)}")
 
 # Custom CSS
 st.markdown("""
