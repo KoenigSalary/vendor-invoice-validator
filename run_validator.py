@@ -59,12 +59,10 @@ def setup_directories(base_dir):
 def read_invoice_excel(path):
     """Enhanced Excel reading with multiple engine fallback"""
     try:
-<<<<<<< Updated upstream
         # Specify the engine explicitly (use openpyxl for .xlsx files)
         return pd.read_excel(path, engine="openpyxl")
     except Exception as e:
         print(f"[ERROR] Failed to read invoice file: {e}")
-=======
         logger.info(f"Reading invoice file: {path}")
         
         if not os.path.exists(path):
@@ -573,7 +571,7 @@ def test_validator():
         logger.error(f"❌ Test error: {str(e)}")
         return False
 
-# === Run Automatically if script executed directly ===
+#Run Automatically if script executed directly
 if __name__ == "__main__":
     # Set up argument parsing for different modes
     import sys

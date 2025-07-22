@@ -10,6 +10,16 @@ from PIL import Image
 import base64
 import json
 
+# Demo mode for cloud deployment
+if not os.path.exists('data'):
+    st.info("🚀 Demo Mode: This is the Invoice Validation Dashboard. Run the validator locally to see real data.")
+    st.write("Dashboard Features:")
+    st.write("- Invoice validation reports")
+    st.write("- GST compliance checking") 
+    st.write("- Duplicate detection")
+    st.write("- Email notifications")
+    st.stop()
+
 # Define colors
 PRIMARY_COLOR = "#2E86C1"  # Professional blue
 ACCENT_COLOR = "#F39C12"   # Professional orange
