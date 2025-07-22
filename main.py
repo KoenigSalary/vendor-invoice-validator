@@ -390,29 +390,53 @@ def run_invoice_validation():
             copy_validation_result_for_dashboard()
         except Exception as e:
             print(f"⚠️ Failed to copy dashboard file: {str(e)}")
-
-        # Step 14: Send email notification
+        # Step 14: Send email notifications with proper routing
         try:
             from email_notifier import EmailNotifier
+            from late_upload_detector import LateUploadDetector
+    
+            notifier = EmailNotifier()
+    
+            # Send validation report to TEAM/FINANCE (not HR)
             team_recipients = os.getenv('TEAM_EMAIL_LIST', '').split(',')
-            if team_recipients and team_recipients[0].strip():
-                notifier = EmailNotifier()
+            team_recipients = [email.strip() for email in team_recipients if email.strip()]
+    
+            if team_recipients:
                 issues_count = len(full_report) if 'full_report' in locals() else 0
                 notifier.send_validation_report(today_str, team_recipients, issues_count)
-                print("📧 Email notification sent successfully!")
+                print(f"📧 Validation report sent to team: {', '.join(team_recipients)}")
             else:
                 print("⚠️ No email recipients configured in TEAM_EMAIL_LIST")
-        except Exception as e:
-            print(f"⚠️ Email sending failed: {str(e)}")
-
-        print("✅ Invoice validation workflow completed successfully!")
-        return True
-
-    except Exception as e:
-        print(f"❌ Unexpected error in main workflow: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return False
+    
+        # Check for late uploads and send to HR ONLY (for negative incidents)
+        try:
+            detector = LateUploadDetector()
+            late_invoices = detector.check_late_uploads()
+        
+            if late_invoices and len(late_invoices) > 0:
+                hr_recipients = os.getenv('HR_EMAIL_LIST', '').split(',')
+                hr_recipients = [email.strip() for email in hr_recipients if email.strip()]
+            
+            if hr_recipients:
+                notifier.send_late_upload_alert(late_invoices, hr_recipients)
+                print(f"🚨 Late upload alert sent to HR: {len(late_invoices)} negative incidents")
+            else:
+                print("⚠️ No HR email recipients configured for late upload alerts")
+        else:
+            print("✅ No late uploads detected - HR notification not required")
+            
+    except Exception as late_check_error:
+        print(f"⚠️ Late upload check failed: {str(late_check_error)}")
+    
+    print("📧 Email notification workflow completed successfully!")
+    
+except Exception as e:  
+    print(f"⚠️ Email sending failed: {str(e)}")
+    import traceback
+    traceback.print_exc()
+        
+print("✅ Invoice validation workflow completed successfully!")
+return True
 
 if __name__ == "__main__":
     success = run_invoice_validation()
