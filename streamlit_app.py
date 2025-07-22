@@ -22,9 +22,9 @@ try:
         # Create a container for the logo
         with st.container():
             # Use columns with equal spacing
-            col1, col2, col3 = st.columns([2, 3, 2])
+            col1, col2, col3 = st.columns([2, 2, 3])
             
-            with col3:
+            with col2:
                 logo = Image.open(logo_path)
                 # Control exact logo size
                 st.image(logo, width=300)  # ✅ Fixed width - adjust this number
