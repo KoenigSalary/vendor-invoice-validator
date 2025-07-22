@@ -1,12 +1,65 @@
-# Environment variables
+cat > .gitignore << 'EOF'
+# Environment variables (contains credentials)
 .env
 
-# Data directories
+# Data directories (contains business-sensitive invoice data)
 data/
 downloads/
 exports/
 reports/
+snapshots/
+test_reports/
+test_snapshots/
 
 # Log files
 logs/
 *.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.crdownload
+
+# Chrome driver and browser files
+chromedriver
+geckodriver
+selenium-server-*.jar
+
+# Excel/CSV temporary files
+~$*.xlsx
+~$*.xls
+~$*.csv
+
+# Configuration files that might contain sensitive data
+scheduler_config.json
+auto-run.yml
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
