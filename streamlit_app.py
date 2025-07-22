@@ -15,35 +15,26 @@ st.set_page_config(
 try:
     from PIL import Image
     import os
-    
+
     logo_path = "assets/koenig_logo.png"
-    
+
     if os.path.exists(logo_path):
         # Create a container for the logo
         with st.container():
             # Use columns with equal spacing
             col1, col2, col3 = st.columns([3, 2, 2])
-            
+
             with col2:
                 logo = Image.open(logo_path)
                 # Control exact logo size
                 st.image(logo, width=300)  # ✅ Fixed width - adjust this number
-                
-                # Centered company tagline
-                st.markdown("""
-                <div style="text-align: center; margin-top: 15px;">
-                    <h3 style="color: #2E86C1; margin: 0; font-weight: 600;">
-                        Professional Training & IT Solutions
-                    </h3>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        # Add spacing after logo
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        
+
+        # Add minimal spacing after logo
+        st.markdown("<br>", unsafe_allow_html=True)
+
     else:
         st.error("⚠️ Logo file not found at assets/koenig_logo.png")
-        
+
 except Exception as e:
     st.error(f"⚠️ Error loading logo: {str(e)}")
 
