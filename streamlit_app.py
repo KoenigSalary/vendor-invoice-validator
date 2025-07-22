@@ -1,5 +1,4 @@
 # Create a completely clean streamlit_app.py
-cat > streamlit_app.py << 'EOF'
 import streamlit as st
 import pandas as pd
 import os
