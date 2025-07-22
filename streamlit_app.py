@@ -31,7 +31,7 @@ try:
                 # Centered company tagline
                 st.markdown("""
                 <div style="text-align: center; margin-top: 15px;">
-                    <h3 style="color: #2E86C1; margin: 0; font-weight: 600;">
+                    <h3 style="color: #2E86C1; margin: 0; font-weight: 300;">
                         Professional Training & IT Solutions
                     </h3>
                 </div>
