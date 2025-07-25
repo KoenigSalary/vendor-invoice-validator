@@ -64,3 +64,4 @@ auto-run.yml
 *.sqlite
 *.sqlite3
 .env
+.env
