@@ -1,193 +1,212 @@
 # email_notifier.py
-
-import smtplib
 import os
-import zipfile
+import smtplib
+import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
+from email.mime.application import MIMEApplication
 from datetime import datetime
-from dotenv import load_dotenv
-
-load_dotenv()
+import traceback
 
 class EmailNotifier:
     def __init__(self):
-        self.smtp_server = os.getenv('SMTP_SERVER', 'smtp.office365.com')
-        self.smtp_port = int(os.getenv('SMTP_PORT', '587'))
-        self.username = os.getenv('EMAIL_USERNAME')
-        self.password = os.getenv('EMAIL_PASSWORD')
-        self.from_email = os.getenv('EMAIL_FROM', self.username)
-
-    def create_validation_zip(self, report_date):
-        """Create zip file with validation report and invoices"""
-        try:
-            data_dir = f"data/{report_date}"
-            zip_filename = f"data/invoice_validation_{report_date}.zip"
-
-            with zipfile.ZipFile(zip_filename, 'w') as zipf:
-                # Add validation report
-                report_file = f"data/delta_report_{report_date}.xlsx"
-                if os.path.exists(report_file):
-                    zipf.write(report_file, f"validation_report_{report_date}.xlsx")
-
-                # Add original invoice ZIP if it exists
-                original_zip = f"{data_dir}/invoices.zip"
-                if os.path.exists(original_zip):
-                    zipf.write(original_zip, "original_invoices.zip")
-
-            print(f"✅ Created validation zip: {zip_filename}")
-            return zip_filename
-
-        except Exception as e:
-            print(f"❌ Failed to create zip file: {str(e)}")
-            return None
-
-    def send_validation_report(self, report_date, recipients, issues_found=0):
-        """Send validation report with exact formatting"""
-        try:
-            # Calculate dates
-            from datetime import datetime, timedelta
-            validation_date = datetime.strptime(report_date, "%Y-%m-%d")
-            formatted_date = validation_date.strftime("%d %B %Y")
-            deadline_date = (validation_date + timedelta(days=4)).strftime("%d %B %Y")
-
-            # Create ZIP file
-            zip_file = self.create_validation_zip(report_date)
-
-            # Prepare email
-            msg = MIMEMultipart()
-            msg['From'] = self.from_email
-            msg['To'] = ", ".join(recipients)
-            msg['Subject'] = f"📄 Invoice Validation Report – {formatted_date}"
-
-            # Email body - Exact format as specified
-            body = f"""Dear Team,
-
-📌 Please find attached the automated invoice validation report for {formatted_date}.
-
-🔍 Validation Summary
-🗓️ Validation Date: {formatted_date}
-📊 Report Period: Last 4 days
-🧾 Past Data Check: Last 3 months
-⚠️ Issues Detected: {issues_found} invoices flagged for review
-
-📎 Attachments
-✅ Invoice Validation Report (Excel format)
-🗂️ Invoice Files from RMS (ZIP folder)
-
-⏳ Action Required
-Please review and rectify all flagged invoices by {deadline_date} (EOD) to ensure timely compliance and data accuracy.
-
-Failure to address the discrepancies by the above deadline may result in reporting delays or escalations.
-
-For any clarification or assistance, feel free to reach out to the Finance or Accounts Team.
-
-Best regards,
-🧠 Invoice Validation System
-Koenig Solutions Pvt. Ltd.
-"""
-            msg.attach(MIMEText(body, 'plain'))
-
-            # Attach ZIP file  
-            if zip_file and os.path.exists(zip_file):
-                with open(zip_file, "rb") as attachment:
-                    part = MIMEBase('application', 'octet-stream')
-                    part.set_payload(attachment.read())
-
-                encoders.encode_base64(part)
-                part.add_header(
-                    'Content-Disposition',
-                    f'attachment; filename= invoice_validation_{report_date}.zip'
-                )   
-                msg.attach(part)
-
-            # Send email
-            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
-            server.starttls()
-            server.login(self.username, self.password)
-            server.send_message(msg)
-            server.quit()
-
-            print(f"✅ Validation report sent to: {', '.join(recipients)}")
-            return True
-
-        except Exception as e:
-            print(f"❌ Failed to send validation report: {str(e)}")
-            return False
-
-    def send_late_upload_alert(self, late_invoices, recipients):
-        """Send late upload alert email"""
-        try:
-            from datetime import datetime
-            current_date = datetime.now().strftime("%d %B %Y")
+        # Get SMTP settings from environment variables
+        self.smtp_user = os.getenv('SMTP_USER')
+        self.smtp_pass = os.getenv('SMTP_PASS')
+        self.smtp_server = 'smtp.office365.com'  # Outlook SMTP server
+        self.smtp_port = 587
         
-            # Prepare email
-            msg = MIMEMultipart()
-            msg['From'] = self.from_email
-            msg['To'] = ", ".join(recipients)
-            msg['Subject'] = f"🚨 NEGATIVE INCIDENT: Late Invoice Upload Alert – {current_date}"
-                
-            late_count = len(late_invoices)
-            invoice_list = "\n".join([f"• {invoice}" for invoice in late_invoices[:10]])
-            
-            # Email body - emphasizing negative incident
-            body = f"""Dear HR Team,
-
-🚨 NEGATIVE INCIDENT REPORT: Late invoice uploads detected requiring disciplinary tracking.
-
-🔍 Incident Summary
-🗓️ Incident Date: {current_date}
-📊 Late Submissions: {late_count} invoices
-⏰ Status: Overdue submissions affecting compliance
-🎯 Impact: Negative performance indicator for invoice creators
-
-📋 Affected Invoice Creators
-{invoice_list}
-{f"... and {late_count - 10} more incidents" if late_count > 10 else ""}
-
-⏳ HR Action Required
-1. Record negative incidents against respective invoice creators
-2. Follow up with department heads for immediate corrective action
-3. Initiate performance improvement discussions if recurring
-4. Ensure compliance training for affected personnel
-
-📊 Performance Impact
-These late submissions may affect:
-- Monthly performance reviews
-- Compliance ratings
-- Department efficiency metrics
-
-Best regards,
-🧠 Invoice Validation System
-Koenig Solutions Pvt. Ltd.
-
-Note: This alert is sent exclusively to HR for incident tracking and performance management.
-"""
+        # Validate settings
+        if not self.smtp_user or not self.smtp_pass:
+            print("⚠️ SMTP credentials not found in environment variables")
         
-            msg.attach(MIMEText(body, 'plain'))
+    def send_email(self, subject, recipients, html_content, text_content, attachments=None):
+        """Enhanced email sending with better error handling and diagnostics"""
+        try:
+            # Create message container
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = self.smtp_user
+            msg['To'] = ', '.join(recipients) if isinstance(recipients, list) else recipients
             
-            # Send email
-            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
-            server.starttls()
-            server.login(self.username, self.password)
-            server.send_message(msg)
-            server.quit()
+            # Attach parts
+            part1 = MIMEText(text_content, 'plain')
+            part2 = MIMEText(html_content, 'html')
+            msg.attach(part1)
+            msg.attach(part2)
+            
+            # Attach files if provided
+            if attachments:
+                if not isinstance(attachments, list):
+                    attachments = [attachments]
                 
-            print(f"🚨 Negative incident alert sent to HR: {', '.join(recipients)}")
+                for file_path in attachments:
+                    try:
+                        if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                            with open(file_path, 'rb') as file:
+                                attachment = MIMEApplication(file.read())
+                                attachment.add_header(
+                                    'Content-Disposition', 
+                                    'attachment', 
+                                    filename=os.path.basename(file_path)
+                                )
+                                msg.attach(attachment)
+                                print(f"✅ Attached file: {os.path.basename(file_path)}")
+                        else:
+                            print(f"⚠️ Attachment not found or empty: {file_path}")
+                    except Exception as e:
+                        print(f"⚠️ Error attaching file {file_path}: {str(e)}")
+            
+            # Create secure connection and send email
+            print(f"🔄 Connecting to SMTP server: {self.smtp_server}:{self.smtp_port}")
+            
+            # Use this improved SMTP connection method
+            context = ssl.create_default_context()
+            
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                # Connection diagnostics
+                print("🔄 SMTP: Starting connection")
+                server.set_debuglevel(1)  # Enable debug messages
+                
+                # Identify ourselves to the server
+                server.ehlo()
+                print("🔄 SMTP: EHLO completed")
+                
+                # Secure the connection
+                server.starttls(context=context)
+                print("🔄 SMTP: STARTTLS completed")
+                
+                # Re-identify after TLS
+                server.ehlo()
+                print("🔄 SMTP: Second EHLO completed")
+                
+                # Login
+                print(f"🔄 SMTP: Attempting login as {self.smtp_user}")
+                server.login(self.smtp_user, self.smtp_pass)
+                print("✅ SMTP: Login successful")
+                
+                # Send email
+                server.sendmail(self.smtp_user, recipients, msg.as_string())
+                print(f"✅ Email sent to {len(recipients) if isinstance(recipients, list) else 1} recipient(s)")
+            
             return True
             
-        except Exception as e:
-            print(f"❌ Failed to send late upload alert: {str(e)}")
+        except smtplib.SMTPAuthenticationError:
+            print("❌ SMTP Authentication failed! Please check username and password.")
+            print("⚠️ Note: For Microsoft accounts, you may need to use an App Password.")
             return False
-
-# Test function
-if __name__ == "__main__":
-    # Test email configuration
-    notifier = EmailNotifier()
-    print("Email configuration loaded:")
-    print(f"SMTP Server: {notifier.smtp_server}:{notifier.smtp_port}")
-    print(f"Username: {notifier.username}")
-    print(f"From: {notifier.from_email}")
-
+            
+        except smtplib.SMTPException as e:
+            print(f"❌ SMTP Error: {str(e)}")
+            return False
+            
+        except Exception as e:
+            print(f"❌ Failed to send email: {str(e)}")
+            traceback.print_exc()
+            return False
+    
+    def send_validation_report(self, today_str, recipients, issues_count):
+        """Basic validation report email"""
+        subject = f"Invoice Validation Report - {today_str}"
+        
+        text_content = f"""
+        Invoice Validation Report - {today_str}
+        
+        A total of {issues_count} issues were found during validation.
+        Please see the attached report for details.
+        
+        This is an automated email from the Invoice Validation System.
+        """
+        
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
+                Invoice Validation Report - {today_str}
+            </h2>
+            
+            <p>A total of <strong>{issues_count}</strong> issues were found during validation.</p>
+            <p>Please see the attached report for details.</p>
+            
+            <p style="color: #7f8c8d; margin-top: 30px; font-size: 0.9em;">
+                This is an automated email from the Invoice Validation System.
+            </p>
+        </div>
+        """
+        
+        result = self.send_email(
+            subject, 
+            recipients, 
+            html_content, 
+            text_content
+        )
+        
+        return result
+    
+    def send_detailed_validation_report(self, today_str, recipients, email_summary, report_path=None,
+                                      current_batch_start=None, current_batch_end=None, 
+                                      cumulative_start=None, cumulative_end=None):
+        """Enhanced validation report with detailed statistics"""
+        try:
+            subject = f"Invoice Validation Report - {today_str}"
+            
+            # Safely get HTML and text content
+            html_content = email_summary.get('html_summary', "<p>No summary available</p>")
+            text_content = email_summary.get('text_summary', "No summary available")
+            
+            # Add extra information if provided
+            if current_batch_start and current_batch_end:
+                batch_info = f"""
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                    <h3 style="color: #2c3e50; margin-top: 0;">Additional Information</h3>
+                    <p><strong>Current Batch:</strong> {current_batch_start} to {current_batch_end}</p>
+                    <p><strong>Cumulative Range:</strong> {cumulative_start or 'N/A'} to {cumulative_end or 'N/A'}</p>
+                </div>
+                """
+                html_content += batch_info
+            
+            # Set up attachments
+            attachments = []
+            if report_path and os.path.exists(report_path):
+                attachments.append(report_path)
+                
+                html_content += f"""
+                <div style="background-color: #e8f4fd; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                    <h3 style="color: #2980b9; margin-top: 0;">📎 Attachments</h3>
+                    <p>The detailed validation report is attached to this email: <strong>{os.path.basename(report_path)}</strong></p>
+                </div>
+                """
+            
+            result = self.send_email(
+                subject, 
+                recipients, 
+                html_content, 
+                text_content, 
+                attachments=attachments
+            )
+            
+            return result
+            
+        except Exception as e:
+            print(f"❌ Enhanced email failed: {str(e)}")
+            traceback.print_exc()
+            
+            # Get statistics safely for fallback email
+            statistics = email_summary.get('statistics', {})
+            failed = statistics.get('failed_invoices', 0)
+            warnings = statistics.get('warning_invoices', 0)
+            
+            # Calculate total issues safely (avoiding the len() error)
+            total_issues = 0
+            if isinstance(failed, int):
+                total_issues += failed
+            elif failed is not None:
+                total_issues += len(failed)
+                
+            if isinstance(warnings, int):
+                total_issues += warnings
+            elif warnings is not None:
+                total_issues += len(warnings)
+            
+            # Send fallback email
+            self.send_validation_report(today_str, recipients, total_issues)
+            return False
