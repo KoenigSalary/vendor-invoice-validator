@@ -106,42 +106,62 @@ class EmailNotifier:
             return False
     
     def send_validation_report(self, today_str, recipients, issues_count):
-        """Basic validation report email"""
-        subject = f"Invoice Validation Report - {today_str}"
-        
+        """Enhanced validation report email with rectification deadline"""
+    
+        # Calculate rectification deadline (5 days from today)
+        today_date = datetime.strptime(today_str, '%Y-%m-%d')
+        deadline_date = today_date + timedelta(days=5)
+        deadline_str = deadline_date.strftime('%Y-%m-%d')
+    
+        subject = f"Invoice Validation Report - {today_str} (Rectification Deadline: {deadline_str})"
+    
         text_content = f"""
         Invoice Validation Report - {today_str}
-        
+    
         A total of {issues_count} issues were found during validation.
         Please see the attached report for details.
-        
+    
+        IMPORTANT: Please rectify all issues by {deadline_str} (5 business days) and confirm completion.
+    
         This is an automated email from the Invoice Validation System.
         """
-        
+    
         html_content = f"""
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
                 Invoice Validation Report - {today_str}
             </h2>
-            
+        
             <p>A total of <strong>{issues_count}</strong> issues were found during validation.</p>
             <p>Please see the attached report for details.</p>
-            
+        
+            <div style="background-color: #ffe0e0; padding: 15px; border-left: 4px solid #ff4444; margin: 20px 0;">
+                <p style="font-weight: bold; color: #cc0000; margin-top: 0;">IMPORTANT DEADLINE</p>
+                <p style="margin-bottom: 0;">Please rectify all issues by <strong>{deadline_str}</strong> (5 business days) and confirm completion.</p>
+            </div>
+        
             <p style="color: #7f8c8d; margin-top: 30px; font-size: 0.9em;">
                 This is an automated email from the Invoice Validation System.
             </p>
         </div>
         """
-        
+    
+        # Also store the deadline in the database for tracking
+        try:
+            from invoice_tracker import update_rectification_deadline
+            update_rectification_deadline(today_str, deadline_str)
+        except Exception as e:
+            print(f"❌ Failed to update deadline in database: {str(e)}")
+    
         result = self.send_email(
             subject, 
             recipients, 
             html_content, 
             text_content
         )
-        
-        return result
     
+        return result
+   
     def send_detailed_validation_report(self, today_str, recipients, email_summary, report_path=None,
                                       current_batch_start=None, current_batch_end=None, 
                                       cumulative_start=None, cumulative_end=None):

@@ -5,396 +5,39 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Any, Optional
 import logging
 from pathlib import Path
-# Add this at the top of your main.py after imports
-import sys
-import traceback
-
-
-
-# Define a fixed version with REQUIRED_FIELDS guaranteed
-class FixedInvoiceValidationSystem:
-    """Fixed version of InvoiceValidationSystem with guaranteed REQUIRED_FIELDS"""
-    
-    # Define class attribute
-    REQUIRED_FIELDS = ['PurchaseInvNo', 'PurchaseInvDate', 'PartyName', 'GSTNO', 'Total']
-    
-    def __init__(self):
-        # Ensure instance attribute
-        self.REQUIRED_FIELDS = ['PurchaseInvNo', 'PurchaseInvDate', 'PartyName', 'GSTNO', 'Total']
-        
-        # Other attributes that might be needed
-        self.ENHANCED_FIELDS = [
-            'invoice_id', 'invoice_currency', 'location', 'total_invoice_value',
-            'due_date', 'mop', 'vendor_name', 'invoice_date'
-        ]
-    
-    def setup_configuration(self):
-        """Stub for setup_configuration method"""
-        self.ENHANCED_FIELDS = [
-            'invoice_id', 'invoice_currency', 'location', 'total_invoice_value',
-            'due_date', 'mop', 'vendor_name', 'invoice_date'
-        ]
-    
-    def setup_validation_rules(self):
-        """Stub for setup_validation_rules method"""
-        pass
-        
-    def validate_invoice_data(self, invoice_data):
-        """Simple placeholder for validate_invoice_data method"""
-        return {
-            'is_valid': True,
-            'errors': [],
-            'warnings': []
-        }
-    
-    def generate_validation_report(self, validation_results):
-        """Simple placeholder for generate_validation_report method"""
-        return "Validation report"
-
-# Wait until all modules are imported, then replace InvoiceValidationSystem
-import atexit
-
-def fix_invoice_validation_system():
-    """Apply the fix after all imports are done"""
-    for name, module in list(sys.modules.items()):
-        if hasattr(module, 'InvoiceValidationSystem'):
-            print(f"🔧 Replacing InvoiceValidationSystem in {name}")
-            module.InvoiceValidationSystem = FixedInvoiceValidationSystem
-
-# Register the fix to run after all imports
-atexit.register(fix_invoice_validation_system)
-
-# Also force our fixed version to be used globally
-InvoiceValidationSystem = FixedInvoiceValidationSystem
-# ===== END OF FIX =====
-
-# Now continue with the original imports
-from rms_scraper import rms_download
-# ... rest of original imports ...
-
-
-# Fix for validator module
-try:
-    # Try to use our fixed version
-    print("🔧 Attempting to use fixed validator...")
-    from fixed_validator import FixedInvoiceValidationSystem
-    
-    # Replace InvoiceValidationSystem with our fixed version in all modules
-    for module_name, module in list(sys.modules.items()):
-        if hasattr(module, 'InvoiceValidationSystem'):
-            print(f"🔧 Replacing InvoiceValidationSystem in {module_name}")
-            module.InvoiceValidationSystem = FixedInvoiceValidationSystem
-    
-    # Also replace it directly in the validator module
-    try:
-        import validator
-        validator.InvoiceValidationSystem = FixedInvoiceValidationSystem
-        print("🔧 Replaced InvoiceValidationSystem in validator module")
-    except ImportError:
-        print("⚠️ Could not import validator module")
-    
-    # Define our own version if needed
-    InvoiceValidationSystem = FixedInvoiceValidationSystem
-    print("✅ Fixed validator setup complete")
-    
-except ImportError:
-    print("⚠️ Could not import fixed_validator")
-
-# Continue with the rest of your imports and code...
-
-def debug_invoice_system():
-    """Debug the InvoiceValidationSystem class issue"""
-    print("\n🔍 DEBUGGING INVOICE VALIDATION SYSTEM\n")
-    
-    # Find all files that might contain the class
-    import glob
-    import os
-    
-    python_files = glob.glob("*.py") + glob.glob("*/*.py")
-    
-    for file_path in python_files:
-        try:
-            with open(file_path, 'r') as f:
-                content = f.read()
-                if "class InvoiceValidationSystem" in content:
-                    print(f"📄 Found class definition in: {file_path}")
-                if "InvoiceValidationSystem(" in content:
-                    print(f"🔍 Found class instantiation in: {file_path}")
-        except:
-            pass
-    
-    # Try to directly import and instantiate the class
-    try:
-        from validator_utils import InvoiceValidationSystem
-        print("✅ Successfully imported InvoiceValidationSystem from validator_utils")
-        
-        # Try instantiating with debug
-        try:
-            print("🔄 Trying to instantiate InvoiceValidationSystem...")
-            results = validator.validate_invoice_data(invoice_data)
-            validator = InvoiceValidationSystem()
-        try:
-            validator = InvoiceValidationSystem()
-    
-            # Ensure REQUIRED_FIELDS exists
-            if not hasattr(validator, 'REQUIRED_FIELDS'):
-                validator.REQUIRED_FIELDS = ['PurchaseInvNo', 'PurchaseInvDate', 'PartyName', 'GSTNO', 'Total']
-                print("🔧 Added missing REQUIRED_FIELDS to validator")
-    
-            results = validator.validate_invoice_data(invoice_data)
-        except AttributeError as e:
-            if "REQUIRED_FIELDS" in str(e):
-                print("🚑 Handling REQUIRED_FIELDS error with emergency implementation")
-                results = {
-                    'is_valid': False,
-                    'errors': ["System error: Missing required attribute. Using emergency handler."],
-                    'warnings': []
-                }
-            else:
-                raise
-            print("✅ Successfully created InvoiceValidationSystem instance")
-            print(f"👉 Class attributes: {dir(InvoiceValidationSystem)}")
-            print(f"👉 Instance attributes: {dir(validator)}")
-            
-            # Check specifically for REQUIRED_FIELDS
-            if hasattr(InvoiceValidationSystem, 'REQUIRED_FIELDS'):
-                print(f"✅ Class has REQUIRED_FIELDS: {InvoiceValidationSystem.REQUIRED_FIELDS}")
-            else:
-                print("❌ Class does NOT have REQUIRED_FIELDS")
-                
-            if hasattr(validator, 'REQUIRED_FIELDS'):
-                print(f"✅ Instance has REQUIRED_FIELDS: {validator.REQUIRED_FIELDS}")
-            else:
-                print("❌ Instance does NOT have REQUIRED_FIELDS")
-                
-        except Exception as e:
-            print(f"❌ Error creating instance: {str(e)}")
-            traceback.print_exc()
-            
-    except ImportError:
-        print("❌ Could not import InvoiceValidationSystem from validator_utils")
-        
-        # Try other common files
-        for module_name in ['validation', 'invoice_validator', 'invoice_system']:
-            try:
-                module = __import__(module_name)
-                if hasattr(module, 'InvoiceValidationSystem'):
-                    print(f"✅ Found InvoiceValidationSystem in {module_name}")
-                    break
-            except ImportError:
-                continue
-    
-    print("\n🔍 END OF DEBUG\n")
-
-def debug_invoice_system():
-    """Debug the InvoiceValidationSystem class issue"""
-    print("\n🔍 DEBUGGING INVOICE VALIDATION SYSTEM\n")
-    
-    # Find all files that might contain the class
-    import glob
-    import os
-    
-    python_files = glob.glob("*.py") + glob.glob("*/*.py")
-    
-    for file_path in python_files:
-        try:
-            with open(file_path, 'r') as f:
-                content = f.read()
-                if "class InvoiceValidationSystem" in content:
-                    print(f"📄 Found class definition in: {file_path}")
-                if "InvoiceValidationSystem(" in content:
-                    print(f"🔍 Found class instantiation in: {file_path}")
-        except:
-            pass
-    
-    # Try to directly import and instantiate the class
-    try:
-        from validator_utils import InvoiceValidationSystem
-        print("✅ Successfully imported InvoiceValidationSystem from validator_utils")
-        
-        # Try instantiating with debug
-        try:
-            print("🔄 Trying to instantiate InvoiceValidationSystem...")
-            validator = InvoiceValidationSystem()
-            print("✅ Successfully created InvoiceValidationSystem instance")
-            print(f"👉 Class attributes: {dir(InvoiceValidationSystem)}")
-            print(f"👉 Instance attributes: {dir(validator)}")
-            
-            # Check specifically for REQUIRED_FIELDS
-            if hasattr(InvoiceValidationSystem, 'REQUIRED_FIELDS'):
-                print(f"✅ Class has REQUIRED_FIELDS: {InvoiceValidationSystem.REQUIRED_FIELDS}")
-            else:
-                print("❌ Class does NOT have REQUIRED_FIELDS")
-                
-            if hasattr(validator, 'REQUIRED_FIELDS'):
-                print(f"✅ Instance has REQUIRED_FIELDS: {validator.REQUIRED_FIELDS}")
-            else:
-                print("❌ Instance does NOT have REQUIRED_FIELDS")
-                
-        except Exception as e:
-            print(f"❌ Error creating instance: {str(e)}")
-            traceback.print_exc()
-            
-    except ImportError:
-        print("❌ Could not import InvoiceValidationSystem from validator_utils")
-        
-        # Try other common files
-        for module_name in ['validation', 'invoice_validator', 'invoice_system']:
-            try:
-                module = __import__(module_name)
-                if hasattr(module, 'InvoiceValidationSystem'):
-                    print(f"✅ Found InvoiceValidationSystem in {module_name}")
-                    break
-            except ImportError:
-                continue
-    
-    print("\n🔍 END OF DEBUG\n")
-
-def monkey_patch_invoice_system():
-    """Apply monkey patch to fix REQUIRED_FIELDS attribute"""
-    print("\n🔧 Applying monkey patch for InvoiceValidationSystem\n")
-    
-    # Try to find and patch the class
-    try:
-        # Try common modules where the class might be defined
-        modules_to_try = [
-            'validator_utils', 'validation', 'invoice_validator', 
-            'invoice_system', 'invoice_validation'
-        ]
-        
-        patched = False
-        
-        for module_name in modules_to_try:
-            try:
-                # Import the module dynamically
-                module = __import__(module_name)
-                
-                # Check if InvoiceValidationSystem is in the module
-                if hasattr(module, 'InvoiceValidationSystem'):
-                    # Add REQUIRED_FIELDS to the class
-                    if not hasattr(module.InvoiceValidationSystem, 'REQUIRED_FIELDS'):
-                        module.InvoiceValidationSystem.REQUIRED_FIELDS = [
-                            'PurchaseInvNo', 'PurchaseInvDate', 'PartyName', 'GSTNO', 'Total'
-                        ]
-                        print(f"✅ Patched InvoiceValidationSystem.REQUIRED_FIELDS in {module_name}")
-                    
-                    # Also patch the __init__ method to ensure instances have the attribute
-                    original_init = module.InvoiceValidationSystem.__init__
-                    
-                    def patched_init(self, *args, **kwargs):
-                        # Call original init
-                        original_init(self, *args, **kwargs)
-                        
-                        # Ensure REQUIRED_FIELDS exists on instance
-                        if not hasattr(self, 'REQUIRED_FIELDS'):
-                            self.REQUIRED_FIELDS = [
-                                'PurchaseInvNo', 'PurchaseInvDate', 'PartyName', 'GSTNO', 'Total'
-                            ]
-                    
-                    module.InvoiceValidationSystem.__init__ = patched_init
-                    print(f"✅ Patched InvoiceValidationSystem.__init__ in {module_name}")
-                    
-                    patched = True
-                    break
-            except ImportError:
-                print(f"⚠️ Could not import module {module_name}")
-                continue
-        
-        if not patched:
-            print("⚠️ Could not find InvoiceValidationSystem class to patch")
-            
-    except Exception as e:
-        print(f"❌ Error applying monkey patch: {str(e)}")
-        import traceback
-        traceback.print_exc()
-    
-    print("\n🔧 Monkey patching complete\n")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class InvoiceValidationSystem:
+    # Define the class attribute
+    REQUIRED_FIELDS = ['PurchaseInvNo', 'PurchaseInvDate', 'PartyName', 'GSTNO', 'Total']
+    
     """
     Comprehensive Invoice Validation System with multi-currency support,
     location-based tax logic, and enhanced field validation
     """
     
     def __init__(self):
+        # Store the original class attribute value before potentially overwriting it
+        self._original_required_fields = InvoiceValidationSystem.REQUIRED_FIELDS.copy()
+        
+        # Call setup methods
         self.setup_configuration()
         self.setup_validation_rules()
         
+        # Ensure REQUIRED_FIELDS is set on the instance
+        if not hasattr(self, 'REQUIRED_FIELDS'):
+            self.REQUIRED_FIELDS = self._original_required_fields
+    
     def setup_configuration(self):
-        """Initialize system configuration and constants"""
-
-    def map_columns_case_insensitive(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Map columns case insensitively"""
-        # Create a lowercase lookup dictionary
-        lowercase_mapping = {k.lower(): v for k, v in self.RMS_FIELD_MAPPING.items()}
-    
-        # Check each column and map if it exists in lowercase form
-        for col in df.columns:
-            col_lower = col.lower()
-            if col_lower in lowercase_mapping and lowercase_mapping[col_lower] not in df.columns:
-                app_field = lowercase_mapping[col_lower]
-                df[app_field] = df[col]
-                logger.info(f"Case-insensitive mapped '{col}' to '{app_field}'")
-    
-        return df
-
-        # Enhanced RMS field mapping with variations
-        self.RMS_FIELD_MAPPING = {
-            # Invoice creator variations
-            'Inv Created By': 'invoice_creator_name',
-            'inv created by': 'invoice_creator_name',
-            'INV CREATED BY': 'invoice_creator_name',
-            'Invoice Created By': 'invoice_creator_name',
+        # ... existing code ...
         
-            # Due date variations
-            'DueDate': 'due_date',
-            'Due Date': 'due_date',
-            'due date': 'due_date',
-            'Due_Date': 'due_date',
-        
-            # SCID variations
-            'SCID#': 'scid',
-            'SCID': 'scid',
-            'scid': 'scid',
-            'SupplyChainID': 'scid',
-            'Supply Chain ID': 'scid',
-        
-            # MOP variations
-            'MOP': 'mop',
-            'Mode of Payment': 'mop',
-            'Payment Mode': 'mop',
-            'PaymentMode': 'mop',
-        
-            # Account Head variations
-            'A/C Head': 'account_head',
-            'AC Head': 'account_head',
-            'Account Head': 'account_head',
-            'AccountHead': 'account_head',
-        
-            # Location variations
-            'Location': 'location',
-            'LOCATION': 'location',
-            'loc': 'location',
-            'Country': 'location'
-        }
-    
-        # Account Heads Configuration - Add actual implementation instead of placeholder
-        self.ACCOUNT_HEADS = [
-            'Operations',
-            'IT',
-            'HR',
-            'Marketing',
-            'Finance',
-            'Travel',
-            'Legal',
-            'Training',
-            'Sales',
-            'Admin',
-            'Others'
+        # Use a different name for your enhanced fields
+        self.ENHANCED_FIELDS = [
+            'invoice_id', 'invoice_currency', 'location', 'total_invoice_value',
+            'due_date', 'mop', 'vendor_name', 'invoice_date'
         ]
         
         # Global Subsidiaries Configuration
@@ -586,8 +229,7 @@ class InvoiceValidationSystem:
         # Remove duplicates while preserving order
         self.MOP_OPTIONS = list(dict.fromkeys(self.MOP_OPTIONS))
         
-        # Required Invoice Fields
-        self.REQUIRED_FIELDS = [
+        self.ENHANCED_REQUIRED_FIELDS = [
             'invoice_id', 'invoice_currency', 'location', 'total_invoice_value',
             'due_date', 'mop', 'vendor_name', 'invoice_date'
         ]
@@ -884,7 +526,7 @@ class InvoiceValidationSystem:
                 results['warnings'].append("SCID appears to be too short")
             else:
                 results['processed_data']['scid_valid'] = True
-                
+
     def _validate_tds(self, invoice_data: Dict, results: Dict):
         """Placeholder for TDS validation - Coming Soon"""
         
@@ -902,21 +544,16 @@ class InvoiceValidationSystem:
             results['warnings'].append("🔄 TDS validation coming soon")
 
     def _validate_account_head(self, invoice_data: Dict, results: Dict):
-        """Validate Account Head categorization"""
-    
-        account_head = invoice_data.get('account_head')
-    
-        if not account_head:
-            results['warnings'].append("Account Head not provided - required for expense categorization")
-            return
-    
-        # Check if account head is valid
-        if account_head not in self.ACCOUNT_HEADS:
-            valid_heads = self.ACCOUNT_HEADS
-            results['warnings'].append(f"Invalid Account Head: {account_head}. Valid options: {valid_heads}")
-        else:
-            results['processed_data']['account_head_valid'] = True
-            results['processed_data']['account_head'] = account_head
+        """Placeholder for Account Head validation - Coming Soon"""
+        
+        results['coming_soon'] = results.get('coming_soon', {})
+        results['coming_soon']['account_head'] = {
+            'status': 'COMING_SOON',
+            'message': 'Account Heads validation will be available in the next release'
+        }
+        
+        # Add placeholder note
+        results['warnings'].append("🔄 Account Heads validation coming soon")
 
     def _calculate_rectification_deadline(self, invoice_data: Dict, results: Dict):
         """Calculate 6-day rectification deadline for failed invoices"""
@@ -1054,20 +691,11 @@ class InvoiceValidationSystem:
         return "\n".join(report)
 
     def process_batch_invoices(self, excel_file_path: str) -> Dict[str, Any]:
-        """Process multiple invoices from Excel file with RMS field mapping support"""
-    
-    def process_batch_invoices(self, excel_file_path: str) -> Dict[str, Any]:
-        """Process multiple invoices from Excel file with RMS field mapping support"""
-    
+        """Process multiple invoices from Excel file"""
+        
         try:
             df = pd.read_excel(excel_file_path)
-            logger.info(f"Excel loaded with columns: {df.columns.tolist()}")
-        
-            # Apply case-insensitive mapping
-            if hasattr(self, 'map_columns_case_insensitive'):
-                df = self.map_columns_case_insensitive(df)
-                logger.info(f"After mapping, columns: {df.columns.tolist()}")
-        
+            
             results = {
                 'total_invoices': len(df),
                 'processed_invoices': 0,
@@ -1075,45 +703,26 @@ class InvoiceValidationSystem:
                 'failed_invoices': 0,
                 'detailed_results': []
             }
-        
+            
             for index, row in df.iterrows():
                 invoice_data = row.to_dict()
+                validation_result = self.validate_invoice_data(invoice_data)
+                
+                results['detailed_results'].append({
+                    'row_number': index + 1,
+                    'invoice_id': invoice_data.get('invoice_id', 'N/A'),
+                    'validation_result': validation_result
+                })
+                
+                results['processed_invoices'] += 1
+                
+                if validation_result['is_valid']:
+                    results['passed_invoices'] += 1
+                else:
+                    results['failed_invoices'] += 1
             
-                # Make sure invoice_creator_name is properly included
-                if 'Inv Created By' in invoice_data and 'invoice_creator_name' not in invoice_data:
-                    invoice_data['invoice_creator_name'] = invoice_data['Inv Created By']
-            
-                try:
-                    validation_result = self.validate_invoice_data(invoice_data)
-                
-                    # Store original invoice data in the validation result
-                    validation_result['invoice_data'] = invoice_data
-                
-                    # Preserve the original creator name in results
-                    creator_name = invoice_data.get('invoice_creator_name', 
-                                    invoice_data.get('Inv Created By', 'Unknown'))
-                
-                    results['detailed_results'].append({
-                        'row_number': index + 1,
-                        'invoice_id': invoice_data.get('invoice_id', 'N/A'),
-                        'invoice_creator_name': creator_name,
-                        'validation_result': validation_result
-                    })
-                
-                    results['processed_invoices'] += 1
-                
-                    if validation_result['is_valid']:
-                        results['passed_invoices'] += 1
-                    else:
-                        results['failed_invoices'] += 1
-            
-                except Exception as row_e:
-                    # Handle exception for this row
-                    logger.error(f"Error processing row {index}: {str(row_e)}")
-                    # Continue with next row
-        
             return results
-        
+            
         except Exception as e:
             logger.error(f"Batch processing error: {str(e)}")
             return {
@@ -1123,7 +732,7 @@ class InvoiceValidationSystem:
             }
 
     def export_validation_results(self, results: Dict, output_path: str):
-        """Export validation results to Excel with all fields"""
+        """Export validation results to Excel with invoice creator name"""
     
         try:
             # Create detailed results DataFrame
@@ -1131,28 +740,17 @@ class InvoiceValidationSystem:
         
             for result in results.get('detailed_results', []):
                 validation = result['validation_result']
-                invoice_data = validation.get('invoice_data', {})
             
-                # Core fields
                 row_data = {
                     'Row Number': result['row_number'],
                     'Invoice ID': result['invoice_id'],
-                    'Invoice Creator Name': result.get('invoice_creator_name', 'Unknown'),
+                    'Invoice Creator Name': result.get('invoice_creator_name', 'Unknown'),  # Include creator name
                     'Status': 'PASSED' if validation['is_valid'] else 'FAILED',
                     'Error Count': len(validation['errors']),
                     'Warning Count': len(validation['warnings']),
                     'Errors': '; '.join(validation['errors']),
                     'Warnings': '; '.join(validation['warnings'])
                 }
-            
-                # Add the newly implemented fields
-                row_data.update({
-                    'Due Date': invoice_data.get('due_date', 'N/A'),
-                    'SCID': invoice_data.get('scid', 'N/A'),
-                    'MOP': invoice_data.get('mop', 'N/A'),
-                    'Account Head': invoice_data.get('account_head', 'N/A'),
-                    'Location': invoice_data.get('location', 'N/A')
-                })
             
                 # Add compliance data
                 if 'compliance_status' in validation:
@@ -1166,6 +764,11 @@ class InvoiceValidationSystem:
                 # Add rectification deadline if applicable
                 if 'rectification' in validation:
                     row_data['Rectification Deadline'] = validation['rectification'].get('deadline_date', 'N/A')
+            
+                # Include other fields from RMS if available
+                for rms_field, app_field in self.RMS_FIELD_MAPPING.items():
+                    if app_field in result and app_field not in row_data:
+                        row_data[rms_field] = result[app_field]
             
                 detailed_data.append(row_data)
         
@@ -1217,9 +820,3 @@ if __name__ == "__main__":
         'company_state': 'DELHI',
         'scid': 'SC12345678'
     }
-    
-    # Test validation
-    validation_result = validator.validate_invoice_data(sample_invoice)
-    
-    # Generate and print report
-    print(validator.generate_validation_report(validation_result))

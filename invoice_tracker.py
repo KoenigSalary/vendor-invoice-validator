@@ -72,13 +72,13 @@ def update_database_schema():
     except Exception as e:
         print(f"❌ Failed to update database schema: {str(e)}")
 
-# === Ensure required tables exist ===  
+# In invoice_tracker.py - Update create_tables() function
 def create_tables():
     os.makedirs("data", exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
         
-    # Create invoice_snapshots table (enhanced)
+    # Create invoice_snapshots table with enhanced fields
     cursor.execute("""    
         CREATE TABLE IF NOT EXISTS invoice_snapshots (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,6 +90,18 @@ def create_tables():
             hsn_code TEXT,
             taxable_value REAL,
             total_amount REAL,
+            invoice_currency TEXT,          -- New field
+            location TEXT,                  -- New field
+            tds REAL,                       -- New field
+            invoice_id TEXT,                -- New field
+            mop TEXT,                       -- New field
+            accounts_head TEXT,             -- New field
+            vat REAL,                       -- New field
+            due_date TEXT,                  -- New field
+            total_invoice_value REAL,       -- New field
+            scid TEXT,                      -- New field
+            rectification_deadline TEXT,    -- New field
+            ap_confirmation TEXT,           -- New field
             hash TEXT,
             run_date TEXT,
             run_type TEXT DEFAULT 'standard',
@@ -102,7 +114,7 @@ def create_tables():
             created_at TEXT
         )
     """)
-        
+
     # Create run_log table (enhanced)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS run_log (
@@ -638,4 +650,3 @@ if __name__ == "__main__":
     # Test the database when run directly
     create_tables()
     test_database_connection()
-
