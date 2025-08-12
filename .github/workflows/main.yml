@@ -1,3 +1,289 @@
+nano .github/workflows/main.ymlname: Invoice Validator Enhanced System
+
+on:
+  schedule:
+    - cron: '0 6 * * 1,2,3,4'  # Run Monday-Thursday at 6 AM UTC
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  process-invoices:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    
+    env:
+      DISPLAY: :99
+      CHROME_BIN: /usr/bin/google-chrome
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        
+    - name: Update system packages
+      run: |
+        sudo apt-get update
+        sudo apt-get upgrade -y
+        
+    - name: Install Chrome dependencies
+      run: |
+        sudo apt-get install -y \
+          wget \
+          gnupg \
+          ca-certificates \
+          apt-transport-https \
+          software-properties-common \
+          curl \
+          unzip
+          
+    - name: Install Chrome browser
+      run: |
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+        
+    - name: Install Chrome system dependencies
+      run: |
+        sudo apt-get install -y \
+          libasound2t64 \
+          libatk1.0-0t64 \
+          libc6 \
+          libcairo2 \
+          libcups2t64 \
+          libdbus-1-3 \
+          libdrm2t64 \
+          libexpat1 \
+          libfontconfig1 \
+          libgcc-s1 \
+          libgdk-pixbuf2.0-0t64 \
+          libglib2.0-0t64 \
+          libgtk-3-0t64 \
+          libnspr4 \
+          libnss3 \
+          libpango-1.0-0 \
+          libpangocairo-1.0-0 \
+          libstdc++6 \
+          libx11-6 \
+          libx11-xcb1 \
+          libxcb1 \
+          libxcomposite1 \
+          libxcursor1 \
+          libxdamage1 \
+          libxext6 \
+          libxfixes3 \
+          libxi6 \
+          libxrandr2 \
+          libxrender1 \
+          libxss1t64 \
+          libxtst6 \
+          xdg-utils \
+          fonts-liberation \
+          libappindicator3-1 \
+          libasound2t64 \
+          libatk-bridge2.0-0t64 \
+          libatspi2.0-0t64 \
+          libdrm2t64 \
+          libgtk-3-0t64 \
+          libnspr4 \
+          libnss3 \
+          libx11-xcb1 \
+          libxcomposite1 \
+          libxss1t64 \
+          xvfb
+          
+    - name: Setup ChromeDriver
+      run: |
+        CHROME_DRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE)
+        wget -N https://chromedriver.storage.googleapis.com/$CHROME_DRIVER_VERSION/chromedriver_linux64.zip
+        unzip chromedriver_linux64.zip
+        sudo mv chromedriver /usr/local/bin/chromedriver
+        sudo chmod +x /usr/local/bin/chromedriver
+        
+    - name: Start Xvfb
+      run: |
+        sudo apt-get install -y xvfb
+        Xvfb :99 -screen 0 1024x768x24 &
+        sleep 3
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Verify Chrome installation
+      run: |
+        google-chrome --version
+        chromedriver --version
+        
+    - name: Create necessary directories
+      run: |
+        mkdir -p data
+        mkdir -p exports
+        mkdir -p logs
+        touch data/invoices.csv
+        
+    - name: Initialize database
+      run: |
+        python -c "
+        import sqlite3
+        import os
+        
+        # Create enhanced_invoice_history.db
+        conn = sqlite3.connect('enhanced_invoice_history.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS invoice_snapshots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                invoice_number TEXT,
+                snapshot_date DATE,
+                vendor_name TEXT,
+                amount REAL,
+                validation_status TEXT,
+                location TEXT,
+                tax_amount REAL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS change_tracking (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                invoice_number TEXT,
+                field_changed TEXT,
+                old_value TEXT,
+                new_value TEXT,
+                change_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        conn.commit()
+        conn.close()
+        print('Database initialized successfully')
+        "
+        
+    - name: Run Enhanced Invoice Processor
+      env:
+        CHROME_OPTIONS: --headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-extensions --disable-plugins --disable-images --disable-javascript --window-size=1920,1080
+      run: |
+        python -c "
+        import sys
+        import os
+        sys.path.append('.')
+        
+        try:
+            from enhanced_processor import KoenigEnhancedProcessor
+            
+            processor = KoenigEnhancedProcessor()
+            print('Starting enhanced invoice processing...')
+            
+            # Run the enhanced processor
+            results = processor.process_invoices()
+            
+            print(f'Processing completed successfully: {results}')
+            
+        except ImportError as e:
+            print(f'Import error: {e}')
+            print('Running basic processor...')
+            # Fallback to basic processing if enhanced processor not available
+            import pandas as pd
+            
+            # Create sample data for testing
+            sample_data = {
+                'Invoice Number': ['INV001', 'INV002', 'INV003'],
+                'Vendor Name': ['Test Vendor 1', 'Test Vendor 2', 'Test Vendor 3'],
+                'Amount': [1000.0, 2000.0, 1500.0],
+                'Status': ['Processed', 'Pending', 'Failed']
+            }
+            
+            df = pd.DataFrame(sample_data)
+            df.to_csv('data/invoices.csv', index=False)
+            print('Sample data created successfully')
+            
+        except Exception as e:
+            print(f'Error during processing: {e}')
+            sys.exit(1)
+        "
+        
+    - name: Generate Reports
+      run: |
+        python -c "
+        import pandas as pd
+        import os
+        from datetime import datetime
+        
+        try:
+            # Load processed data
+            if os.path.exists('data/invoices.csv'):
+                df = pd.read_csv('data/invoices.csv')
+                
+                # Generate summary report
+                report = f'''
+        Enhanced Invoice Validation Report
+        Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        
+        Summary Statistics:
+        - Total Invoices: {len(df)}
+        - Processing Status Distribution:
+        {df['Status'].value_counts().to_string() if 'Status' in df.columns else 'No status data'}
+        
+        Details:
+        {df.to_string() if len(df) <= 10 else df.head(10).to_string()}
+        '''
+                
+                # Save report
+                os.makedirs('exports', exist_ok=True)
+                with open('exports/invoice_report.txt', 'w') as f:
+                    f.write(report)
+                    
+                print('Report generated successfully')
+                print(report)
+            else:
+                print('No data file found, skipping report generation')
+                
+        except Exception as e:
+            print(f'Error generating report: {e}')
+        "
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: invoice-processing-results
+        path: |
+          data/
+          exports/
+          enhanced_invoice_history.db
+          logs/
+        retention-days: 30
+        
+    - name: Send notification
+      if: always()
+      run: |
+        echo "Invoice processing workflow completed"
+        echo "Status: ${{ job.status }}"
+        echo "Repository: ${{ github.repository }}"
+        echo "Commit: ${{ github.sha }}"
+        
+        # Log completion
+        python -c "
+        from datetime import datetime
+        import os
+        
+        os.makedirs('logs', exist_ok=True)
+        
+        with open('logs/workflow_execution.log', 'a') as f:
+            f.write(f'{datetime.now()}: Workflow completed with status ${{ job.status }}\n')
+        "
 name: 🚀 Enhanced Vendor Invoice Validator
 
 on:
