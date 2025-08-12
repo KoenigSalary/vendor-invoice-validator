@@ -64,7 +64,7 @@ def setup_chrome_driver(download_dir_abs, headless=True):
         })
         
         driver = webdriver.Chrome(options=chrome_options)
-        driver.set_page_load_timeout(120)
+        driver.set_page_load_timeout(30)
         
         logger.info(f"✅ Chrome driver setup complete. Download directory: {download_dir_abs}")
         return driver
@@ -183,7 +183,7 @@ def set_filters_and_search(driver):
         search_btn.click()
         
         # Wait for results to load
-        time.sleep(15)  # Extended wait for GitHub Actions
+        time.sleep(5)  # Increased wait time for search results
         
         logger.info("✅ Search completed")
         
@@ -315,7 +315,7 @@ def download_files(driver, download_dir_abs):
         logger.error(f"❌ Download process failed: {str(e)}")
         return None, None
 
-def wait_for_downloads(download_dir_abs, max_wait_time=300):
+def wait_for_downloads(download_dir_abs, max_wait_time=120):
     """Wait for downloads to complete and rename files"""
     logger.info("⏳ Waiting for downloads to complete...")
     
@@ -508,66 +508,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"❌ Error: {e}")
         exit(1)
-def get_github_actions_chrome_options():
-    """Get Chrome options optimized for GitHub Actions environment"""
-    options = webdriver.ChromeOptions()
-    
-    # Essential for GitHub Actions
-    options.add_argument('--headless=new')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--remote-debugging-port=9222')
-    
-    # Memory and performance optimization
-    options.add_argument('--memory-pressure-off')
-    options.add_argument('--disable-background-timer-throttling')
-    options.add_argument('--disable-backgrounding-occluded-windows')
-    options.add_argument('--disable-renderer-backgrounding')
-    
-    # Network and loading optimization
-    options.add_argument('--aggressive-cache-discard')
-    options.add_argument('--disable-extensions')
-    options.add_argument('--disable-plugins')
-    options.add_argument('--disable-default-apps')
-    
-    # Set user agent to avoid detection
-    options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-    
-    # Window size
-    options.add_argument('--window-size=1920,1080')
-    
-    # Download preferences
-    prefs = {
-        "profile.default_content_settings.popups": 0,
-        "profile.default_content_setting_values.notifications": 2,
-        "profile.managed_default_content_settings.images": 2  # Block images for speed
-    }
-    options.add_experimental_option("prefs", prefs)
-    
-    return options
-
-def safe_click_with_retry(driver, element, max_retries=5):
-    """Enhanced click with retry logic for GitHub Actions"""
-    for attempt in range(max_retries):
-        try:
-            # Scroll into view
-            driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", element)
-            time.sleep(2)
-            
-            # Check if element is clickable
-            if element.is_enabled() and element.is_displayed():
-                element.click()
-                return True
-            else:
-                # Try JavaScript click
-                driver.execute_script("arguments[0].click();", element)
-                return True
-                
-        except Exception as e:
-            logger.warning(f"Click attempt {attempt + 1} failed: {str(e)}")
-            if attempt < max_retries - 1:
-                time.sleep(3 * (attempt + 1))  # Exponential backoff
-                continue
-    
-    return False
