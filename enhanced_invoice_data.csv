@@ -1,0 +1,4 @@
+Invoice Number,Vendor Name,Amount,Validation Status,Location,Currency,Tax Amount,Due Date
+INV-001,ABC Corp,10000,Passed,Delhi HO,INR,1800,2025-08-20
+INV-002,XYZ Ltd,15000,Warning,Bangalore,INR,2700,2025-08-25
+INV-003,PQR Inc,8000,Failed,Goa,USD,0,2025-08-15

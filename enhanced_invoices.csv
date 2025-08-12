@@ -1,0 +1,6 @@
+invoice_number,vendor_name,amount,validation_status,location,tax_amount,invoice_currency,due_date
+INV001,Tech Solutions Ltd,25000,Passed,Delhi,4500,INR,2025-09-11
+INV002,Global Services,45000,Warning,Mumbai,8100,INR,2025-08-27
+INV003,Digital Corp,30000,Failed,Bangalore,5400,USD,2025-09-26
+INV004,Innovation Hub,55000,Passed,Chennai,9900,INR,2025-10-11
+INV005,Smart Systems,40000,Warning,Gurgaon,7200,EUR,2025-09-01
