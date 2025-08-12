@@ -44,51 +44,6 @@ def try_read_file(file_path):
     except Exception as e:
         raise ValueError(f"❌ Failed to read {file_path}: {str(e)}")
 
-def process_invoice_attachments(invoice_id, zip_path, extract_dir):
-    """Process invoice attachments from ZIP file and validate against database records"""
-    try:
-        # Extract the ZIP file if not already extracted
-        if not os.path.exists(extract_dir):
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(extract_dir)
-        
-        # Find relevant attachment based on invoice_id
-        invoice_files = []
-        for root, dirs, files in os.walk(extract_dir):
-            for file in files:
-                # Check if filename contains the invoice ID
-                if invoice_id in file:
-                    file_path = os.path.join(root, file)
-                    invoice_files.append(file_path)
-        
-        if not invoice_files:
-            return {"status": "error", "message": f"No attachment found for invoice {invoice_id}"}
-        
-        # Process each file based on its type
-        extracted_data = {}
-        for file_path in invoice_files:
-            if file_path.lower().endswith(('.pdf')):
-                # Process PDF
-                extracted_data.update(extract_data_from_pdf(file_path))
-            elif file_path.lower().endswith(('.jpg', '.jpeg', '.png')):
-                # Process images
-                extracted_data.update(extract_data_from_image(file_path))
-            elif file_path.lower().endswith(('.doc', '.docx')):
-                # Process Word documents
-                extracted_data.update(extract_data_from_doc(file_path))
-            elif file_path.lower().endswith(('.csv', '.xls', '.xlsx')):
-                # Process spreadsheets
-                extracted_data.update(extract_data_from_spreadsheet(file_path))
-        
-        return {
-            "status": "success",
-            "data": extracted_data,
-            "files_processed": invoice_files
-        }
-        
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
 def scan_invoice_files(base_folder='data', date_range_days=3):
     """
     Scan invoice files with configurable date range

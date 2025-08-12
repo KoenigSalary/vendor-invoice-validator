@@ -111,7 +111,6 @@ def read_invoice_excel(path):
                 
     except Exception as e:
         logger.error(f"Unexpected error reading invoice file: {str(e)}")
->>>>>>> Stashed changes
         return None
 
 def extract_text_from_file(file_path):
@@ -326,7 +325,6 @@ def process_pdf_file(args):
         return None
 
 def validate_invoices():
-<<<<<<< Updated upstream
     if not os.path.exists(XLS_PATH):
         print(f"[ERROR] Invoice sheet not found at {XLS_PATH}")
         return None
@@ -378,7 +376,7 @@ def is_valid_zip(zip_path):
             return None  # Exit function if the ZIP file is invalid
     else:
         print(f"[ERROR] Invoices ZIP file not found: {ZIP_PATH}")
-=======
+
     """Main validation function with enhanced error handling and performance"""
     try:
         start_time = time.time()
@@ -546,7 +544,6 @@ def is_valid_zip(zip_path):
         logger.error(f"❌ Validation process failed: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
->>>>>>> Stashed changes
         return None
 
 def validate_invoices_simple():

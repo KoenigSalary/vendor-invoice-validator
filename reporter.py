@@ -15,7 +15,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def save_snapshot_report(data, start_date, end_date, output_dir="snapshots"):
-    """Enhanced version of snapshot report with new fields"""
+    """
+    Enhanced version of snapshot report with better error handling,
     statistics, and formatting
     """
     try:
@@ -45,20 +46,6 @@ def save_snapshot_report(data, start_date, end_date, output_dir="snapshots"):
             return None
 
         logger.info(f"📊 Creating snapshot report with {len(df)} records")
-
-        required_fields = [
-            'Invoice_Number', 'Invoice_Date', 'Vendor_Name', 'Amount', 
-            'Invoice_Creator_Name', 'Validation_Status', 'Issues_Found',
-            'Issue_Details', 'GST_Number', 'Row_Index', 'Validation_Date',
-            'Invoice_Currency', 'Location', 'TDS', 'Invoice_ID', 'MOP',
-            'AH', 'VAT', 'Due_Date', 'Total_Invoice_Value', 'SCID',
-            'Rectification_Deadline', 'AP_Confirmation'
-        ]
-    
-        # Add missing columns
-        for field in required_fields:
-            if field not in df.columns:
-                df[field] = ""
 
         # Standardize status column
         if 'Status' not in df.columns:

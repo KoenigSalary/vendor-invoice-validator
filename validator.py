@@ -118,112 +118,43 @@ def create_sample_data():
     print(f"✅ Created {len(df)} sample invoices")
     return df
 
-def validate_invoice_data(db_record, attachment_data):
-    """
-    Validate invoice by comparing database record with data extracted from attachment
-    
-    Args:
-        db_record: Record from the invoice list panel/database
-        attachment_data: Data extracted from the actual invoice document
-    
-    Returns:
-        dict: Validation results with issues found
-    """
-    validation_results = {
-        "status": "Valid",
-        "issues": []
-    }
-    
-    # Fields to validate from invoice list panel in RMS
-    rms_fields = ["invoice_id", "scid", "upload_date", "Invoice_creator_name", "due_date"]
-    for field in rms_fields:
-        if field in db_record and field in attachment_data:
-            if str(db_record[field]).strip() != str(attachment_data[field]).strip():
-                validation_results["issues"].append({
-                    "field": field,
-                    "db_value": db_record[field],
-                    "invoice_value": attachment_data[field],
-                    "message": f"Mismatch in {field}"
-                })
-    
-    # Fields to validate from the invoice document
-    doc_fields = ["Invoice_Number", "Invoice_Date", "Vendor_Name", "Amount", 
-                 "GST_Number", "Invoice_Currency", "TDS", "VAT", "Total_Invoice_Value"]
-    
-    for field in doc_fields:
-        if field in attachment_data:
-            # Various validation rules based on field type
-            if field == "GST_Number" and not is_valid_gstin(attachment_data[field]):
-                validation_results["issues"].append({
-                    "field": field,
-                    "value": attachment_data[field],
-                    "message": f"Invalid {field} format"
-                })
-            elif field in ["Amount", "TDS", "VAT", "Total_Invoice_Value"]:
-                try:
-                    value = float(attachment_data[field])
-                    if value < 0:
-                        validation_results["issues"].append({
-                            "field": field,
-                            "value": attachment_data[field],
-                            "message": f"Negative value for {field}"
-                        })
-                except ValueError:
-                    validation_results["issues"].append({
-                        "field": field,
-                        "value": attachment_data[field],
-                        "message": f"Non-numeric value for {field}"
-                    })
-        else:
-            validation_results["issues"].append({
-                "field": field,
-                "message": f"Missing {field} in invoice document"
-            })
-    
-    # Set overall status
-    if validation_results["issues"]:
-        validation_results["status"] = "Issues Found"
-    
-    return validation_results
-
 def run_validation_workflow():
     """Main validation workflow"""
     try:
-        # Your existing validation workflow code...
+        # 1. Get today's folder and fallback logic
+        today = datetime.today().strftime("%Y-%m-%d")
+        base_dir = os.path.join("data", today)
         
-        # Add code to integrate the new validation function
-        # For example, after loading invoice data:
-        if df is not None and not df.empty:
-            # Process attachments for each invoice
-            for idx, row in df.iterrows():
-                invoice_id = row.get('Invoice_ID', row.get('InvID', row.get('invoice_no', '')))
-                if invoice_id:
-                    # Extract data from attachment
-                    attachment_data = process_invoice_attachments(
-                        invoice_id=invoice_id,
-                        zip_path=zip_path,
-                        extract_dir=os.path.join(base_dir, "unzipped")
-                    )
-                    
-                    if attachment_data.get('status') == 'success':
-                        # Validate extracted data against database record
-                        validation_result = validate_invoice_data(
-                            db_record=row.to_dict(),
-                            attachment_data=attachment_data.get('data', {})
-                        )
-                        
-                        # Update validation status in the dataframe
-                        df.at[idx, 'Validation_Status'] = validation_result['status']
-                        if validation_result['issues']:
-                            issues_text = '; '.join([issue['message'] for issue in validation_result['issues']])
-                            df.at[idx, 'Issues_Found'] = len(validation_result['issues'])
-                            df.at[idx, 'Issue_Details'] = issues_text
-                        
-                        # Add extracted data to dataframe for new fields
-                        for field, value in attachment_data.get('data', {}).items():
-                            if field not in df.columns:
-                                df[field] = ''
-                            df.at[idx, field] = value
+        print(f"🔍 Looking for data in: {base_dir}")
+        
+        # 2. Ensure folder exists or fallback
+        if not os.path.exists(base_dir):
+            print(f"❌ Folder not found for today ({today}), trying fallback.")
+            fallback_dir = get_latest_data_folder()
+            if fallback_dir:
+                print(f"🔁 Using fallback folder: {fallback_dir}")
+                base_dir = fallback_dir
+                # Update today to match the fallback folder date
+                today = os.path.basename(fallback_dir)
+            else:
+                print("❌ No fallback folder found. Creating sample data for testing.")
+                # Create today's folder and use sample data
+                os.makedirs(base_dir, exist_ok=True)
+        
+        # 3. Define paths
+        result_path = os.path.join(base_dir, "validation_result.xlsx")
+        zip_path = os.path.join(base_dir, "invoices.zip")
+        
+        print(f"📁 Working directory: {base_dir}")
+        print(f"📄 Result path: {result_path}")
+        print(f"📦 ZIP path: {zip_path}")
+        
+        # 4. Load invoice data (actual or sample)
+        df = load_actual_invoice_data(base_dir)
+        
+        if df is None or df.empty:
+            print("⚠️ No actual invoice data found, using sample data")
+            df = create_sample_data()
         
         # 5. Run validation using validator_utils
         print("\n🔄 Running invoice validation...")
