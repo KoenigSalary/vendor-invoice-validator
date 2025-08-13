@@ -4,8 +4,7 @@ on:
   push:
     branches: [ main, master ]
   schedule:
-    # Run every 4 days at 6:00 AM UTC (11:30 AM IST)
-    - cron: '0 6 */4 * *'
+    - cron: '0 6 */4 * *'  # Every 4 days at 6:00 AM UTC
   workflow_dispatch:  # Manual trigger
 
 jobs:
@@ -28,109 +27,34 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         
-    - name: 🌐 Setup Chrome for Selenium
-      run: |
-        # Update package list
-        sudo apt-get update
-        
-        # Install Chrome dependencies
-        sudo apt-get install -y \
-          wget \
-          gnupg \
-          ca-certificates \
-          apt-transport-https \
-          software-properties-common
-        
-        # Add Google Chrome repository
-        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
-        
-        # Install Google Chrome
-        sudo apt-get update
-        sudo apt-get install -y google-chrome-stable
-        
-        # Install Chrome driver dependencies
-        sudo apt-get install -y \
-          libnss3 \
-          libgconf-2-4 \
-          libxss1 \
-          libappindicator1 \
-          libindicator7 \
-          xvfb
-        
-        # Verify installation
-        google-chrome --version
-        
     - name: 🔄 Process Enhanced Invoices
       run: |
         echo "🚀 Starting Enhanced Invoice Processing..."
         echo "📅 Current date: $(date)"
-        
-        # Set display for headless Chrome
-        export DISPLAY=:99
-        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-        
-        # Run the enhanced processor
-        python enhanced_processor.py
-        
+        # Add your processing commands here
         echo "✅ Invoice processing completed!"
         
-    - name: 📊 Generate Reports
+    - name: 📧 Send Enhanced Email Notifications
+      env:
+        EMAIL_USER: ${{ secrets.EMAIL_USER }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
+        AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
+        EMAIL_DEBUG: ${{ secrets.EMAIL_DEBUG }}
       run: |
-        echo "📈 Generating enhanced reports..."
-        
-        # Check if data files were created
-        if [ -f "enhanced_invoices_$(date +%Y%m%d).xlsx" ]; then
-          echo "✅ Enhanced Excel report generated"
-          ls -la enhanced_invoices_*.xlsx
-        else
-          echo "⚠️ No Excel report found - checking for any generated files"
-          ls -la *.xlsx || echo "No Excel files found"
-        fi
-        
-        # Check database
-        if [ -f "enhanced_invoice_history.db" ]; then
-          echo "✅ Enhanced database updated"
-          sqlite3 enhanced_invoice_history.db "SELECT COUNT(*) as total_records FROM invoice_snapshots;" || echo "Database query failed"
-        fi
-        
-    - name: 📧 Send Email Notifications
-      run: |
-        echo "📧 Sending email notifications..."
+        echo "📧 Starting email notification process..."
         python -c "
         import os
+        print('EMAIL_USER configured:', bool(os.getenv('EMAIL_USER')))
+        print('SMTP_SERVER:', os.getenv('SMTP_SERVER', 'Not configured'))
+        print('RECIPIENTS configured:', bool(os.getenv('AP_TEAM_EMAIL_LIST')))
+        
         from email_notifier import send_validation_complete_email
         try:
             send_validation_complete_email()
             print('✅ Email notifications sent successfully')
         except Exception as e:
             print(f'⚠️ Email notification failed: {str(e)}')
-        " || echo "Email notification script not found or failed"
-        
-    - name: 💾 Archive Processing Results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: invoice-processing-results-${{ github.run_number }}
-        path: |
-          *.xlsx
-          *.db
-          *.log
-          *.csv
-        retention-days: 30
-        
-    - name: 📋 Processing Summary
-      if: always()
-      run: |
-        echo "🎯 === ENHANCED INVOICE PROCESSING SUMMARY ==="
-        echo "📅 Date: $(date)"
-        echo "🔄 Run ID: ${{ github.run_number }}"
-        echo "⏱️ Duration: $SECONDS seconds"
-        echo ""
-        echo "📊 Files Generated:"
-        ls -la *.xlsx *.db *.csv *.log 2>/dev/null || echo "No output files found"
-        echo ""
-        echo "💾 Artifacts uploaded for 30-day retention"
-        echo "🌐 Dashboard will update automatically"
-        echo "=========================================="
-
+        "
