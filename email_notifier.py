@@ -1,3 +1,4 @@
+
 import smtplib
 import os
 from email.mime.text import MIMEText
@@ -28,15 +29,39 @@ class EnhancedEmailSystem:
     """Enhanced email system with rich HTML templates and attachments"""
     
     def __init__(self, smtp_server=None, smtp_port=None, username=None, password=None):
-        # Use environment variables if parameters not provided
+    # Use environment variables if parameters not provided
         self.smtp_server = smtp_server or os.getenv('SMTP_SERVER', 'smtp.gmail.com')
         self.smtp_port = int(smtp_port or os.getenv('SMTP_PORT', '587'))
         self.username = username or os.getenv('EMAIL_USER')
         self.password = password or os.getenv('EMAIL_PASSWORD')
-        
-        # Recipients from environment or default
-        recipients_str = os.getenv('RECIPIENTS', '')
-        self.default_recipients = [email.strip() for email in recipients_str.split(',') if email.strip()]
+    
+        # FIX: Try multiple recipient environment variables
+        recipients_str = (
+            os.getenv('AP_TEAM_EMAIL_LIST') or 
+            os.getenv('EMAIL_RECIPIENTS') or 
+            os.getenv('RECIPIENTS') or 
+            os.getenv('TEAM_EMAIL_LIST') or 
+            ''
+        )
+    
+        # Debug output
+        if os.getenv('EMAIL_DEBUG'):
+            print(f"📧 DEBUG: Found recipients_str: {repr(recipients_str)}")
+    
+        # Parse recipients
+        if recipients_str:
+            # Handle different separators and clean up
+            recipients_str = recipients_str.strip().strip('"').strip("'")
+            self.default_recipients = [
+                email.strip() 
+                for email in recipients_str.replace(';', ',').split(',') 
+                if email.strip() and '@' in email.strip()
+            ]
+        else:
+            self.default_recipients = []
+    
+        if os.getenv('EMAIL_DEBUG'):
+            print(f"📧 DEBUG: Parsed recipients: {self.default_recipients}")
     
     def create_invoice_zip(self, invoice_files, validation_period=None):
         """Create ZIP file with invoice copies"""
