@@ -1,4 +1,3 @@
-
 import smtplib
 import os
 from email.mime.text import MIMEText
@@ -8,6 +7,13 @@ from email import encoders
 from datetime import datetime, timedelta
 import zipfile
 import glob
+import logging
+
+os.environ['EMAIL_RECIPIENTS'] = 'tax@koenig-solutions.com'
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class EmailNotifier:
     """Basic email notifier for backward compatibility"""
@@ -26,403 +32,351 @@ class EmailNotifier:
         return True
 
 class EnhancedEmailSystem:
-    """Enhanced email system with rich HTML templates and attachments"""
+    """Enhanced email system with rich HTML templates and ZIP attachments"""
     
     def __init__(self, smtp_server=None, smtp_port=None, username=None, password=None):
-    # Use environment variables if parameters not provided
-        self.smtp_server = smtp_server or os.getenv('SMTP_SERVER', 'smtp.gmail.com')
+        # Use your existing environment variables
+        self.smtp_server = smtp_server or os.getenv('SMTP_SERVER', 'smtp.office365.com')
         self.smtp_port = int(smtp_port or os.getenv('SMTP_PORT', '587'))
-        self.username = username or os.getenv('EMAIL_USER')
-        self.password = password or os.getenv('EMAIL_PASSWORD')
-    
-        # FIX: Try multiple recipient environment variables
+        self.username = username or os.getenv('EMAIL_USERNAME')  # Your variable name
+        self.password = password or os.getenv('EMAIL_PASSWORD')  # Your variable name
+        self.from_email = os.getenv('EMAIL_FROM', self.username)
+        self.from_name = os.getenv('SMTP_FROM_NAME', 'Invoice Management System')
+        
+        # Get recipients from your AP_TEAM_EMAIL_LIST
         recipients_str = (
-            os.getenv('AP_TEAM_EMAIL_LIST') or 
-            os.getenv('EMAIL_RECIPIENTS') or 
-            os.getenv('RECIPIENTS') or 
-            os.getenv('TEAM_EMAIL_LIST') or 
+            os.getenv('AP_TEAM_EMAIL_LIST') or
+            os.getenv('EMAIL_RECIPIENTS') or
+            os.getenv('TEAM_EMAIL_LIST') or
             ''
         )
-    
-        # Debug output
-        if os.getenv('EMAIL_DEBUG'):
-            print(f"📧 DEBUG: Found recipients_str: {repr(recipients_str)}")
-    
+        
         # Parse recipients
         if recipients_str:
-            # Handle different separators and clean up
             recipients_str = recipients_str.strip().strip('"').strip("'")
             self.default_recipients = [
-                email.strip() 
-                for email in recipients_str.replace(';', ',').split(',') 
+                email.strip()
+                for email in recipients_str.replace(';', ',').split(',')
                 if email.strip() and '@' in email.strip()
             ]
         else:
             self.default_recipients = []
+        
+        logger.info(f"📧 Email system initialized with {len(self.default_recipients)} recipients")
     
-        if os.getenv('EMAIL_DEBUG'):
-            print(f"📧 DEBUG: Parsed recipients: {self.default_recipients}")
-    
-    def create_invoice_zip(self, invoice_files, validation_period=None):
-        """Create ZIP file with invoice copies"""
+    def create_invoice_zip(self, excel_report_path, invoice_files_dir="invoice_files"):
+        """Create ZIP file with Excel report and invoice files"""
         try:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            period = validation_period or "current"
-            zip_filename = f'Invoice_Files_RMS_{period}_{timestamp}.zip'
+            zip_filename = f'invoice_validation_{timestamp}.zip'
             
-            with zipfile.ZipFile(zip_filename, 'w') as zipf:
-                for invoice_file in invoice_files:
-                    if os.path.exists(invoice_file):
-                        zipf.write(invoice_file, os.path.basename(invoice_file))
-                        print(f"✅ Added to ZIP: {os.path.basename(invoice_file)}")
-            
+            with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                # Add Excel report to ZIP
+                if os.path.exists(excel_report_path):
+                    zipf.write(excel_report_path, 'validation_report.xlsx')
+                    logger.info(f"📊 Added Excel report to ZIP: {excel_report_path}")
+                
+                # Add invoice files
+                invoice_count = 0
+                if os.path.exists(invoice_files_dir):
+                    for root, dirs, files in os.walk(invoice_files_dir):
+                        for file in files:
+                            if file.lower().endswith(('.pdf', '.png', '.jpg', '.jpeg')):
+                                file_path = os.path.join(root, file)
+                                # Add to invoice_files folder in ZIP
+                                arcname = f"invoice_files/{file}"
+                                zipf.write(file_path, arcname)
+                                invoice_count += 1
+                
+                # Add summary file
+                summary_content = f"""Invoice Validation Report Summary
+Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Excel Report: validation_report.xlsx
+Invoice Files: {invoice_count} files included
+
+Files included in this ZIP:
+- validation_report.xlsx (Excel validation report)
+- invoice_files/ ({invoice_count} invoice files)
+
+For questions, contact: {self.from_email}
+"""
+                zipf.writestr('summary.txt', summary_content)
+                
+            logger.info(f"📁 ZIP created successfully: {zip_filename} ({invoice_count} invoice files)")
             return zip_filename
+            
         except Exception as e:
-            print(f"⚠️ Error creating ZIP: {str(e)}")
+            logger.error(f"❌ Error creating ZIP file: {str(e)}")
             return None
     
-    def generate_enhanced_email_body(self, validation_summary, changes_detected=None):
-        """Generate enhanced HTML email body - FIXED STRING ESCAPING"""
-        current_date = datetime.now().strftime('%d %B %Y')
-        deadline_date = (datetime.now() + timedelta(days=4)).strftime('%d %B %Y')
+    def create_html_email(self, subject, summary_stats, report_filename):
+        """Create professional HTML email"""
+        html_template = f"""
         
-        changes_detected = changes_detected or []
         
-        # FIXED: Proper string escaping and concatenation
-        email_body = """
-
-
-
-    
-🧾 Enhanced Invoice Validation Report
-
-    
-Automated Multi-Location GST/VAT Compliance System
-
-
-
-
-
-    
-📌 Executive Summary
-
-    
-Dear Team,
-
-
-    
-Please find attached the comprehensive automated invoice validation report for {current_date}.
-
-
-
-
-
-    
-🔍 Enhanced Validation Summary
-
-    
-🗓️ Validation Date:	{current_date}
-📊 Report Period:	Last 4 days
-🧾 Historical Check:	Last 3 months
-⚠️ Issues Detected:	{total_issues} invoices flagged
-🌍 Locations Covered:	{locations_count} global locations
-💱 Currencies Processed:	{currencies}
-🔄 Historical Changes:	{changes_count} modifications detected
-
-""".format(
-            current_date=current_date,
-            total_issues=validation_summary.get('total_issues', 0),
-            locations_count=validation_summary.get('locations_count', 0),
-            currencies=', '.join(validation_summary.get('currencies', [])),
-            changes_count=len(changes_detected)
-        )
         
-        # Add GST/VAT breakdown section - FIXED ESCAPING
-        if validation_summary.get('tax_breakdown'):
-            email_body += """
-
-    
-🧮 GST/VAT Compliance Summary
-
-    """
             
-            for location, tax_info in validation_summary['tax_breakdown'].items():
-                email_body += """
-        """.format(
-                    location=location,
-                    tax_type=tax_info.get('type', 'N/A'),
-                    total_tax=tax_info.get('total_tax', 0)
-                )
-            email_body += """
-    
-{location}	{tax_type}	₹{total_tax:,.2f}
-
-"""
-        
-        # Add due date alerts - FIXED ESCAPING
-        if validation_summary.get('due_date_alerts'):
-            email_body += """
-
-    
-⏰ Critical Due Date Alerts
-
-    
-{alert_count} invoices are due within the next 5 days:
-
-
-    
-""".format(alert_count=len(validation_summary['due_date_alerts']))
             
-            for alert in validation_summary['due_date_alerts'][:5]:
-                email_body += """
         
-{invoice_number} - Due: {due_date} ({vendor})
-""".format(
-                    invoice_number=alert.get('invoice_number', 'N/A'),
-                    due_date=alert.get('due_date', 'N/A'),
-                    vendor=alert.get('vendor', 'N/A')
-                )
-            email_body += """
-    
-
-"""
         
-        # Add attachments section
-        email_body += """
+            
 
-    
-📎 Enhanced Attachments
+                
 
-    
+                    
+📊 Invoice Validation Report
+
+                    
+Koenig Solutions - Invoice Management System
+
+
+                    
+{datetime.now().strftime('%B %d, %Y at %I:%M %p')}
+
+
+                
+
+                
+                
+
+                    
+Validation Summary
+
+                    
+
+                        
+
+                            
+{summary_stats.get('passed', 0)}
+
+                            
+Passed
+
+
+                        
+
+                        
+
+                            
+{summary_stats.get('warnings', 0)}
+
+                            
+Warnings
+
+
+                        
+
+                        
+
+                            
+{summary_stats.get('failed', 0)}
+
+                            
+Failed
+
+
+                        
+
+                    
+
+                    
+                    
+
+                        
+📁 Attached Files
+
+                        
+{report_filename}
+
+
+                        
+
+                            
+📊 Excel validation report with all invoice details
+
+                            
+📄 Invoice files (PDFs, images) for the validation period
+
+                            
+📋 Processing summary and metadata
+
+                        
+
+                    
+
+                    
+                    
+This automated report contains the complete invoice validation results and all associated invoice files.
+
+
+                    
+For questions or support, please contact the Finance Team.
+
+
+                
+
+                
+                
+
+                    
+Generated by Invoice Management System | Koenig Solutions
+
+
+                    
+This is an automated message. Please do not reply directly to this email.
+
+
+                
+
+            
 
         
-✅ Enhanced Invoice Validation Report (Excel format with new fields)
 
         
-🗂️ Invoice Files from RMS (ZIP folder - validation period only)
-
-        
-📋 Historical Changes Log (CSV format - 3 months tracking)
-
-        
-📊 GST/VAT Compliance Summary (PDF format)
-
+        """
+        return html_template
     
-
-
-
-
-    
-⏳ Action Required
-
-    
-Please review and rectify all flagged invoices by {deadline_date} (EOD) to ensure:
-
-
-    
-
-        
-✅ Timely GST/VAT compliance across all locations
-
-        
-✅ Data accuracy and historical integrity
-
-        
-✅ Due date adherence for payment processing
-
-        
-✅ Multi-currency validation completeness
-
-    
-
-    
-⚠️ Failure to address discrepancies by the deadline may result in compliance violations and reporting delays.
-
-
-
-
-
-    
-🌍 Global Coverage
-
-    
-Our Enhanced System Now Covers:
-
-
-    
-🇮🇳 India (All Branches)
-🇺🇸 USA
-🇬🇧 UK
-🇨🇦 Canada
-🇩🇪 Germany
-🇦🇪 Dubai
-🇸🇬 Singapore
-🇦🇺 Australia
-
-
-
-For any clarification or assistance, feel free to reach out to the Finance or Accounts Team.
-
-
-
-
-    
-Best regards,
-
-
-    
-🧠 Enhanced Invoice Validation System v2.0
-
-
-    
-Koenig Solutions Pvt. Ltd.
-
-
-    
-Automated Multi-Location GST/VAT Compliance & Historical Tracking
-
-
-
-
-
-
-""".format(deadline_date=deadline_date)
-        
-        return email_body
-    
-    def send_enhanced_email(self, recipients=None, validation_summary=None, changes_detected=None, attachments=None):
-        """Send enhanced email with all attachments"""
+    def send_email_with_zip(self, zip_filepath, summary_stats=None, recipients=None):
+        """Send email with ZIP attachment"""
         try:
-            # Use default recipients if none provided
-            recipients = recipients or self.default_recipients
             if not recipients:
-                print("⚠️ No recipients specified")
-                return False, "No recipients specified"
+                recipients = self.default_recipients
             
-            # Default validation summary if none provided
-            validation_summary = validation_summary or {
-                'total_issues': 0,
-                'locations_count': 15,
-                'currencies': ['INR', 'USD', 'EUR', 'GBP'],
-                'tax_breakdown': {},
-                'due_date_alerts': []
-            }
-            
-            attachments = attachments or []
-            changes_detected = changes_detected or []
-            
-            # Check SMTP credentials
-            if not self.username or not self.password:
-                print("⚠️ SMTP credentials not configured")
-                return False, "SMTP credentials not configured"
+            if not recipients:
+                logger.error("⚠️ No recipients specified")
+                return False
             
             # Create message
-            msg = MIMEMultipart()
-            msg['From'] = self.username
+            msg = MIMEMultipart('alternative')
+            msg['From'] = f"{self.from_name} <{self.from_email}>"
             msg['To'] = ', '.join(recipients)
-            msg['Subject'] = f"🧾 Enhanced Invoice Validation Report - {datetime.now().strftime('%d %B %Y')} | Multi-Location GST/VAT Compliance"
+            msg['Subject'] = f"📊 Invoice Validation Report - {datetime.now().strftime('%Y-%m-%d')}"
             
-            # Add enhanced email body - FIXED VERSION
-            body = self.generate_enhanced_email_body(validation_summary, changes_detected)
-            msg.attach(MIMEText(body, 'html'))
+            # Default summary stats
+            if not summary_stats:
+                summary_stats = {'passed': 0, 'warnings': 0, 'failed': 0, 'total': 0}
             
-            # Add attachments
-            for attachment_path in attachments:
-                if os.path.exists(attachment_path):
-                    try:
-                        with open(attachment_path, "rb") as attachment:
-                            part = MIMEBase('application', 'octet-stream')
-                            part.set_payload(attachment.read())
-                        
-                        encoders.encode_base64(part)
-                        part.add_header(
-                            'Content-Disposition',
-                            f'attachment; filename= {os.path.basename(attachment_path)}'
-                        )
-                        msg.attach(part)
-                        print(f"✅ Attached: {os.path.basename(attachment_path)}")
-                    except Exception as e:
-                        print(f"⚠️ Failed to attach {attachment_path}: {str(e)}")
+            # Create HTML content
+            html_content = self.create_html_email(
+                subject=msg['Subject'],
+                summary_stats=summary_stats,
+                report_filename=os.path.basename(zip_filepath)
+            )
+            
+            # Attach HTML content
+            html_part = MIMEText(html_content, 'html')
+            msg.attach(html_part)
+            
+            # Attach ZIP file
+            if os.path.exists(zip_filepath):
+                with open(zip_filepath, 'rb') as attachment:
+                    part = MIMEBase('application', 'zip')
+                    part.set_payload(attachment.read())
+                    encoders.encode_base64(part)
+                    part.add_header(
+                        'Content-Disposition',
+                        f'attachment; filename= {os.path.basename(zip_filepath)}'
+                    )
+                    msg.attach(part)
             
             # Send email
-            print(f"📧 Connecting to {self.smtp_server}:{self.smtp_port}")
-            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
-            server.starttls()
-            server.login(self.username, self.password)
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.username, self.password)
+                server.send_message(msg)
             
-            text = msg.as_string()
-            server.sendmail(self.username, recipients, text)
-            server.quit()
-            
-            print(f"✅ Enhanced email sent successfully to {len(recipients)} recipients")
-            return True, "Enhanced email sent successfully"
+            logger.info(f"✅ Email sent successfully to: {', '.join(recipients)}")
+            return True
             
         except Exception as e:
-            print(f"❌ Failed to send email: {str(e)}")
-            return False, f"Failed to send email: {str(e)}"
+            logger.error(f"❌ Error sending email: {str(e)}")
+            return False
+    
+    def send_validation_report_with_invoices(self, excel_report_path, invoice_files_dir="invoice_files", summary_stats=None):
+        """Main method to send validation report with invoice files"""
+        try:
+            # Create ZIP file with Excel report and invoice files
+            zip_filepath = self.create_invoice_zip(excel_report_path, invoice_files_dir)
+            
+            if not zip_filepath:
+                logger.error("❌ Failed to create ZIP file")
+                return False
+            
+            # Send email with ZIP attachment
+            success = self.send_email_with_zip(zip_filepath, summary_stats)
+            
+            # Clean up ZIP file after sending
+            try:
+                if os.path.exists(zip_filepath):
+                    os.remove(zip_filepath)
+                    logger.info(f"🗑️ Temporary ZIP file cleaned up: {zip_filepath}")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not clean up ZIP file: {str(e)}")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"❌ Error in send_validation_report_with_invoices: {str(e)}")
+            return False
 
-# Global function for easy GitHub Actions integration
-def send_validation_complete_email(validation_summary=None, attachments=None):
-    """
-    Simple function to send enhanced validation email
-    Uses environment variables for configuration
-    """
-    try:
-        # Initialize enhanced email system
-        email_system = EnhancedEmailSystem()
-        
-        # Default validation summary
-        if validation_summary is None:
-            validation_summary = {
-                'total_issues': 0,
-                'locations_count': 15,
-                'currencies': ['INR', 'USD', 'EUR', 'GBP'],
-                'tax_breakdown': {
-                    'India - Delhi': {'type': 'CGST+SGST', 'total_tax': 125000.50},
-                    'India - Mumbai': {'type': 'IGST', 'total_tax': 89000.25},
-                    'USA - New York': {'type': 'Sales Tax', 'total_tax': 15000.75}
-                },
-                'due_date_alerts': []
-            }
-        
-        # Find attachments if not provided
-        if attachments is None:
-            attachments = []
-            # Look for common file patterns
-            attachments.extend(glob.glob('*.xlsx'))
-            attachments.extend(glob.glob('*.db'))
-            attachments.extend(glob.glob('*.csv'))
-        
-        # Send enhanced email
-        success, message = email_system.send_enhanced_email(
-            validation_summary=validation_summary,
-            attachments=attachments
-        )
-        
-        print(f"📧 Email result: {message}")
-        return success
-        
-    except Exception as e:
-        print(f"❌ Error in send_validation_complete_email: {str(e)}")
-        return False
-
-# Main execution for testing
-if __name__ == "__main__":
+def main():
+    """Test the email system"""
     print("🧪 Testing email system...")
     
-    # Test with sample data
-    sample_summary = {
-        'total_issues': 5,
-        'locations_count': 12,
-        'currencies': ['INR', 'USD', 'EUR'],
-        'tax_breakdown': {
-            'India - Delhi': {'type': 'CGST+SGST', 'total_tax': 50000.00},
-            'USA - California': {'type': 'Sales Tax', 'total_tax': 5000.00}
-        },
-        'due_date_alerts': [
-            {'invoice_number': 'INV-001', 'due_date': '2024-08-15', 'vendor': 'ABC Corp'}
-        ]
+    # Check credentials
+    if not os.getenv('EMAIL_USERNAME') or not os.getenv('EMAIL_PASSWORD'):
+        print("⚠️ SMTP credentials not configured")
+        print("📧 Email result: SMTP credentials not configured")
+        print("✅ Test result: Failed")
+        return False
+    
+    # Check recipients
+    recipients_str = os.getenv('AP_TEAM_EMAIL_LIST') or os.getenv('EMAIL_RECIPIENTS')
+    if not recipients_str:
+        print("⚠️ No recipients specified")
+        print("📧 Email result: No recipients specified")
+        print("✅ Test result: Failed")
+        return False
+    
+    # Initialize email system
+    email_system = EnhancedEmailSystem()
+    
+    # Find Excel report
+    excel_files = glob.glob("invoice_validation_report_*.xlsx")
+    if not excel_files:
+        print("⚠️ No Excel report found. Please run enhanced_processor.py first")
+        print("📧 Email result: No Excel report found")
+        print("✅ Test result: Failed")
+        return False
+    
+    excel_report = excel_files[-1]  # Use most recent
+    print(f"📊 Found Excel report: {excel_report}")
+    
+    # Test summary stats
+    summary_stats = {
+        'passed': 0,
+        'warnings': 5,
+        'failed': 0,
+        'total': 5
     }
     
-    success = send_validation_complete_email(sample_summary, [])
-    print(f"✅ Test result: {'Success' if success else 'Failed'}")
+    # Send email with ZIP
+    success = email_system.send_validation_report_with_invoices(
+        excel_report_path=excel_report,
+        invoice_files_dir="invoice_files",
+        summary_stats=summary_stats
+    )
+    
+    if success:
+        print("✅ Email sent successfully!")
+        print("📧 Email result: Success")
+        print("✅ Test result: Passed")
+    else:
+        print("❌ Email sending failed")
+        print("📧 Email result: Failed")
+        print("✅ Test result: Failed")
+    
+    return success
+
+if __name__ == "__main__":
+    main()
