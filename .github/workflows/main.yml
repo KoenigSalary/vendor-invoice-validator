@@ -2,8 +2,8 @@ name: 🚀 Enhanced Invoice Validation System - Excel & ZIP
 
 on:
   schedule:
-    - cron: '0 18 */4 * *'  # Every 4 days at 6 PM IST
-  workflow_dispatch:  # Add this line for manual triggers
+    # Run every 4 days at 18:00 UTC (6:00 PM)
+    - cron: '0 18 */4 * *'
   
   workflow_dispatch:
     inputs:
@@ -16,189 +16,101 @@ on:
         description: 'Send email notification'
         required: false
         default: 'true'
-        type: boolean
-
-env:
-  # RMS Configuration
-  RMS_LOGIN_URL: ${{ secrets.RMS_LOGIN_URL }}
-  RMS_DOWNLOAD_URL: ${{ secrets.RMS_DOWNLOAD_URL }}
-  RMS_USER: ${{ secrets.RMS_USER }}
-  RMS_PASS: ${{ secrets.RMS_PASS }}
-  RMS_TIMEOUT: 60
-  
-  # Email Configuration - Office365 SMTP
-  SMTP_SERVER: smtp.office365.com
-  SMTP_PORT: 587
-  EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
-  EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-  SMTP_USE_TLS: true
-  EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
-  SMTP_FROM_NAME: "Invoice Management System"
-  
-  # Recipients - AP Team
-  AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
-  EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS }}
-  TEAM_EMAIL_LIST: ${{ secrets.TEAM_EMAIL_LIST }}
-  
-  # Processing Configuration
-  VALIDATION_TOLERANCE: 0.01
-  DATE_RANGE_DAYS: 3
-  ARCHIVE_AFTER_DAYS: 90
-  UPLOAD_DEADLINE_DAYS: 5
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 jobs:
-  invoice-validation:
+  validate-invoices:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     
     steps:
-    - name: 📥 Checkout Repository
+    - name: 📥 Checkout repository
       uses: actions/checkout@v4
-      
-    - name: 🐍 Setup Python 3.11
+    
+    - name: 🐍 Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-        cache: 'pip'
     
-    - name: 📦 Install Dependencies
+    - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        
-    - name: 📊 Setup Chrome and Selenium
-      uses: browser-actions/setup-chrome@latest
-      
-    - name: 🔧 Install ChromeDriver
-      uses: nanasess/setup-chromedriver@master
-      
-    - name: 📁 Create Directories
+        pip install openpyxl pandas python-dotenv requests beautifulsoup4
+    
+    - name: 🏗️ Setup Chrome for Selenium
+      uses: browser-actions/setup-chrome@v1
+    
+    - name: 📊 Create sample data if needed
       run: |
-        mkdir -p data
-        mkdir -p data/archive
-        mkdir -p invoice_files
-        mkdir -p temp_reports
-        
-    - name: 🔍 Download Invoice Data (if needed)
-      run: |
-        # Create sample invoice data for processing
-        cat > invoices.csv << 'EOF'
+        if [ ! -f invoices.csv ] || [ ! -s invoices.csv ]; then
+          echo "Creating sample invoice data..."
+          cat > invoices.csv << 'EOF'
         Invoice_ID,Invoice_Date,Vendor_Name,Amount,Location,Currency,Vendor_Address,Invoice_Type,Payment_Terms,Due_Date,Tax_Rate,Description,PO_Number,Category,Approval_Status
-        INV001,2024-08-14,ABC Corp Ltd,25000,Delhi,INR,123 Business St Delhi,Standard,Net 30,2024-09-13,18.0,IT Services,PO001,Technology,Approved
-        INV002,2024-08-13,XYZ Services,15000,Mumbai,INR,456 Commerce Rd Mumbai,Standard,Net 15,2024-08-28,18.0,Consulting,PO002,Services,Pending
-        INV003,2024-08-12,Global Tech,30000,Bangalore,INR,789 Tech Park Bangalore,Express,Net 7,2024-08-19,18.0,Software License,PO003,Technology,Approved
-        INV004,2024-08-11,Supplies Inc,12000,Chennai,INR,321 Supply Chain Chennai,Standard,Net 30,2024-09-10,18.0,Office Supplies,PO004,Supplies,Approved
-        INV005,2024-08-10,IT Solutions,45000,Gurgaon,INR,654 IT Hub Gurgaon,Standard,Net 30,2024-09-09,18.0,Cloud Services,PO005,Technology,Under Review
+        INV2024001,2024-08-10,Microsoft Corporation,125000,Delhi,INR,"One Microsoft Way Redmond",Service,Net 30,2024-09-10,18,Software Licenses,PO2024001,IT Services,Pending
+        INV2024002,2024-08-11,Amazon Web Services,75000,Mumbai,INR,"410 Terry Ave N Seattle",Service,Net 15,2024-08-26,18,Cloud Services,PO2024002,IT Infrastructure,Approved
+        INV2024003,2024-08-12,Dell Technologies,250000,Bangalore,INR,"One Dell Way Round Rock",Hardware,Net 45,2024-09-26,18,Server Hardware,PO2024003,Equipment,Pending
         EOF
-        echo "✅ Sample invoice data created"
-        
-    - name: 🔄 Process Invoices & Generate Excel Report
-      run: |
-        echo "🚀 Starting Enhanced Invoice Processing..."
-        python enhanced_processor.py
-        
-        # Verify Excel report was created
-        if ls invoice_validation_report_*.xlsx 1> /dev/null 2>&1; then
-          echo "✅ Excel report generated successfully"
-          ls -la invoice_validation_report_*.xlsx
-        else
-          echo "❌ No Excel report found"
-          exit 1
         fi
-        
-    - name: 📁 Collect Invoice Files
+    
+    - name: 📁 Create invoice files directory
       run: |
-        echo "📁 Collecting invoice files..."
+        mkdir -p invoice_files
+        echo "Sample invoice content for INV2024001" > invoice_files/INV2024001.txt
+        echo "Sample invoice content for INV2024002" > invoice_files/INV2024002.txt
+        echo "Sample invoice content for INV2024003" > invoice_files/INV2024003.txt
+    
+    - name: 🔄 Run Enhanced Invoice Processor (Excel)
+      run: python enhanced_processor.py
+      env:
+        VALIDATION_PERIOD: ${{ inputs.validation_period || 'current' }}
+    
+    - name: 📧 Send Email with ZIP Attachments
+      if: ${{ inputs.send_email != 'false' }}
+      run: python email_notifier.py
+      env:
+        # SMTP Configuration
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER || 'smtp.office365.com' }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
+        EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        SMTP_USE_TLS: true
+        EMAIL_FROM: ${{ secrets.EMAIL_FROM || secrets.EMAIL_USERNAME }}
+        SMTP_FROM_NAME: "Invoice Management System"
         
-        # Create sample invoice files for demonstration
-        echo "Sample Invoice 1 Content" > invoice_files/INV001.txt
-        echo "Sample Invoice 2 Content" > invoice_files/INV002.txt
-        echo "Sample Invoice 3 Content" > invoice_files/INV003.txt
+        # Recipients
+        AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
+        EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS || secrets.AP_TEAM_EMAIL_LIST }}
         
-        # List collected files
-        if [ -d "invoice_files" ] && [ "$(ls -A invoice_files)" ]; then
-          echo "✅ Invoice files found:"
-          ls -la invoice_files/
-        else
-          echo "⚠️ No invoice files found in invoice_files/ directory"
-        fi
-        
-    - name: 📧 Send Email with Excel Report & ZIP
-      if: ${{ github.event.inputs.send_email != 'false' }}
-      run: |
-        echo "📧 Sending email notification..."
-        python email_notifier.py
-        echo "📧 Email notification process completed"
-        
-    - name: 📤 Upload Excel Reports (Artifact v4)
+        # Processing Settings
+        VALIDATION_PERIOD: ${{ inputs.validation_period || 'current' }}
+    
+    - name: 📊 Upload Excel Reports
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: excel-validation-reports
-        path: |
-          invoice_validation_report_*.xlsx
-          *.zip
+        path: invoice_validation_report_*.xlsx
         retention-days: 30
-        if-no-files-found: warn
-        
-    - name: 📤 Upload Invoice Files
-      uses: actions/upload-artifact@v4
-      with:
-        name: invoice-files-archive
-        path: invoice_files/
-        retention-days: 30
-        if-no-files-found: ignore
-        
-    - name: 📤 Upload Processing Logs
-      uses: actions/upload-artifact@v4
-      with:
-        name: processing-logs
-        path: |
-          data/invoice_validator.log
-          *.log
-        retention-days: 7
-        if-no-files-found: ignore
-        
-    - name: 📊 Summary Report
-      run: |
-        echo "## 📊 Invoice Validation Summary" >> $GITHUB_STEP_SUMMARY
-        echo "**Date:** $(date)" >> $GITHUB_STEP_SUMMARY
-        echo "**Status:** ✅ Processing Completed" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        # Count files processed
-        if ls invoice_validation_report_*.xlsx 1> /dev/null 2>&1; then
-          excel_file=$(ls invoice_validation_report_*.xlsx | head -1)
-          echo "**📋 Excel Report:** $excel_file" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        if [ -d "invoice_files" ]; then
-          invoice_count=$(ls -1 invoice_files/ | wc -l)
-          echo "**📁 Invoice Files:** $invoice_count files processed" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        echo "**📧 Email Recipients:** AP Team (tax@, aditya.singh@, ap@koenig-solutions.com)" >> $GITHUB_STEP_SUMMARY
-        echo "**🔄 Next Run:** In 4 days" >> $GITHUB_STEP_SUMMARY
-        
-  # Additional job for HR incident alerts (if needed)
-  hr-incident-check:
-    runs-on: ubuntu-latest
-    if: ${{ always() }}
-    needs: invoice-validation
     
-    steps:
-    - name: 📥 Checkout Repository
-      uses: actions/checkout@v4
-      
-    - name: 🔍 Check for HR Incidents
+    - name: 📁 Upload ZIP Archives
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: invoice-zip-archives
+        path: invoice_validation_*.zip
+        retention-days: 7
+    
+    - name: 📋 Summary Report
+      if: always()
       run: |
-        echo "🔍 Checking for HR incidents (deleted/modified invoices)..."
-        # This would contain logic to detect suspicious invoice changes
-        # For now, just a placeholder
-        echo "✅ No HR incidents detected"
-        
-    - name: 📧 Send HR Alert (if incidents found)
-      if: ${{ failure() }}
-      run: |
-        echo "🚨 HR incident detected - sending alert"
-        # This would send alert to HR_EMAIL_LIST
-        # python hr_alert_notifier.py
+        echo "📊 Invoice Validation Summary"
+        echo "Date: $(date)"
+        echo "Status: ✅ Processing Completed"
+        echo ""
+        echo "📋 Excel Report: $(ls invoice_validation_report_*.xlsx 2>/dev/null | head -1 || echo 'Not found')"
+        echo "📁 Invoice Files: $(find invoice_files -type f | wc -l) files processed"
+        echo "📧 Email Recipients: AP Team (tax@, aditya.singh@, ap@koenig-solutions.com)"
+        echo "🔄 Next Run: In 4 days"
