@@ -1,4 +1,4 @@
-name: 🚀 Enhanced Invoice Validation System - Excel & ZIP
+name: 🚀 Enhanced Invoice Validation System - Excel & ZIP (Debug Mode)
 
 on:
   schedule:
@@ -20,97 +20,275 @@ on:
         options:
           - 'true'
           - 'false'
+      
+      debug_mode:
+        description: 'Enable detailed debugging'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  # RMS Configuration
+  RMS_LOGIN_URL: ${{ secrets.RMS_LOGIN_URL }}
+  RMS_DOWNLOAD_URL: ${{ secrets.RMS_DOWNLOAD_URL }}
+  RMS_USER: ${{ secrets.RMS_USER }}
+  RMS_PASS: ${{ secrets.RMS_PASS }}
+  RMS_TIMEOUT: 60
+  
+  # Email Configuration
+  SMTP_SERVER: smtp.office365.com
+  SMTP_PORT: 587
+  EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+  EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+  SMTP_USE_TLS: true
+  EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+  SMTP_FROM_NAME: "Invoice Management System"
+  
+  # Recipients
+  AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
+  EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS }}
+  TEAM_EMAIL_LIST: ${{ secrets.TEAM_EMAIL_LIST }}
+  
+  # Debug Mode
+  EMAIL_DEBUG: ${{ inputs.debug_mode || 'true' }}
 
 jobs:
   validate-invoices:
     runs-on: ubuntu-latest
     
     steps:
-    - name: 📥 Checkout repository
+    - name: 🔄 Checkout Repository
       uses: actions/checkout@v4
-    
-    - name: 🐍 Set up Python
+      
+    - name: 🐍 Setup Python Environment
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    
-    - name: 📦 Install dependencies
+        cache: 'pip'
+        
+    - name: 📦 Install Dependencies
       run: |
-        python -m pip install --upgrade pip
+        echo "📦 Installing Python dependencies..."
+        pip install --upgrade pip
         pip install -r requirements.txt
-        pip install openpyxl pandas python-dotenv requests beautifulsoup4
-    
-    - name: 🏗️ Setup Chrome for Selenium
-      uses: browser-actions/setup-chrome@v1
-    
-    - name: 📊 Create sample data if needed
-      run: |
-        if [ ! -f invoices.csv ] || [ ! -s invoices.csv ]; then
-          echo "Creating sample invoice data..."
-          cat > invoices.csv << 'EOF'
-        Invoice_ID,Invoice_Date,Vendor_Name,Amount,Location,Currency,Vendor_Address,Invoice_Type,Payment_Terms,Due_Date,Tax_Rate,Description,PO_Number,Category,Approval_Status
-        INV2024001,2024-08-10,Microsoft Corporation,125000,Delhi,INR,"One Microsoft Way Redmond",Service,Net 30,2024-09-10,18,Software Licenses,PO2024001,IT Services,Pending
-        INV2024002,2024-08-11,Amazon Web Services,75000,Mumbai,INR,"410 Terry Ave N Seattle",Service,Net 15,2024-08-26,18,Cloud Services,PO2024002,IT Infrastructure,Approved
-        INV2024003,2024-08-12,Dell Technologies,250000,Bangalore,INR,"One Dell Way Round Rock",Hardware,Net 45,2024-09-26,18,Server Hardware,PO2024003,Equipment,Pending
-        EOF
-        fi
-    
-    - name: 📁 Create invoice files directory
-      run: |
-        mkdir -p invoice_files
-        echo "Sample invoice content for INV2024001" > invoice_files/INV2024001.txt
-        echo "Sample invoice content for INV2024002" > invoice_files/INV2024002.txt
-        echo "Sample invoice content for INV2024003" > invoice_files/INV2024003.txt
-    
-    - name: 🔄 Run Enhanced Invoice Processor (Excel)
-      run: python enhanced_processor.py
-      env:
-        VALIDATION_PERIOD: ${{ inputs.validation_period || 'current' }}
-    
-    - name: 📧 Send Email with ZIP Attachments
-      if: ${{ inputs.send_email != 'false' }}
-      run: python email_notifier.py
-      env:
-        # SMTP Configuration
-        SMTP_SERVER: ${{ secrets.SMTP_SERVER || 'smtp.office365.com' }}
-        SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
-        EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
-        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        SMTP_USE_TLS: true
-        EMAIL_FROM: ${{ secrets.EMAIL_FROM || secrets.EMAIL_USERNAME }}
-        SMTP_FROM_NAME: "Invoice Management System"
+        echo "✅ Dependencies installed successfully"
         
-        # Recipients
-        AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
-        EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS || secrets.AP_TEAM_EMAIL_LIST }}
-        
-        # Processing Settings
-        VALIDATION_PERIOD: ${{ inputs.validation_period || 'current' }}
-    
-    - name: 📊 Upload Excel Reports
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: excel-validation-reports
-        path: invoice_validation_report_*.xlsx
-        retention-days: 30
-    
-    - name: 📁 Upload ZIP Archives
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: invoice-zip-archives
-        path: invoice_validation_*.zip
-        retention-days: 7
-    
-    - name: 📋 Summary Report
-      if: always()
+    - name: 🔍 Debug - Initial File Listing
       run: |
-        echo "📊 Invoice Validation Summary"
-        echo "Date: $(date)"
-        echo "Status: ✅ Processing Completed"
+        echo "🔍 DEBUG: Initial repository structure"
+        echo "📁 Current directory: $(pwd)"
+        echo "📁 Repository contents:"
+        ls -la
         echo ""
-        echo "📋 Excel Report: $(ls invoice_validation_report_*.xlsx 2>/dev/null | head -1 || echo 'Not found')"
-        echo "📁 Invoice Files: $(find invoice_files -type f | wc -l) files processed"
-        echo "📧 Email Recipients: AP Team (tax@, aditya.singh@, ap@koenig-solutions.com)"
-        echo "🔄 Next Run: In 4 days"
+        echo "📁 Looking for Python files:"
+        find . -name "*.py" -type f
+        echo ""
+        echo "📁 Looking for CSV files:"
+        find . -name "*.csv" -type f
+        echo ""
+        
+    - name: 📊 Generate Excel Validation Report
+      run: |
+        echo "🚀 Starting enhanced invoice processing..."
+        echo "📊 Processing invoices with Excel output..."
+        
+        # Run the enhanced processor
+        if [ -f "enhanced_processor.py" ]; then
+          echo "✅ Found enhanced_processor.py"
+          python3 enhanced_processor.py
+        else
+          echo "❌ enhanced_processor.py not found!"
+          exit 1
+        fi
+        
+        echo "📊 Excel processing completed"
+        
+    - name: 🔍 Debug - After Excel Generation
+      run: |
+        echo "🔍 DEBUG: Files after Excel generation"
+        echo "📁 Current directory contents:"
+        ls -la
+        echo ""
+        echo "📊 Looking for Excel files:"
+        find . -name "*.xlsx" -type f
+        echo ""
+        echo "📊 Excel file details:"
+        ls -la *.xlsx 2>/dev/null || echo "No .xlsx files found"
+        echo ""
+        
+    - name: 📁 Create Invoice Files Directory
+      run: |
+        echo "📁 Creating invoice_files directory..."
+        mkdir -p invoice_files
+        
+        # Create sample invoice files for testing if none exist
+        if [ ! "$(ls -A invoice_files 2>/dev/null)" ]; then
+          echo "📝 Creating sample invoice files for testing..."
+          echo "Sample Invoice 1 Content" > invoice_files/INV001.txt
+          echo "Sample Invoice 2 Content" > invoice_files/INV002.txt
+          echo "Sample Invoice 3 Content" > invoice_files/INV003.txt
+          echo "✅ Sample invoice files created"
+        fi
+        
+        echo "📁 Invoice files directory contents:"
+        ls -la invoice_files/
+        
+    - name: 🔍 Debug - Before ZIP Creation
+      run: |
+        echo "🔍 DEBUG: Environment before ZIP creation"
+        echo "📁 Working directory: $(pwd)"
+        echo "📁 All files:"
+        find . -type f -name "*" | head -30
+        echo ""
+        echo "📊 Excel reports available:"
+        ls -la invoice_validation_report_*.xlsx 2>/dev/null || echo "No Excel reports found"
+        echo ""
+        echo "📁 Invoice files available:"
+        ls -la invoice_files/ 2>/dev/null || echo "No invoice_files directory"
+        echo ""
+        
+    - name: 📁 Test ZIP Creation
+      run: |
+        echo "🧪 Testing ZIP creation manually..."
+        
+        # Check if email_notifier.py exists
+        if [ ! -f "email_notifier.py" ]; then
+          echo "❌ email_notifier.py not found!"
+          echo "📁 Available Python files:"
+          find . -name "*.py" -type f
+          exit 1
+        fi
+        
+        # Run the email notifier
+        echo "📧 Running email notifier..."
+        python3 email_notifier.py
+        
+    - name: 🔍 Debug - After ZIP Creation
+      run: |
+        echo "🔍 DEBUG: Files after ZIP creation attempt"
+        echo "📁 Current directory contents:"
+        ls -la
+        echo ""
+        echo "📁 Looking for ZIP files:"
+        find . -name "*.zip" -type f
+        echo ""
+        echo "📁 ZIP file details:"
+        ls -la *.zip 2>/dev/null || echo "No .zip files found"
+        echo ""
+        echo "📁 All files ending with validation:"
+        find . -name "*validation*" -type f
+        echo ""
+        
+    - name: 🔍 Debug - Environment Variables
+      run: |
+        echo "🔍 DEBUG: Environment variables (sensitive data masked)"
+        echo "SMTP_SERVER: $SMTP_SERVER"
+        echo "SMTP_PORT: $SMTP_PORT"
+        echo "EMAIL_USERNAME: ${EMAIL_USERNAME:0:10}***"
+        echo "EMAIL_PASSWORD: $(if [ -n "$EMAIL_PASSWORD" ]; then echo "SET"; else echo "NOT SET"; fi)"
+        echo "AP_TEAM_EMAIL_LIST: ${AP_TEAM_EMAIL_LIST:0:20}***"
+        echo ""
+        
+    - name: 📁 Manual ZIP Creation (Fallback)
+      run: |
+        echo "📁 Manual ZIP creation as fallback..."
+        
+        # Create timestamp
+        TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+        ZIP_NAME="invoice_validation_${TIMESTAMP}.zip"
+        
+        # Find Excel reports
+        EXCEL_FILES=$(find . -name "invoice_validation_report_*.xlsx" -type f)
+        
+        if [ -n "$EXCEL_FILES" ]; then
+          echo "✅ Found Excel files: $EXCEL_FILES"
+          
+          # Create ZIP with Excel files and invoice files
+          zip -r "$ZIP_NAME" $EXCEL_FILES invoice_files/ 2>/dev/null || true
+          
+          if [ -f "$ZIP_NAME" ]; then
+            echo "✅ Manual ZIP created: $ZIP_NAME"
+            ls -la "$ZIP_NAME"
+          else
+            echo "❌ Manual ZIP creation failed"
+          fi
+        else
+          echo "❌ No Excel files found for ZIP creation"
+        fi
+        
+    - name: 🔍 Debug - Final File Check
+      run: |
+        echo "🔍 DEBUG: Final file listing before upload"
+        echo "📁 All files in current directory:"
+        ls -la
+        echo ""
+        echo "📁 ZIP files specifically:"
+        ls -la *.zip 2>/dev/null || echo "No ZIP files found"
+        echo ""
+        echo "📁 Pattern match test:"
+        ls -la invoice_validation_*.zip 2>/dev/null || echo "No files match pattern invoice_validation_*.zip"
+        echo ""
+        
+    - name: 📦 Upload ZIP Archives (Debug)
+      uses: actions/upload-artifact@v4
+      with:
+        name: invoice-zip-archives-debug
+        path: |
+          *.zip
+          invoice_validation_*.xlsx
+          invoice_files/
+        retention-days: 7
+        if-no-files-found: warn
+        
+    - name: 📧 Send Email Notification
+      if: ${{ inputs.send_email != 'false' }}
+      run: |
+        echo "📧 Email notification step..."
+        
+        if [ -f "email_notifier.py" ]; then
+          echo "📧 Found email notifier, checking email sending..."
+          
+          # Check if ZIP files exist
+          if ls invoice_validation_*.zip 1> /dev/null 2>&1; then
+            echo "✅ ZIP files found for email attachment"
+            python3 -c "
+import os
+from email_notifier import EnhancedEmailSystem
+
+# Initialize email system
+email_system = EnhancedEmailSystem()
+
+# Send email with current files
+try:
+    result = email_system.send_validation_email_with_zip()
+    print(f'📧 Email result: {result}')
+except Exception as e:
+    print(f'❌ Email error: {e}')
+"
+          else
+            echo "⚠️ No ZIP files found, sending report-only email"
+          fi
+        else
+          echo "❌ email_notifier.py not found"
+        fi
+        
+    - name: 🎯 Summary Report
+      if: always()
+      run: |
+        echo ""
+        echo "📊 ====== WORKFLOW SUMMARY ======"
+        echo "📅 Date: $(date)"
+        echo "🔄 Validation Period: ${{ inputs.validation_period || 'current' }}"
+        echo "📧 Send Email: ${{ inputs.send_email || 'true' }}"
+        echo "🐛 Debug Mode: ${{ inputs.debug_mode || 'true' }}"
+        echo ""
+        echo "📁 Final File Count:"
+        echo "  📊 Excel files: $(find . -name '*.xlsx' | wc -l)"
+        echo "  📁 ZIP files: $(find . -name '*.zip' | wc -l)"
+        echo "  📄 Invoice files: $(find invoice_files -type f 2>/dev/null | wc -l || echo 0)"
+        echo ""
+        echo "🎯 Workflow Status: Complete"
+        echo "================================"
