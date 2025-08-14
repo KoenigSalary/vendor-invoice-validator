@@ -9,41 +9,17 @@ import zipfile
 import glob
 import logging
 
-os.environ['EMAIL_RECIPIENTS'] = 'tax@koenig-solutions.com'
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-class EmailNotifier:
-    """Basic email notifier for backward compatibility"""
-    def __init__(self):
-        pass
-    
-    def send_validation_report(self, date, recipients, issues_count):
-        print(f"📧 Email notification: {issues_count} issues found on {date}")
-        print(f"📧 Recipients: {recipients}")
-        return True
-    
-    def send_detailed_validation_report(self, date, recipients, email_summary, report_path, *args):
-        print(f"📧 Enhanced email notification sent for {date}")
-        print(f"📧 Recipients: {recipients}")
-        print(f"📊 Report: {report_path}")
-        return True
-
 class EnhancedEmailSystem:
-    """Enhanced email system with rich HTML templates and ZIP attachments"""
-    
+    """Enhanced email system with professional HTML templates and black text"""
+
     def __init__(self, smtp_server=None, smtp_port=None, username=None, password=None):
-        # Use your existing environment variables
+        # SMTP Configuration
         self.smtp_server = smtp_server or os.getenv('SMTP_SERVER', 'smtp.office365.com')
         self.smtp_port = int(smtp_port or os.getenv('SMTP_PORT', '587'))
-        self.username = username or os.getenv('EMAIL_USERNAME')  # Your variable name
-        self.password = password or os.getenv('EMAIL_PASSWORD')  # Your variable name
-        self.from_email = os.getenv('EMAIL_FROM', self.username)
-        self.from_name = os.getenv('SMTP_FROM_NAME', 'Invoice Management System')
+        self.username = username or os.getenv('EMAIL_USERNAME')
+        self.password = password or os.getenv('EMAIL_PASSWORD')
         
-        # Get recipients from your AP_TEAM_EMAIL_LIST
+        # Recipients Configuration
         recipients_str = (
             os.getenv('AP_TEAM_EMAIL_LIST') or
             os.getenv('EMAIL_RECIPIENTS') or
@@ -51,9 +27,7 @@ class EnhancedEmailSystem:
             ''
         )
         
-        # Parse recipients
         if recipients_str:
-            recipients_str = recipients_str.strip().strip('"').strip("'")
             self.default_recipients = [
                 email.strip()
                 for email in recipients_str.replace(';', ',').split(',')
@@ -61,322 +35,257 @@ class EnhancedEmailSystem:
             ]
         else:
             self.default_recipients = []
+
+    def create_professional_html_template(self, validation_data, deadline_date):
+        """Create professional HTML email template with BLACK text"""
         
-        logger.info(f"📧 Email system initialized with {len(self.default_recipients)} recipients")
-    
-    def create_invoice_zip(self, excel_report_path, invoice_files_dir="invoice_files"):
-        """Create ZIP file with Excel report and invoice files"""
+        critical_count = validation_data.get('failed', 0)
+        warning_count = validation_data.get('warnings', 0)
+        passed_count = validation_data.get('passed', 0)
+        total_count = critical_count + warning_count + passed_count
+        
+        critical_amount = '₹1,50,000'  # Sample amounts
+        warning_amount = '₹1,40,000'
+        
+        html_template = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Invoice Validation Report</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #000000; background-color: #ffffff; margin: 0; padding: 20px;">
+            
+            <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff; border: 2px solid #e9ecef; border-radius: 10px; overflow: hidden;">
+                
+                <!-- Main Content -->
+                <div style="padding: 30px; background-color: #ffffff;">
+                    
+                    <!-- Executive Summary -->
+                    <div style="background-color: #f8f9fa; border: 2px solid #dee2e6; border-radius: 8px; padding: 25px; margin-bottom: 25px;">
+                        <h2 style="margin: 0 0 20px 0; color: #000000; font-size: 22px; font-weight: bold;">      📑 ✔️ KOENIG INVOICE VALIDATION REPORT</h2>
+                        
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                            <tr>
+                                <td style="padding: 12px; border: 1px solid #dee2e6; background-color: #ffffff; color: #000000; font-weight: bold;">Status</td>
+                                <td style="padding: 12px; border: 1px solid #dee2e6; background-color: #ffffff; color: #000000; font-weight: bold;">Count</td>
+                                <td style="padding: 12px; border: 1px solid #dee2e6; background-color: #ffffff; color: #000000; font-weight: bold;">Financial Impact</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 12px; border: 1px solid #dee2e6; background-color: #ffebee; color: #000000;">🚨 CRITICAL ISSUES</td>
+                                <td style="padding: 12px; border: 1px solid #dee2e6; background-color: #ffebee; color: #000000; font-weight: bold;">{critical_count}</td>
+                                <td style="padding: 12px; border: 1px solid #dee2e6; background-color: #ffebee; color: #000000; font-weight: bold;">{critical_amount}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 12px; border: 1px solid #dee2e6; background-color: #fff3e0; color: #000000;">⚠️ WARNING ITEMS</td>
+                                <td style="padding: 12px; border: 1px solid #dee2e6; background-color: #fff3e0; color: #000000; font-weight: bold;">{warning_count}</td>
+                                <td style="padding: 12px; border: 1px solid #dee2e6; background-color: #fff3e0; color: #000000; font-weight: bold;">{warning_amount}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 12px; border: 1px solid #dee2e6; background-color: #e8f5e8; color: #000000;">✅ SUCCESSFULLY PROCESSED</td>
+                                <td style="padding: 12px; border: 1px solid #dee2e6; background-color: #e8f5e8; color: #000000; font-weight: bold;">{passed_count}</td>
+                                <td style="padding: 12px; border: 1px solid #dee2e6; background-color: #e8f5e8; color: #000000; font-weight: bold;">Ready for Payment</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <!-- Urgent Action Required -->
+                    <div style="background-color: #ffebee; border-left: 5px solid #d32f2f; padding: 20px; margin-bottom: 25px;">
+                        <h3 style="margin: 0 0 15px 0; color: #000000; font-size: 18px;">🚨 IMMEDIATE ACTION REQUIRED</h3>
+                        <p style="margin: 0; color: #000000; font-size: 16px; font-weight: bold;">Response Deadline: {deadline_date.strftime('%B %d, %Y at %I:%M %p IST')}</p>
+                        <p style="margin: 10px 0 0 0; color: #000000; font-size: 14px;">Non-response will trigger automatic escalation to Finance Head</p>
+                    </div>
+                    
+                    <!-- Required Actions -->
+                    <div style="background-color: #ffffff; border: 2px solid #dee2e6; border-radius: 8px; padding: 25px; margin-bottom: 25px;">
+                        <h3 style="margin: 0 0 20px 0; color: #000000; font-size: 18px;">🎯 REQUIRED ACTIONS</h3>
+                        <ol style="color: #000000; font-size: 15px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                            <li style="color: #000000; margin-bottom: 8px;"><strong style="color: #000000;">Review Failed Invoices:</strong> Check attached Excel report for detailed validation errors</li>
+                            <li style="color: #000000; margin-bottom: 8px;"><strong style="color: #000000;">Provide Corrections:</strong> Submit corrected invoice data or explanations for exceptions</li>
+                            <li style="color: #000000; margin-bottom: 8px;"><strong style="color: #000000;">Vendor Updates:</strong> Update vendor master data if validation issues are due to outdated information</li>
+                            <li style="color: #000000; margin-bottom: 8px;"><strong style="color: #000000;">Approval Status:</strong> Confirm approval status for pending invoices</li>
+                            <li style="color: #000000; margin-bottom: 8px;"><strong style="color: #000000;">Documentation:</strong> Provide supporting documents for flagged transactions</li>
+                        </ol>
+                    </div>
+                    
+                    <!-- Attachments -->
+                    <div style="background-color: #e3f2fd; border: 2px solid #2196f3; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+                        <h3 style="margin: 0 0 15px 0; color: #000000; font-size: 18px;">📎 ATTACHMENTS INCLUDED</h3>
+                        <ul style="color: #000000; font-size: 15px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                            <li style="color: #000000; margin-bottom: 5px;"><strong style="color: #000000;">Excel Validation Report:</strong> Detailed analysis with validation results for all invoices</li>
+                            <li style="color: #000000; margin-bottom: 5px;"><strong style="color: #000000;">Invoice Files ZIP:</strong> Original invoice documents for your reference</li>
+                            <li style="color: #000000; margin-bottom: 5px;"><strong style="color: #000000;">Processing Summary:</strong> Statistical overview and recommendations</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Contact Information -->
+                    <div style="background-color: #f5f5f5; border: 2px solid #9e9e9e; border-radius: 8px; padding: 20px;">
+                        <h3 style="margin: 0 0 15px 0; color: #000000; font-size: 18px;">📞 FOR QUESTIONS OR SUPPORT</h3>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 8px 0; color: #000000; font-weight: bold; width: 30%;">Finance Team:</td>
+                                <td style="padding: 8px 0; color: #000000;">Accounts@koenig-solutions.com</td>
+                            </tr>
+                           
+                            <tr>
+                                <td style="padding: 8px 0; color: #000000; font-weight: bold;">System Support:</td>
+                                <td style="padding: 8px 0; color: #000000;">tax@koenig-solutions.com</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                </div>
+                
+                <!-- Footer -->
+                <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 2px solid #dee2e6;">
+                    <p style="margin: 0; color: #000000; font-size: 12px;">Koenig Solutions Pvt. Ltd. | Generated by Invoice Management System</p>
+                    <p style="margin: 5px 0 0 0; color: #000000; font-size: 11px;">This is an automated report containing confidential information</p>
+                </div>
+                
+            </div>
+        </body>
+        </html>
+        """
+        
+        return html_template
+
+    def create_invoice_zip(self, invoice_files=None, validation_period=None):
+        """Create ZIP file with invoice copies and Excel report"""
         try:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            period = validation_period or "current"
             zip_filename = f'invoice_validation_{timestamp}.zip'
             
             with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                # Add Excel report to ZIP
-                if os.path.exists(excel_report_path):
-                    zipf.write(excel_report_path, 'validation_report.xlsx')
-                    logger.info(f"📊 Added Excel report to ZIP: {excel_report_path}")
+                # Add Excel validation report
+                excel_files = glob.glob('invoice_validation_report_*.xlsx')
+                if excel_files:
+                    latest_excel = max(excel_files, key=os.path.getctime)
+                    zipf.write(latest_excel, 'validation_report.xlsx')
+                    logging.info(f"📊 Added Excel report to ZIP: {latest_excel}")
                 
                 # Add invoice files
                 invoice_count = 0
-                if os.path.exists(invoice_files_dir):
-                    for root, dirs, files in os.walk(invoice_files_dir):
+                if os.path.exists('invoice_files'):
+                    for root, dirs, files in os.walk('invoice_files'):
                         for file in files:
                             if file.lower().endswith(('.pdf', '.png', '.jpg', '.jpeg')):
                                 file_path = os.path.join(root, file)
-                                # Add to invoice_files folder in ZIP
-                                arcname = f"invoice_files/{file}"
+                                arcname = os.path.join('invoice_files', file)
                                 zipf.write(file_path, arcname)
                                 invoice_count += 1
                 
-                # Add summary file
-                summary_content = f"""Invoice Validation Report Summary
-Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-Excel Report: validation_report.xlsx
-Invoice Files: {invoice_count} files included
-
-Files included in this ZIP:
-- validation_report.xlsx (Excel validation report)
-- invoice_files/ ({invoice_count} invoice files)
-
-For questions, contact: {self.from_email}
-"""
-                zipf.writestr('summary.txt', summary_content)
+                logging.info(f"📁 ZIP created successfully: {zip_filename} ({invoice_count} invoice files)")
+                return zip_filename
                 
-            logger.info(f"📁 ZIP created successfully: {zip_filename} ({invoice_count} invoice files)")
-            return zip_filename
-            
         except Exception as e:
-            logger.error(f"❌ Error creating ZIP file: {str(e)}")
+            logging.error(f"❌ Error creating ZIP: {e}")
             return None
-    
-    def create_html_email(self, subject, summary_stats, report_filename):
-        """Create professional HTML email"""
-        html_template = f"""
-        
-        
-        
-            
-            
-        
-        
-            
 
-                
-
-                    
-📊 Invoice Validation Report
-
-                    
-Koenig Solutions - Invoice Management System
-
-
-                    
-{datetime.now().strftime('%B %d, %Y at %I:%M %p')}
-
-
-                
-
-                
-                
-
-                    
-Validation Summary
-
-                    
-
-                        
-
-                            
-{summary_stats.get('passed', 0)}
-
-                            
-Passed
-
-
-                        
-
-                        
-
-                            
-{summary_stats.get('warnings', 0)}
-
-                            
-Warnings
-
-
-                        
-
-                        
-
-                            
-{summary_stats.get('failed', 0)}
-
-                            
-Failed
-
-
-                        
-
-                    
-
-                    
-                    
-
-                        
-📁 Attached Files
-
-                        
-{report_filename}
-
-
-                        
-
-                            
-📊 Excel validation report with all invoice details
-
-                            
-📄 Invoice files (PDFs, images) for the validation period
-
-                            
-📋 Processing summary and metadata
-
-                        
-
-                    
-
-                    
-                    
-This automated report contains the complete invoice validation results and all associated invoice files.
-
-
-                    
-For questions or support, please contact the Finance Team.
-
-
-                
-
-                
-                
-
-                    
-Generated by Invoice Management System | Koenig Solutions
-
-
-                    
-This is an automated message. Please do not reply directly to this email.
-
-
-                
-
-            
-
-        
-
-        
-        """
-        return html_template
-    
-    def send_email_with_zip(self, zip_filepath, summary_stats=None, recipients=None):
-        """Send email with ZIP attachment"""
+    def send_email_with_attachments(self, recipients, subject, html_body, zip_file):
+        """Send professional HTML email with ZIP attachment"""
         try:
-            if not recipients:
-                recipients = self.default_recipients
-            
-            if not recipients:
-                logger.error("⚠️ No recipients specified")
-                return False
-            
-            # Create message
-            msg = MIMEMultipart('alternative')
-            msg['From'] = f"{self.from_name} <{self.from_email}>"
+            msg = MIMEMultipart()
+            msg['From'] = self.username
             msg['To'] = ', '.join(recipients)
-            msg['Subject'] = f"📊 Invoice Validation Report - {datetime.now().strftime('%Y-%m-%d')}"
+            msg['Subject'] = subject
             
-            # Default summary stats
-            if not summary_stats:
-                summary_stats = {'passed': 0, 'warnings': 0, 'failed': 0, 'total': 0}
-            
-            # Create HTML content
-            html_content = self.create_html_email(
-                subject=msg['Subject'],
-                summary_stats=summary_stats,
-                report_filename=os.path.basename(zip_filepath)
-            )
-            
-            # Attach HTML content
-            html_part = MIMEText(html_content, 'html')
-            msg.attach(html_part)
+            # Attach HTML body
+            msg.attach(MIMEText(html_body, 'html'))
             
             # Attach ZIP file
-            if os.path.exists(zip_filepath):
-                with open(zip_filepath, 'rb') as attachment:
-                    part = MIMEBase('application', 'zip')
+            if zip_file and os.path.exists(zip_file):
+                with open(zip_file, 'rb') as attachment:
+                    part = MIMEBase('application', 'octet-stream')
                     part.set_payload(attachment.read())
                     encoders.encode_base64(part)
                     part.add_header(
                         'Content-Disposition',
-                        f'attachment; filename= {os.path.basename(zip_filepath)}'
+                        f'attachment; filename= {os.path.basename(zip_file)}'
                     )
                     msg.attach(part)
             
-            # Send email
+            # Send email via SMTP
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
                 server.starttls()
                 server.login(self.username, self.password)
                 server.send_message(msg)
             
-            logger.info(f"✅ Email sent successfully to: {', '.join(recipients)}")
+            logging.info(f"✅ Email sent successfully to: {', '.join(recipients)}")
             return True
             
         except Exception as e:
-            logger.error(f"❌ Error sending email: {str(e)}")
+            logging.error(f"❌ Error sending email: {e}")
             return False
-    
-    def send_validation_report_with_invoices(self, excel_report_path, invoice_files_dir="invoice_files", summary_stats=None):
-        """Main method to send validation report with invoice files"""
-        try:
-            # Create ZIP file with Excel report and invoice files
-            zip_filepath = self.create_invoice_zip(excel_report_path, invoice_files_dir)
-            
-            if not zip_filepath:
-                logger.error("❌ Failed to create ZIP file")
-                return False
-            
-            # Send email with ZIP attachment
-            success = self.send_email_with_zip(zip_filepath, summary_stats)
-            
-            # Clean up ZIP file after sending
-            try:
-                if os.path.exists(zip_filepath):
-                    os.remove(zip_filepath)
-                    logger.info(f"🗑️ Temporary ZIP file cleaned up: {zip_filepath}")
-            except Exception as e:
-                logger.warning(f"⚠️ Could not clean up ZIP file: {str(e)}")
-            
-            return success
-            
-        except Exception as e:
-            logger.error(f"❌ Error in send_validation_report_with_invoices: {str(e)}")
-            return False
+        finally:
+            # Cleanup temporary ZIP file
+            if zip_file and os.path.exists(zip_file):
+                os.remove(zip_file)
+                logging.info(f"🗑️ Temporary ZIP file cleaned up: {zip_file}")
 
 def main():
-    """Test the email system"""
+    """Test the enhanced email system"""
     print("🧪 Testing email system...")
-    
-    # Check credentials
-    if not os.getenv('EMAIL_USERNAME') or not os.getenv('EMAIL_PASSWORD'):
-        print("⚠️ SMTP credentials not configured")
-        print("📧 Email result: SMTP credentials not configured")
-        print("✅ Test result: Failed")
-        return False
-    
-    # Check recipients
-    recipients_str = os.getenv('AP_TEAM_EMAIL_LIST') or os.getenv('EMAIL_RECIPIENTS')
-    if not recipients_str:
-        print("⚠️ No recipients specified")
-        print("📧 Email result: No recipients specified")
-        print("✅ Test result: Failed")
-        return False
     
     # Initialize email system
     email_system = EnhancedEmailSystem()
     
+    if not email_system.username or not email_system.password:
+        print("⚠️ SMTP credentials not configured")
+        return "SMTP credentials not configured"
+    
+    if not email_system.default_recipients:
+        print("⚠️ No recipients specified")
+        return "No recipients specified"
+    
+    logging.info(f"📧 Email system initialized with {len(email_system.default_recipients)} recipients")
+    
     # Find Excel report
-    excel_files = glob.glob("invoice_validation_report_*.xlsx")
+    excel_files = glob.glob('invoice_validation_report_*.xlsx')
     if not excel_files:
-        print("⚠️ No Excel report found. Please run enhanced_processor.py first")
-        print("📧 Email result: No Excel report found")
-        print("✅ Test result: Failed")
-        return False
+        print("📊 No Excel reports found")
+        return "No Excel reports found"
     
-    excel_report = excel_files[-1]  # Use most recent
-    print(f"📊 Found Excel report: {excel_report}")
+    latest_excel = max(excel_files, key=os.path.getctime)
+    print(f"📊 Found Excel report: {os.path.basename(latest_excel)}")
     
-    # Test summary stats
-    summary_stats = {
-        'passed': 0,
-        'warnings': 5,
-        'failed': 0,
-        'total': 5
+    # Create ZIP with invoices
+    zip_file = email_system.create_invoice_zip()
+    if not zip_file:
+        print("❌ Failed to create ZIP file")
+        return "Failed to create ZIP"
+    
+    # Sample validation data
+    validation_data = {
+        'failed': 3,
+        'warnings': 4,
+        'passed': 8
     }
     
-    # Send email with ZIP
-    success = email_system.send_validation_report_with_invoices(
-        excel_report_path=excel_report,
-        invoice_files_dir="invoice_files",
-        summary_stats=summary_stats
+    # Create professional HTML email
+    deadline_date = datetime.now() + timedelta(days=3)
+    html_body = email_system.create_professional_html_template(validation_data, deadline_date)
+    
+    # Send email
+    subject = f"🚨 URGENT: Invoice Validation - Action Required by {deadline_date.strftime('%b %d, %Y')}"
+    
+    success = email_system.send_email_with_attachments(
+        email_system.default_recipients,
+        subject,
+        html_body,
+        zip_file
     )
     
     if success:
         print("✅ Email sent successfully!")
-        print("📧 Email result: Success")
-        print("✅ Test result: Passed")
+        return "Success"
     else:
         print("❌ Email sending failed")
-        print("📧 Email result: Failed")
-        print("✅ Test result: Failed")
-    
-    return success
+        return "Failed"
 
 if __name__ == "__main__":
-    main()
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    result = main()
+    print(f"📧 Email result: {result}")
+    print(f"✅ Test result: {'Passed' if result == 'Success' else 'Failed'}")
