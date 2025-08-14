@@ -1,0 +1,533 @@
+TransactionID	GroupId	Employee	Type	Date	Amount	Bank	Narration	Currency	ACCHead	Expense
+315966	0	Rukhsar Khureshi-3220	Payment	10-Jul-25	3,718.00	Kotak Delhi OD account 0317 KSPL	NEFT-2507100QCX06- KOSPL2 KOTAKSINGLE2 0 20257101:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+315314	0		Payment	08-Jul-25	103,200.00	Kotak Delhi OD account 0317 KSPL	NEFT-2507080QAC2K- KOSPL2 KOTAKSINGLE2 0 20257899:Create By:-Kushagr Kapoor:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+315303	0		Payment	08-Jul-25	49,051.00	Kotak Delhi OD account 0317 KSPL	NEFT-2507080Q9RUX- KOSPL2 KOTAKSINGLE2 0 20257832:Create By:-Kushagr Kapoor:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+315302	0	Shalini Raghuwanshi-3218	Payment	08-Jul-25	12,929.00	Kotak Delhi OD account 0317 KSPL	IFT-SHALINI RAGHUWANSHI-FCM-250708HIT5VT:Create By:-Kushagr Kapoor:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+315149	0	Rahul Jha-3462	Payment	07-Jul-25	63,200.00	Kotak Delhi OD account 0317 KSPL	NEFT-2507070Q8UBV- KOSPL2 KOTAKSINGLE2 0 20257727:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+315109	0	Kannan Manoharan-2525	Payment	04-Jul-25	126,800.00	Kotak Delhi OD account 0317 KSPL	NEFT-2507040Q72AH- KOSPL2 KOTAKSINGLE2 0 20257441:Create By:-Kushagr Kapoor:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+314487	0		Payment	03-Jul-25	175,400.00	Kotak Delhi OD account 0317 KSPL	NEFT-2507030Q5U16- KOSPL2 KOTAKSINGLE2 0 20257386:Create By:-Kushagr Kapoor:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+314211	0		Payment	03-Jul-25	713,343.00	Kotak Delhi OD account 0317 KSPL	NEFT-2507030Q58MP- KOSPL2 KOTAKSINGLE2 0 20257334:Create By:-Kushagr Kapoor:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+314210	0		Payment	03-Jul-25	406,813.00	Kotak Delhi OD account 0317 KSPL	NEFT-2507030Q55WD- KOSPL2 KOTAKSINGLE2 0 20257376:Create By:-Kushagr Kapoor:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+314207	0	Vijay Balde-3183	Payment	02-Jul-25	55,000.00	Kotak Delhi OD account 0317 KSPL	IFT-VIJAY JAGADEESH BALDE-FCM-250702HEQQ8V:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+314206	0		Payment	02-Jul-25	129,867.00	Kotak Delhi OD account 0317 KSPL	NEFT-2507020Q4P99- KOSPL2 KOTAKSINGLE2 0 20257223:Create By:-Kushagr Kapoor:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+314176	0	Mohd Siddiqui-3182	Payment	02-Jul-25	4,782.00	Kotak Delhi OD account 0317 KSPL	IFT-MOHD FARHAN SIDDIQUI-FCM-250702HEMGRY:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+314175	0		Payment	02-Jul-25	143,200.00	Kotak Delhi OD account 0317 KSPL	NEFT-2507020Q4JKI- KOSPL2 KOTAKSINGLE2 0 20257278:Create By:-Kushagr Kapoor:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+314168	0		Payment	02-Jul-25	31,053,689.00	Kotak Delhi OD account 0317 KSPL	NEFT-2507020Q4CSP- KOSPL2 KOTAKSINGLE2 0 20257217:Create By:-Kushagr Kapoor:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+314167	0		Payment	02-Jul-25	5,735,184.00	Kotak Delhi OD account 0317 KSPL	IFT-2507020Q4CSP- KOSPL2 KOTAKSINGLE2 0 202572170:Create By:-Kushagr Kapoor:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+314130	0		Payment	02-Jul-25	2,471,356.00	Kotak Delhi OD account 0317 KSPL	NEFT-2507010Q3SKI- KOSPL2 KOTAKSINGLE2 0 20257117:Create By:-Kushagr Kapoor:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+314121	0		Payment	01-Jul-25	1,510,224.00	Kotak Delhi OD account 0317 KSPL	IFT-2507010Q3SKI- KOSPL2 KOTAKSINGLE2 0 202571179:Create By:-Kushagr Kapoor:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+315861	315303	Praveen Kumar-1297	Payment	08-Jul-2025	6288.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315860	315303	Sandeep Singh-1247	Payment	08-Jul-2025	654.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315859	315303	Akwinder Kaur-2388	Payment	08-Jul-2025	3955.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315858	315303	Lipika Sharma-3519	Payment	08-Jul-2025	1300.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315857	315303	Neeraj Pathak-3511	Payment	08-Jul-2025	665.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315856	315303	Pooja Kumari Prasad-3499	Payment	08-Jul-2025	2600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315855	315303	Kannan S-3180	Payment	08-Jul-2025	5300.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315854	315303	Rahul Nandy-3033	Payment	08-Jul-2025	4500.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315853	315303	Sonia Chhabra-2758	Payment	08-Jul-2025	5522.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315852	315303	Anish Samy-2752	Payment	08-Jul-2025	2532.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315851	315303	Monika Ahlawat-2709	Payment	08-Jul-2025	650.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315850	315303	Kannan Manoharan-2525	Payment	08-Jul-2025	5290.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315849	315303	Rishika Tibarewala-2484	Payment	08-Jul-2025	9795.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315847	315314	Jai Chitkara-2362	Payment	08-Jul-2025	103200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315240	314487	Gaurav Gosain-3259	Payment	03-Jul-2025	103200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315239	314487	Arshad Qureshi-2633	Payment	03-Jul-2025	72200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314580	314210	Suriya Sakthivel-2468	Payment	03-Jul-2025	66480.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314579	314210	Parshu Navale-3656	Payment	03-Jul-2025	38095.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314578	314210	Persis Anil-3676	Payment	03-Jul-2025	1600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314577	314210	Abhay Biala-3665	Payment	03-Jul-2025	51438.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314576	314210	Abhishek Bhamotriya-3664	Payment	03-Jul-2025	47143.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314575	314210	Swati Rai-3660	Payment	03-Jul-2025	46229.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314574	314210	Neha Yadav-3657	Payment	03-Jul-2025	38095.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314573	314210	Bhaskar Baruah-3655	Payment	03-Jul-2025	38962.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314572	314210	Shefali Kanwar-3645	Payment	03-Jul-2025	35000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314571	314210	Shaik Arshiya-3669	Payment	03-Jul-2025	18057.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314570	314210	Onkar Shinde-3667	Payment	03-Jul-2025	25714.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314549	314211	Aswani Sudha-3504	Payment	03-Jul-2025	42657.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314548	314211	Imran Ali M R-3210	Payment	03-Jul-2025	101943.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314547	314211	Mehak Syed-3671	Payment	03-Jul-2025	11429.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314546	314211	Hitesh Popat-3670	Payment	03-Jul-2025	24762.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314545	314211	Prajakta Landge-3662	Payment	03-Jul-2025	77381.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314544	314211	Uday Banerjee-3661	Payment	03-Jul-2025	66981.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314543	314211	Rushabh Shah-3658	Payment	03-Jul-2025	76190.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314542	314211	Aditya Rana-3654	Payment	03-Jul-2025	27200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314541	314211	Aayush Kaushik-3653	Payment	03-Jul-2025	27200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314540	314211	Anshika Srivastava-3651	Payment	03-Jul-2025	27200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314539	314211	Archita Singh-3650	Payment	03-Jul-2025	27200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314538	314211	Idrees Ali Idrees Ali-3644	Payment	03-Jul-2025	88200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314537	314211	Sarath Ramachandran-3643	Payment	03-Jul-2025	115000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315028	314175	Ramya M-2695	Payment	02-Jul-2025	143200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315027	314168	Shruti Gupta-1539	Payment	02-Jul-2025	162867.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315026	314168	Nehal Ahmed Kasmani-2639	Payment	02-Jul-2025	48200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315025	314168	Neelanjana Mukerji-2754	Payment	02-Jul-2025	63200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315024	314168	Sonu Kumar-10027	Payment	02-Jul-2025	27735.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315023	314168	Geetansh Goyal-3642	Payment	02-Jul-2025	48200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315022	314168	Magesh Palani-3640	Payment	02-Jul-2025	49885.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315021	314168	Soumik Purkayastha-3639	Payment	02-Jul-2025	88200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315020	314168	Sarika Gupta-3638	Payment	02-Jul-2025	70000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315019	314168	Kushal Shet-3637	Payment	02-Jul-2025	63000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315018	314168	Mansi Butola-3636	Payment	02-Jul-2025	55000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315017	314168	Danish Shaikh-3633	Payment	02-Jul-2025	66400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315016	314168	Mohammad Ansari-3631	Payment	02-Jul-2025	100000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315015	314168	Shivanshi Puri-3630	Payment	02-Jul-2025	48200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315014	314168	Radhika R-3629	Payment	02-Jul-2025	53200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315013	314168	Fayaz Jh-3628	Payment	02-Jul-2025	68000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315012	314168	Lalit Kumar-3627	Payment	02-Jul-2025	56200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315011	314168	Aman Kumar-3626	Payment	02-Jul-2025	58200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315010	314168	Prachi Arora-3625	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315009	314168	Pratibha Poddar-3624	Payment	02-Jul-2025	33600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315008	314168	Salik Hayat Makhmoor-3622	Payment	02-Jul-2025	55000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315007	314168	Ishita Gupta-3614	Payment	02-Jul-2025	38400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315006	314168	Umar Farooq-3611	Payment	02-Jul-2025	63200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315005	314168	Digvijay Negi-3609	Payment	02-Jul-2025	72200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315004	314168	Tannu Shree-3607	Payment	02-Jul-2025	29952.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315003	314168	Usama Tabish Mohammed-3606	Payment	02-Jul-2025	58200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315002	314168	Santhosh Dhanapal-3605	Payment	02-Jul-2025	73000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315001	314168	Gauri Praveen Yadav-3602	Payment	02-Jul-2025	50000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+315000	314168	Vanshika Shrivastav-3600	Payment	02-Jul-2025	33600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314999	314168	Avinash Verma-3599	Payment	02-Jul-2025	86400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314998	314168	Javeed Kareem-3598	Payment	02-Jul-2025	99800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314997	314168	Neha Saxena-3597	Payment	02-Jul-2025	63200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314996	314168	Anuradha Chaudhary-3596	Payment	02-Jul-2025	29952.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314995	314168	Shoaib Javid Peer-3594	Payment	02-Jul-2025	46400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314994	314168	Syeda Ahmed-3593	Payment	02-Jul-2025	63000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314993	314168	Nimisha Mohan-3592	Payment	02-Jul-2025	95000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314992	314168	Bhavyashree S-3591	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314991	314168	Rahul Biswa-3588	Payment	02-Jul-2025	53200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314990	314168	Nikhil Yadav-3587	Payment	02-Jul-2025	80000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314989	314168	Shrey Saxena-3586	Payment	02-Jul-2025	63200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314988	314168	Maitri Bhansali-3583	Payment	02-Jul-2025	54800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314987	314168	Kuldeep Swami-3582	Payment	02-Jul-2025	110000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314986	314168	Amulya Singh-3578	Payment	02-Jul-2025	33600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314985	314168	Amit Mishra-3577	Payment	02-Jul-2025	33600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314984	314168	Pradeep Singh-3573	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314983	314168	Suhaash Saripilli-3572	Payment	02-Jul-2025	50000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314982	314168	Amolik Singh-3571	Payment	02-Jul-2025	33600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314981	314168	Vibhor Verma-3570	Payment	02-Jul-2025	33600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314980	314168	Pawan Kumar-3569	Payment	02-Jul-2025	33600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314979	314168	Alok Raj-3567	Payment	02-Jul-2025	33600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314978	314168	Arjun Jain-3566	Payment	02-Jul-2025	58200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314977	314168	Pramila Chandraiah-3565	Payment	02-Jul-2025	79800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314976	314168	Anup Sharma-3561	Payment	02-Jul-2025	75000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314975	314168	Snehal Deepak Modi-3555	Payment	02-Jul-2025	108000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314974	314168	Ravita Parwani-3553	Payment	02-Jul-2025	88200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314973	314168	Neha Tripathi-3552	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314972	314168	Monika Sakthivel-3550	Payment	02-Jul-2025	64300.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314971	314168	Siddhant Sharma-3549	Payment	02-Jul-2025	63200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314970	314168	Gunjan Setia-3547	Payment	02-Jul-2025	30000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314969	314168	Drashtiben Mukeshbhai Devmurari-3543	Payment	02-Jul-2025	53200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314968	314168	Saema Ambareen Qazi-3541	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314967	314168	Manjiri Abhijit Tilak-3537	Payment	02-Jul-2025	33215.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314966	314168	Ritika Patel-3536	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314965	314168	Samruddhi Swapnil Kotibhaskar-3534	Payment	02-Jul-2025	103200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314964	314168	Swathi Raj-3527	Payment	02-Jul-2025	50000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314963	314168	Sarath G-3526	Payment	02-Jul-2025	80000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314962	314168	Nikhil Pal-3525	Payment	02-Jul-2025	65000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314961	314168	Alwin Pb-3524	Payment	02-Jul-2025	50000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314960	314168	Kanchan Sundarani-3523	Payment	02-Jul-2025	50000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314959	314168	Vishwajeet Singh-3521	Payment	02-Jul-2025	58200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314958	314168	Lipika Sharma-3519	Payment	02-Jul-2025	73200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314957	314168	Jagmeet Singh-3518	Payment	02-Jul-2025	82000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314956	314168	Divya G-3517	Payment	02-Jul-2025	39947.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314955	314168	Santanu Chakraborty-3516	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314954	314168	Pankaj Shimpi-3513	Payment	02-Jul-2025	110000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314953	314168	Vishakha Sharma-3512	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314952	314168	Neeraj Pathak-3511	Payment	02-Jul-2025	75000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314951	314168	Tanya Chhabra-3509	Payment	02-Jul-2025	58200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314950	314168	Neha Gaur-3506	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314949	314168	Bhavna Singh-3505	Payment	02-Jul-2025	63200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314948	314168	Pratik Kuyate-3501	Payment	02-Jul-2025	90000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314947	314168	Pushpadevi Mourya-3500	Payment	02-Jul-2025	40000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314946	314168	Pooja Kumari Prasad-3499	Payment	02-Jul-2025	41538.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314945	314168	Abhishek Singh Thakur-3497	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314944	314168	Arghadeep Das-3491	Payment	02-Jul-2025	80000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314943	314168	Srirag Nair-3481	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314942	314168	Ritika Arora-3478	Payment	02-Jul-2025	70000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314941	314168	Saad Zahid-3474	Payment	02-Jul-2025	63200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314940	314168	Dakshi Lal Srivastava-3472	Payment	02-Jul-2025	53200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314939	314168	Amandeep Pannu-3471	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314938	314168	Sagnik Ghosh-3470	Payment	02-Jul-2025	84450.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314937	314168	Amit Mishra-3461	Payment	02-Jul-2025	38006.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314936	314168	Vivek Menon-3460	Payment	02-Jul-2025	58437.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314935	314168	Maheshwari P-3458	Payment	02-Jul-2025	33400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314934	314168	Kushagr Kapoor-3456	Payment	02-Jul-2025	56400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314933	314168	Pramod Kulat-3455	Payment	02-Jul-2025	82000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314932	314168	Harpreet Dang-3454	Payment	02-Jul-2025	50000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314931	314168	Siddharth Oza-3449	Payment	02-Jul-2025	59800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314930	314168	Tata Subramanian-3446	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314929	314168	Shaik Parvin-3445	Payment	02-Jul-2025	50800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314928	314168	Prashant Semwal-3439	Payment	02-Jul-2025	110000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314927	314168	Aishwarya Mohan-3438	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314926	314168	Stella Kumari-3434	Payment	02-Jul-2025	49800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314925	314168	Shubhankar Sharma-3431	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314924	314168	Aditya Sharma-3421	Payment	02-Jul-2025	110000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314923	314168	Jony Saini-3412	Payment	02-Jul-2025	34999.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314922	314168	Tripti Sharma-3411	Payment	02-Jul-2025	24999.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314921	314168	Aditya Srivastava-3409	Payment	02-Jul-2025	55000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314920	314168	Sanskriti Joshi-3408	Payment	02-Jul-2025	65000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314919	314168	Sachin Naik-3407	Payment	02-Jul-2025	58000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314918	314168	Naveen Kumar Rukkanna-3399	Payment	02-Jul-2025	57400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314917	314168	Parisha Gupta-3397	Payment	02-Jul-2025	58200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314916	314168	Rohit Tiwary-3395	Payment	02-Jul-2025	98200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314915	314168	Abhishek R-3394	Payment	02-Jul-2025	67400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314914	314168	Kajal Ramnani-3386	Payment	02-Jul-2025	82000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314913	314168	Nabila Fatima-3381	Payment	02-Jul-2025	41000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314912	314168	Tejashree Awari-3378	Payment	02-Jul-2025	32308.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314911	314168	Rohit Kapoor-3375	Payment	02-Jul-2025	73200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314910	314168	Satyam Deshmukh-3367	Payment	02-Jul-2025	58200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314909	314168	Yogesh Khurana-3366	Payment	02-Jul-2025	103200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314908	314168	Aman Sinha-3362	Payment	02-Jul-2025	96400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314907	314168	Sakshi Nagpal-3353	Payment	02-Jul-2025	58200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314906	314168	Pervez Ansari-3352	Payment	02-Jul-2025	75000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314905	314168	Vishal Jaiswar-3346	Payment	02-Jul-2025	74564.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314904	314168	Rahul Singh-3341	Payment	02-Jul-2025	73200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314903	314168	Deepu Thomas-3320	Payment	02-Jul-2025	108200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314902	314168	Tamanna Alisha-3313	Payment	02-Jul-2025	53944.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314901	314168	Rakesh Amarnath-3308	Payment	02-Jul-2025	73000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314900	314168	Saurabh Tiwari-3307	Payment	02-Jul-2025	83200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314899	314168	Arun Jangid-3293	Payment	02-Jul-2025	45675.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314898	314168	Satish Gangwani-3289	Payment	02-Jul-2025	108200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314897	314168	Anureet Kaur Anureet Kaur-3275	Payment	02-Jul-2025	39001.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314896	314168	Prity Bharti-3272	Payment	02-Jul-2025	61800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314895	314168	Jasleen Kaur-3270	Payment	02-Jul-2025	81400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314894	314168	Sushil Pandey-3252	Payment	02-Jul-2025	73200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314893	314168	Maitri Rana-3238	Payment	02-Jul-2025	105200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314892	314168	Samina Shaikh-3235	Payment	02-Jul-2025	73200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314891	314168	Nikhil Kuldeep-3230	Payment	02-Jul-2025	61816.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314890	314168	Aishwar Nigam-3227	Payment	02-Jul-2025	103200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314889	314168	Pauroosh Kaushal-3224	Payment	02-Jul-2025	115600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314888	314168	Rukhsar Khureshi-3220	Payment	02-Jul-2025	80000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314887	314168	Dheeraj Raosaheb-3219	Payment	02-Jul-2025	70000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314886	314168	Shubham Saha-3211	Payment	02-Jul-2025	72000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314885	314168	Sunil Badiginchala-3202	Payment	02-Jul-2025	73000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314884	314168	Vipin Nautiyal-3201	Payment	02-Jul-2025	44424.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314883	314168	Sachin Prasad-3196	Payment	02-Jul-2025	158000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314882	314168	Vaibhav Prakash-3192	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314881	314168	Anshu Batra-3191	Payment	02-Jul-2025	73000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314880	314168	Ranjith Kumar Ramachandran-3187	Payment	02-Jul-2025	109992.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314879	314168	Kannan S-3180	Payment	02-Jul-2025	121200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314878	314168	Nidhi Nayak-3179	Payment	02-Jul-2025	94200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314877	314168	Amit Kumar-3176	Payment	02-Jul-2025	88180.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314876	314168	Manjari Sharma-3175	Payment	02-Jul-2025	40000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314875	314168	Tejasav Sah-3173	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314874	314168	Nahid Mirza-3164	Payment	02-Jul-2025	59200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314873	314168	Akansha Nehra-3162	Payment	02-Jul-2025	88200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314872	314168	Rishita Khandelwal-3153	Payment	02-Jul-2025	40001.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314871	314168	Amit Kumar-3144	Payment	02-Jul-2025	58000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314870	314168	Md Aslam-3138	Payment	02-Jul-2025	48200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314869	314168	Shashwath Rai-3137	Payment	02-Jul-2025	61000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314868	314168	Nishant Yash-3135	Payment	02-Jul-2025	46500.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314867	314168	Tarandeep Kaur-3130	Payment	02-Jul-2025	103200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314866	314168	Vijay Kumar-3119	Payment	02-Jul-2025	75000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314865	314168	Priyanjal Dikshit-3092	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314864	314168	Karthik Es-3085	Payment	02-Jul-2025	93200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314863	314168	Muninder Kumar-3075	Payment	02-Jul-2025	72000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314862	314168	Nisha Shirodker-3057	Payment	02-Jul-2025	43200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314861	314168	Amit Bijalwan-3051	Payment	02-Jul-2025	115307.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314860	314168	Pragya Jain-3047	Payment	02-Jul-2025	51300.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314859	314168	Sarthak Panwar-3041	Payment	02-Jul-2025	54200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314858	314168	Rahul Nandy-3033	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314857	314168	Divya R-3031	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314856	314168	Saif Munshi-3027	Payment	02-Jul-2025	49150.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314855	314168	Kajal Mishra-2995	Payment	02-Jul-2025	43200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314854	314168	Rajat Rajput-2982	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314853	314168	Jkd Avinakshi-2944	Payment	02-Jul-2025	50200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314852	314168	Geetha M-2931	Payment	02-Jul-2025	78000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314851	314168	Jyoti Sharma-2912	Payment	02-Jul-2025	66200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314850	314168	Amit Mahawar-2911	Payment	02-Jul-2025	52787.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314849	314168	Mohsin Bhat-2907	Payment	02-Jul-2025	43200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314848	314168	Shiv Sompati-2905	Payment	02-Jul-2025	73200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314847	314168	Ajay Kapoor-2898	Payment	02-Jul-2025	78200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314846	314168	Sania Mutreja-2896	Payment	02-Jul-2025	113200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314845	314168	Simran Dewan-2895	Payment	02-Jul-2025	63200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314844	314168	Pooja Sharma-2845	Payment	02-Jul-2025	58200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314843	314168	Aishwarya Rajput-2841	Payment	02-Jul-2025	63200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314842	314168	Rupali Chaubey-2776	Payment	02-Jul-2025	98200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314841	314168	Richa Singh-2771	Payment	02-Jul-2025	80200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314840	314168	Priya Singh-2768	Payment	02-Jul-2025	45000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314839	314168	Swati Kumari-2762	Payment	02-Jul-2025	70200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314838	314168	Sonia Chhabra-2758	Payment	02-Jul-2025	78200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314837	314168	Anish Samy-2752	Payment	02-Jul-2025	88200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314836	314168	Vikas Hangloo-2749	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314835	314168	Nawaf Aslam-2743	Payment	02-Jul-2025	52155.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314834	314168	Swapnil Soner-2742	Payment	02-Jul-2025	108200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314833	314168	Nikhil Gupta-2739	Payment	02-Jul-2025	80770.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314832	314168	Ajaypal Singh-2736	Payment	02-Jul-2025	52501.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314831	314168	Gourav Garg-2729	Payment	02-Jul-2025	40848.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314830	314168	Prashant Verma-2728	Payment	02-Jul-2025	45734.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314829	314168	Khushi Dhingra-2724	Payment	02-Jul-2025	49900.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314828	314168	K M Bilvika-2713	Payment	02-Jul-2025	101000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314827	314168	Abdul Mateen Abdul Mateen-2712	Payment	02-Jul-2025	70000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314826	314168	Monika Ahlawat-2709	Payment	02-Jul-2025	98200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314825	314168	Kshitiz Raghuvanshi Kshitiz Raghuvanshi-2707	Payment	02-Jul-2025	40000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314824	314168	Raushan Ranjan-2704	Payment	02-Jul-2025	98200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314823	314168	Saijal Dahiya-2702	Payment	02-Jul-2025	54867.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314822	314168	Avni Sharma-2699	Payment	02-Jul-2025	80770.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314821	314168	Shubhika Singh-2697	Payment	02-Jul-2025	40000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314820	314168	Swati Maruti Nagare-2694	Payment	02-Jul-2025	107655.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314819	314168	Nisha Varghese-2690	Payment	02-Jul-2025	83200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314818	314168	Snehal Subhash Sawant-2689	Payment	02-Jul-2025	83200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314817	314168	Manikandan N-2684	Payment	02-Jul-2025	98200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314816	314168	Sanchita Dixit-2658	Payment	02-Jul-2025	55204.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314815	314168	Zaid Wani-2655	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314814	314168	Deepanshu Kumar-2652	Payment	02-Jul-2025	107575.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314813	314168	Dinesh Tiwari-2645	Payment	02-Jul-2025	83200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314812	314168	Parveen Mor-2635	Payment	02-Jul-2025	115168.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314811	314168	Ajay Rawat-2632	Payment	02-Jul-2025	28847.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314810	314168	Ritika Bhalla-2627	Payment	02-Jul-2025	50700.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314809	314168	Vaibhav Doshi-2624	Payment	02-Jul-2025	91896.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314808	314168	Gayatri Chauhan-2614	Payment	02-Jul-2025	46870.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314807	314168	Shahid Hamid-2613	Payment	02-Jul-2025	69925.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314806	314168	Shruti Kulshrestha-2607	Payment	02-Jul-2025	90000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314805	314168	Pranav Kamble-2603	Payment	02-Jul-2025	68130.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314804	314168	Shivam Soni-2602	Payment	02-Jul-2025	123200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314803	314168	Paul Tony-2600	Payment	02-Jul-2025	67200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314802	314168	Priyanka Verma-2590	Payment	02-Jul-2025	83200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314801	314168	Sana Pathan-2588	Payment	02-Jul-2025	69200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314800	314168	Farha Razzak-2586	Payment	02-Jul-2025	108200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314799	314168	Muddasir Siraj Mahadik-2585	Payment	02-Jul-2025	34729.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314798	314168	Sheelam Mishra-2573	Payment	02-Jul-2025	53200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314797	314168	Harshita Maurya-2569	Payment	02-Jul-2025	82680.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314796	314168	Kaustubh Dahake-2559	Payment	02-Jul-2025	70000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314795	314168	Dhanya Singh-2544	Payment	02-Jul-2025	126867.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314794	314168	Shrey Sharotri-2541	Payment	02-Jul-2025	100000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314793	314168	Kanav Jain-2540	Payment	02-Jul-2025	58200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314792	314168	Biswarup Kumbhakar-2535	Payment	02-Jul-2025	52503.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314791	314168	Sukhwinder Singh Sukhwinder Singh-2524	Payment	02-Jul-2025	88200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314790	314168	Deepak Jaju-2517	Payment	02-Jul-2025	93200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314789	314168	Rahul Jasrotia-2513	Payment	02-Jul-2025	65133.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314788	314168	Ramzan Ladubai-2507	Payment	02-Jul-2025	18309.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314787	314168	Sushma Sharma-2503	Payment	02-Jul-2025	143200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314786	314168	Sachin Chouhan-2502	Payment	02-Jul-2025	53200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314785	314168	Priyanka Goyal-2493	Payment	02-Jul-2025	77800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314784	314168	Neelesh Sharma-2492	Payment	02-Jul-2025	76200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314783	314168	Ankur Kumar-2485	Payment	02-Jul-2025	99450.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314782	314168	Rishika Tibarewala-2484	Payment	02-Jul-2025	94200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314781	314168	Rahul Khadase-2480	Payment	02-Jul-2025	113200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314780	314168	Mokshita Shetty-2479	Payment	02-Jul-2025	88200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314779	314168	Saquib Manzoor Saquib Manzoor-2464	Payment	02-Jul-2025	136382.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314778	314168	John Paul-2460	Payment	02-Jul-2025	28200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314777	314168	Shrinkhala Khare-2458	Payment	02-Jul-2025	83200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314776	314168	Suresh V-2452	Payment	02-Jul-2025	57674.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314775	314168	Jyoti Kumari-2451	Payment	02-Jul-2025	143200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314774	314168	Madhur Patidar-2449	Payment	02-Jul-2025	103200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314773	314168	Urvashi Khelani-2447	Payment	02-Jul-2025	86658.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314772	314168	Shehbaz Mohd Hanif Ansari-2445	Payment	02-Jul-2025	140100.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314771	314168	Harsha Manoj-2443	Payment	02-Jul-2025	108200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314770	314168	Mayur Kotoky-2441	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314769	314168	Sunil Sharma-2437	Payment	02-Jul-2025	28800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314768	314168	Shikha Jain-2435	Payment	02-Jul-2025	68800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314767	314168	Sai Venkateswaran-2433	Payment	02-Jul-2025	105231.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314766	314168	Samidha Rane-2429	Payment	02-Jul-2025	58200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314765	314168	Sameer Maner-2427	Payment	02-Jul-2025	97200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314764	314168	Gurjot Sodhi-2419	Payment	02-Jul-2025	193200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314763	314168	Amruth Karisiddappa-2414	Payment	02-Jul-2025	106744.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314762	314168	Vandana Kurichh-2408	Payment	02-Jul-2025	73200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314761	314168	Shikha Mishra-2402	Payment	02-Jul-2025	48000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314760	314168	Hardik Tike-2400	Payment	02-Jul-2025	138200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314759	314168	Kuldip Parmar-2393	Payment	02-Jul-2025	61794.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314758	314168	Himanshu Sharma-2392	Payment	02-Jul-2025	78200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314757	314168	Jeetendra Khelani-2390	Payment	02-Jul-2025	103200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314756	314168	Akwinder Kaur-2388	Payment	02-Jul-2025	138200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314755	314168	Sreemanta Das-2384	Payment	02-Jul-2025	133600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314754	314168	Tapos Mondal-2381	Payment	02-Jul-2025	104533.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314753	314168	Bhavesh Pali-2380	Payment	02-Jul-2025	183200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314752	314168	Avinash Tiwari-2377	Payment	02-Jul-2025	113200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314751	314168	Abhishek Vidiyala-2370	Payment	02-Jul-2025	128600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314750	314168	Yogesh Meherwade-2367	Payment	02-Jul-2025	84552.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314749	314168	Vaibhav Gupta-2361	Payment	02-Jul-2025	106200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314748	314168	Vibhor Sharma-2348	Payment	02-Jul-2025	143200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314747	314168	Varun Godiyal-2347	Payment	02-Jul-2025	123200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314746	314168	Joel Isaac Ananda Raj-2337	Payment	02-Jul-2025	107333.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314745	314168	Shifali Sharma-2335	Payment	02-Jul-2025	143200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314744	314168	Tejaji Rabari-2326	Payment	02-Jul-2025	43965.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314743	314168	Synthia Dey-2311	Payment	02-Jul-2025	68000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314742	314168	Damini -2309	Payment	02-Jul-2025	143200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314741	314168	Karishma Talreja-2298	Payment	02-Jul-2025	139200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314740	314168	Sandeep Tiwari-2291	Payment	02-Jul-2025	108200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314739	314168	Krishna Kondepudi-2279	Payment	02-Jul-2025	80200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314738	314168	Gurjeet Singh-2263	Payment	02-Jul-2025	148200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314737	314168	Rahul Bartia-2259	Payment	02-Jul-2025	68000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314736	314168	Gurpreet Kaur-2253	Payment	02-Jul-2025	143200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314735	314168	Afshan Arif-2248	Payment	02-Jul-2025	66200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314734	314168	Suvrarup Banerjee-2243	Payment	02-Jul-2025	68000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314733	314168	Gurdeep Sandhu-2236	Payment	02-Jul-2025	158200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314732	314168	Saurabh Banerjee-2232	Payment	02-Jul-2025	62200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314731	314168	Manohar Patlolla-2225	Payment	02-Jul-2025	143000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314730	314168	Archna Dhyani-2216	Payment	02-Jul-2025	83200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314729	314168	Kuldeep Singh-2203	Payment	02-Jul-2025	143200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314728	314168	Akash Singh-2189	Payment	02-Jul-2025	45008.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314727	314168	Shova Sharma-2188	Payment	02-Jul-2025	84367.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314726	314168	Ankit Malik-2178	Payment	02-Jul-2025	114000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314725	314168	Sunny Sirohi-2165	Payment	02-Jul-2025	134000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314724	314168	Anmol Agrawal-2157	Payment	02-Jul-2025	97550.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314723	314168	Gajendra Choudhary-2132	Payment	02-Jul-2025	108200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314722	314168	Subhendu Mukherjee-2128	Payment	02-Jul-2025	138400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314721	314168	Saroj -2125	Payment	02-Jul-2025	133696.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314720	314168	Nirbhai Chauhan-2114	Payment	02-Jul-2025	83200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314719	314168	Abhijit Dey-2031	Payment	02-Jul-2025	133800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314718	314168	Aloysious Ambrose-2030	Payment	02-Jul-2025	178000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314717	314168	Nitesh Shukla-1976	Payment	02-Jul-2025	156138.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314716	314168	Micky Mowar-1957	Payment	02-Jul-2025	140700.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314715	314168	Sunaina .-1951	Payment	02-Jul-2025	91200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314714	314168	Aditya Sharma-1948	Payment	02-Jul-2025	278200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314713	314168	Saurabh Chauhan-1942	Payment	02-Jul-2025	108492.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314712	314168	Pooja Chauhan-1924	Payment	02-Jul-2025	61500.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314711	314168	Bhaskar Dixit-1920	Payment	02-Jul-2025	142675.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314710	314168	Ritika Ghai-1913	Payment	02-Jul-2025	98200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314709	314168	Sujay Das-1899	Payment	02-Jul-2025	115800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314708	314168	Megha Jain-1893	Payment	02-Jul-2025	124200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314707	314168	Nancy Sharma-1867	Payment	02-Jul-2025	63200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314706	314168	Prashant Gupta-1852	Payment	02-Jul-2025	93200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314705	314168	Priyanka Khurana-1819	Payment	02-Jul-2025	124200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314704	314168	Shipra Jaiswal-1814	Payment	02-Jul-2025	126200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314703	314168	Vinod Kumar-1781	Payment	02-Jul-2025	116774.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314702	314168	Nidhi Ahuja-1765	Payment	02-Jul-2025	159920.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314701	314168	Rohit Bahl-1761	Payment	02-Jul-2025	128200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314700	314168	Pradeep Kumar-1744	Payment	02-Jul-2025	61164.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314699	314168	Saurabh Srivastava-1731	Payment	02-Jul-2025	198200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314698	314168	Abhishek Soni-1689	Payment	02-Jul-2025	161833.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314697	314168	Ravi Sharma-1653	Payment	02-Jul-2025	155200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314696	314168	Shreya Arora-1646	Payment	02-Jul-2025	85000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314695	314168	Subhash Kumar-1583	Payment	02-Jul-2025	72120.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314694	314168	Simmi Anand-1577	Payment	02-Jul-2025	163200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314693	314168	Ravi Kumar-1573	Payment	02-Jul-2025	181700.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314692	314168	Nishant Harshwardhan-1564	Payment	02-Jul-2025	143200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314691	314168	Prem Nidhi Sharma-1563	Payment	02-Jul-2025	153350.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314690	314168	Ashwin Koshy-1545	Payment	02-Jul-2025	192033.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314689	314168	Indu Saxena-1529	Payment	02-Jul-2025	158200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314688	314168	Rakesh Rautelia-1520	Payment	02-Jul-2025	65400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314687	314168	Harish Kumar-1495	Payment	02-Jul-2025	17010.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314686	314168	Monika Chopra-1460	Payment	02-Jul-2025	108200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314685	314168	Rakesh Kumar Rakesh Kumar-1407	Payment	02-Jul-2025	203200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314684	314168	Vatan Joshi-1368	Payment	02-Jul-2025	238200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314683	314168	Megha Vichhear-1347	Payment	02-Jul-2025	73200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314682	314168	Praveen Kumar-1297	Payment	02-Jul-2025	150700.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314681	314168	Shubhrangshu Saha-1285	Payment	02-Jul-2025	75410.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314680	314168	Vishal Bhatia-1267	Payment	02-Jul-2025	181200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314679	314168	Devpriyam Sharma-1253	Payment	02-Jul-2025	147200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314678	314168	Sandeep Singh-1247	Payment	02-Jul-2025	148200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314677	314168	Prashant Ranjan-1231	Payment	02-Jul-2025	166600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314676	314168	Gaurav Joshi-1227	Payment	02-Jul-2025	182000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314675	314168	Annu Arora-1126	Payment	02-Jul-2025	81200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314674	314168	Manish Bansal-1096	Payment	02-Jul-2025	106200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314673	314168	Manish Kumar-844	Payment	02-Jul-2025	228200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314672	314168	Sanjay Savita-830	Payment	02-Jul-2025	74013.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314671	314168	Sanjeev Kumar-802	Payment	02-Jul-2025	117291.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314670	314168	Vibhor Bhardwaj-753	Payment	02-Jul-2025	141368.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314669	314168	Akshay Kumar-519	Payment	02-Jul-2025	168600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314668	314168	Prabin Singh-351	Payment	02-Jul-2025	127000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314667	314168	Sachin Chauhan-307	Payment	02-Jul-2025	170704.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314666	314168	Digvijay Prasad-229	Payment	02-Jul-2025	79334.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314665	314168	Girish Kumar-207	Payment	02-Jul-2025	163904.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314664	314168	Rajesh Gogia-139	Payment	02-Jul-2025	176608.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314663	314168	Praveen Kumar-4	Payment	02-Jul-2025	213344.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314661	314167	Pranav Sharma-2804	Payment	02-Jul-2025	80770.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314660	314167	Ragini Singh-3560	Payment	02-Jul-2025	39450.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314659	314167	Sanskar Saxena-3495	Payment	02-Jul-2025	45000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314658	314167	Arshad Kamal-3494	Payment	02-Jul-2025	108200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314657	314167	Krupali Subhash Burute-3493	Payment	02-Jul-2025	70000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314656	314167	Abhishek Mukherjee-3492	Payment	02-Jul-2025	50000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314655	314167	Sameeksha Haresh Mandhan-3487	Payment	02-Jul-2025	73200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314654	314167	Mohd Hasib Mohd Hasib-3485	Payment	02-Jul-2025	73200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314653	314167	Kevin L-3467	Payment	02-Jul-2025	51800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314652	314167	Aditya Tiwari-3457	Payment	02-Jul-2025	59800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314651	314167	Akshat Parashar-3452	Payment	02-Jul-2025	70000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314650	314167	Nirmala C-3447	Payment	02-Jul-2025	59800.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314649	314167	Vaibhav Gupta-3424	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314648	314167	Abhishek -3420	Payment	02-Jul-2025	78200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314647	314167	Simarjeet Bhatia-3419	Payment	02-Jul-2025	65000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314646	314167	Tarseel Bakhtiyar Kazmi Tarseel Bakhtiyar Kazmi-3418	Payment	02-Jul-2025	58810.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314645	314167	Jhosepher Freddy-3403	Payment	02-Jul-2025	38400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314644	314167	Pritesh Burange-3380	Payment	02-Jul-2025	40000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314643	314167	Vanka Satya-3379	Payment	02-Jul-2025	58976.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314642	314167	Suraj Shete-3354	Payment	02-Jul-2025	113200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314641	314167	Deepti Shastri-3318	Payment	02-Jul-2025	36917.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314640	314167	Shruti Chhabra-3317	Payment	02-Jul-2025	125200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314639	314167	Krishna Dwivedi-3315	Payment	02-Jul-2025	98200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314638	314167	Umesh Kumar Umesh Kumar-3312	Payment	02-Jul-2025	151400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314637	314167	Aditya Singh-3306	Payment	02-Jul-2025	50302.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314636	314167	Bala K-3279	Payment	02-Jul-2025	63200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314635	314167	Ashok Srinivasan-3257	Payment	02-Jul-2025	83200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314634	314167	Samira Nigrel-3234	Payment	02-Jul-2025	111600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314633	314167	Shalini Raghuwanshi-3218	Payment	02-Jul-2025	93200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314632	314167	Sandeep Joshi-3217	Payment	02-Jul-2025	38809.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314631	314167	Pratik Chetan Khuthia-3214	Payment	02-Jul-2025	83200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314630	314167	Pooja Zadbuke-3188	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314629	314167	Mohd Siddiqui-3182	Payment	02-Jul-2025	65218.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314628	314167	Anupam Thukral-3181	Payment	02-Jul-2025	108200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314627	314167	Malathi Murugesan-3172	Payment	02-Jul-2025	83200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314626	314167	Roohi Raheem-3171	Payment	02-Jul-2025	112950.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314625	314167	Aman Rajput-3161	Payment	02-Jul-2025	61200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314624	314167	Prerna Talwar-3154	Payment	02-Jul-2025	96500.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314623	314167	Aditi Sharma-3126	Payment	02-Jul-2025	74000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314622	314167	Sonali Sharma-3114	Payment	02-Jul-2025	60200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314621	314167	Shohrat Dhupar-3097	Payment	02-Jul-2025	36000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314620	314167	Pavan Pari-3088	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314619	314167	Praveena R-3082	Payment	02-Jul-2025	60000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314618	314167	Ekta Gupta-3050	Payment	02-Jul-2025	62200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314617	314167	Saumitra Kulkarni-3037	Payment	02-Jul-2025	54867.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314616	314167	Bharatkumar Bhojwani-3003	Payment	02-Jul-2025	53310.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314615	314167	Sourabh Jain-3002	Payment	02-Jul-2025	85000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314614	314167	Kanika Arora-3001	Payment	02-Jul-2025	55200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314613	314167	Kanagavalli P-2992	Payment	02-Jul-2025	102992.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314612	314167	Avtansh Singh-2991	Payment	02-Jul-2025	50000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314611	314167	Zeba Khan-2985	Payment	02-Jul-2025	67200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314610	314167	Isha Singh-2975	Payment	02-Jul-2025	45200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314609	314167	Apurva Gaygole-2959	Payment	02-Jul-2025	45000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314608	314167	Haya Khan-2955	Payment	02-Jul-2025	58200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314607	314167	Shalini Sharma-2945	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314606	314167	Anirudh Sharma-2934	Payment	02-Jul-2025	95200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314605	314167	Aayushi Maheshwari-2925	Payment	02-Jul-2025	70200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314604	314167	Ravina Rao-2923	Payment	02-Jul-2025	63200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314603	314167	Ragini Nayak-2920	Payment	02-Jul-2025	68200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314602	314167	Tanvi Sareen-2914	Payment	02-Jul-2025	91200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314601	314167	Nabasmita Bora-2913	Payment	02-Jul-2025	61200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314600	314167	Rashmi Sharma-2906	Payment	02-Jul-2025	61400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314599	314167	Abhishek Pratap-2893	Payment	02-Jul-2025	54867.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314598	314167	Ratan Priya-2869	Payment	02-Jul-2025	39937.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314597	314167	Vinithson Iniyan Jeremiah Jacob Sundarsingh-2867	Payment	02-Jul-2025	63029.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314596	314167	Rohit Chahande-2859	Payment	02-Jul-2025	70200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314595	314167	Kaveri Kaur-2849	Payment	02-Jul-2025	60200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314594	314167	Yashaswini Srinivasan-2824	Payment	02-Jul-2025	101000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314593	314167	Anchal Bhatia-2822	Payment	02-Jul-2025	48200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314592	314167	Shailesh Saxena-2801	Payment	02-Jul-2025	75000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314591	314167	Soniya Rana-2794	Payment	02-Jul-2025	74880.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314590	314167	Roma Chowhan-2641	Payment	02-Jul-2025	77750.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314589	314167	Shuganya Sachdeva-2601	Payment	02-Jul-2025	108200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314588	314167	Pooja Maheshwari-2397	Payment	02-Jul-2025	110200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314587	314167	Surjeet Tomer-1684	Payment	02-Jul-2025	113250.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314586	314167	Tarun Patial-824	Payment	02-Jul-2025	198200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314585	314167	Nityanand Thakur-760	Payment	02-Jul-2025	159400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314583	314206	Sucheta Dalal-2733	Payment	02-Jul-2025	54867.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314582	314206	Shital Khot-3385	Payment	02-Jul-2025	75000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314275	314130	Hetasi Mehta-3437	Payment	02-Jul-2025	38400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314274	314130	Jyoti Rai-3429	Payment	02-Jul-2025	38006.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314273	314130	Bhargavi Bhimavarapu-3382	Payment	02-Jul-2025	43680.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314272	314130	Gunja Sharma-3096	Payment	02-Jul-2025	47700.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314271	314130	Jatin Khurana-2211	Payment	02-Jul-2025	50700.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314270	314130	Manish Chaturvedi-2155	Payment	02-Jul-2025	110200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314269	314130	Rajpal .-2149	Payment	02-Jul-2025	124700.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314268	314130	Jasmeet Kaur-1969	Payment	02-Jul-2025	110200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314267	314130	Sheshadri Shetty-1882	Payment	02-Jul-2025	141833.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314266	314130	Dinesh Jha-1797	Payment	02-Jul-2025	126600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314265	314130	Jessica Saluja-1759	Payment	02-Jul-2025	77200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314264	314130	Sunny Yadav-1751	Payment	02-Jul-2025	126200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314263	314130	Nupur Munjal-1687	Payment	02-Jul-2025	111600.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314262	314130	Karan Lakhina-1477	Payment	02-Jul-2025	98586.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314261	314130	Neha Shah-1403	Payment	02-Jul-2025	110000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314260	314130	Charu Saini-1401	Payment	02-Jul-2025	80000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314259	314130	Tarun Monga-1173	Payment	02-Jul-2025	110200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314258	314130	Pooja Aggarwal-1103	Payment	02-Jul-2025	638000.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314257	314130	Sunil Kushwaha-1086	Payment	02-Jul-2025	71467.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314256	314130	Krishan Jha-702	Payment	02-Jul-2025	29953.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314255	314130	Anurag Chauhan-521	Payment	02-Jul-2025	48978.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314254	314130	Madan Jha-98	Payment	02-Jul-2025	54865.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314253	314130	Rimpy Srivastava-58	Payment	02-Jul-2025	82288.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314252	314121	Biplav Saha-3422	Payment	01-Jul-2025	38400.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314251	314121	Aansu Giri-3324	Payment	01-Jul-2025	53200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314250	314121	Shubhi Tripathi-3109	Payment	01-Jul-2025	88200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314249	314121	Rashi Oberoi-2847	Payment	01-Jul-2025	50022.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314248	314121	Dimna K-2825	Payment	01-Jul-2025	78200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314247	314121	Rohit Aggarwal-1	Payment	01-Jul-2025	1133200.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	
+314246	314121	Bharat Sharma-88	Payment	01-Jul-2025	69002.0000	Kotak Delhi OD account 0317 KSPL	Salary Exp-Payable	INR	Salary Exp-Payable	

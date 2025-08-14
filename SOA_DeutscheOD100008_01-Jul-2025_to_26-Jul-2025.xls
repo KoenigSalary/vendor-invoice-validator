@@ -1,0 +1,3 @@
+TransactionID	GroupId	Employee	Type	Date	Amount	Bank	Narration	Currency	ACCHead	Expense
+314561	0	Sakshi Dhawan-902	Payment	02-Jul-25	285,620.00	Deutsche Bank OD 100008	NET/RTGS/Sakshi Gaba Dhawan/AXIS BANK:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
+314560	0	Subodh Chaudhary-84	Payment	02-Jul-25	151,645.00	Deutsche Bank OD 100008	NET/NEFT/Subodh Kumar Chaudhary/KOTAK MAHINDRA BAN:Create By:-Kushagr Kapoor	INR	Salary Exp-Payable	
