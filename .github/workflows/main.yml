@@ -2,8 +2,8 @@ name: 🚀 Enhanced Invoice Validation System - Excel & ZIP
 
 on:
   schedule:
-    # Run every 4 days at 18:00 UTC (6:00 PM)
-    - cron: '0 18 */4 * *'
+    - cron: '0 18 */4 * *'  # Every 4 days at 6 PM IST
+  workflow_dispatch:  # Add this line for manual triggers
   
   workflow_dispatch:
     inputs:
