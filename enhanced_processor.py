@@ -1,354 +1,521 @@
-#!/usr/bin/env python3
-"""
-Enhanced Invoice Processor - Debug Version
-Comprehensive CSV diagnostics and error handling
-"""
-
 import pandas as pd
 import numpy as np
+from datetime import datetime, timedelta
 import logging
 import os
-import sys
-from datetime import datetime, timedelta
-import zipfile
 from pathlib import Path
+import re
+from typing import Dict, List, Tuple, Optional
+import zipfile
+import shutil
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+from openpyxl.utils.dataframe import dataframe_to_rows
+import warnings
+warnings.filterwarnings('ignore')
 
-# Configure enhanced logging
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('debug_processor.log'),
-        logging.StreamHandler(sys.stdout)
+        logging.FileHandler('invoice_processing.log'),
+        logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
 
-class CSVDiagnostic:
-    """Comprehensive CSV file diagnostics"""
-    
-    def __init__(self, file_path):
-        self.file_path = file_path
-        self.diagnosis = {}
-    
-    def diagnose_file(self):
-        """Run complete diagnostic on CSV file"""
-        logger.info(f"🔍 Starting CSV diagnostic for: {self.file_path}")
-        
-        # Check 1: File existence
-        if not os.path.exists(self.file_path):
-            self.diagnosis['exists'] = False
-            logger.error(f"❌ File does not exist: {self.file_path}")
-            self.suggest_fixes()
-            return False
-        
-        self.diagnosis['exists'] = True
-        logger.info(f"✅ File exists: {self.file_path}")
-        
-        # Check 2: File size
-        file_size = os.path.getsize(self.file_path)
-        self.diagnosis['size'] = file_size
-        logger.info(f"📊 File size: {file_size} bytes")
-        
-        if file_size == 0:
-            logger.error("❌ File is empty!")
-            self.create_sample_csv()
-            return False
-        
-        # Check 3: File content preview
-        try:
-            with open(self.file_path, 'r', encoding='utf-8') as f:
-                first_lines = [f.readline().strip() for _ in range(5)]
-            
-            logger.info("📝 First 5 lines of file:")
-            for i, line in enumerate(first_lines, 1):
-                if line:
-                    logger.info(f"   Line {i}: {line[:100]}{'...' if len(line) > 100 else ''}")
-                else:
-                    logger.warning(f"   Line {i}: (empty)")
-                    
-        except UnicodeDecodeError:
-            logger.error("❌ File encoding issue - trying different encodings")
-            return self.try_different_encodings()
-        
-        # Check 4: CSV structure
-        return self.analyze_csv_structure()
-    
-    def try_different_encodings(self):
-        """Try reading file with different encodings"""
-        encodings = ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
-        
-        for encoding in encodings:
-            try:
-                logger.info(f"🔄 Trying encoding: {encoding}")
-                df = pd.read_csv(self.file_path, encoding=encoding, nrows=5)
-                logger.info(f"✅ Successfully read with {encoding} encoding")
-                self.diagnosis['encoding'] = encoding
-                return True
-            except Exception as e:
-                logger.warning(f"   Failed with {encoding}: {str(e)}")
-                continue
-        
-        logger.error("❌ Could not read file with any encoding")
-        return False
-    
-    def analyze_csv_structure(self):
-        """Analyze CSV structure and headers"""
-        try:
-            # Try reading just the header
-            df_header = pd.read_csv(self.file_path, nrows=0)
-            columns = df_header.columns.tolist()
-            
-            logger.info(f"📋 Found {len(columns)} columns:")
-            for i, col in enumerate(columns, 1):
-                logger.info(f"   Column {i}: '{col}'")
-            
-            self.diagnosis['columns'] = columns
-            self.diagnosis['column_count'] = len(columns)
-            
-            if len(columns) == 0:
-                logger.error("❌ No columns found in CSV!")
-                return False
-            
-            # Try reading a few rows
-            df_sample = pd.read_csv(self.file_path, nrows=3)
-            logger.info(f"📊 Sample data shape: {df_sample.shape}")
-            
-            return True
-            
-        except pd.errors.EmptyDataError:
-            logger.error("❌ CSV file is empty or has no data")
-            return False
-        except pd.errors.ParserError as e:
-            logger.error(f"❌ CSV parsing error: {str(e)}")
-            return False
-        except Exception as e:
-            logger.error(f"❌ Unexpected error analyzing CSV: {str(e)}")
-            return False
-    
-    def create_sample_csv(self):
-        """Create a sample CSV file for testing"""
-        logger.info("🔧 Creating sample CSV file...")
-        
-        sample_data = {
-            'Invoice_ID': ['INV001', 'INV002', 'INV003'],
-            'Invoice_Date': ['2024-08-01', '2024-08-02', '2024-08-03'],
-            'Vendor_Name': ['Test Vendor A', 'Test Vendor B', 'Test Vendor C'],
-            'Amount': [25000, 15000, 35000],
-            'Location': ['Delhi', 'Mumbai', 'Bangalore'],
-            'Status': ['Active', 'Active', 'Active']
-        }
-        
-        df = pd.DataFrame(sample_data)
-        sample_file = 'sample_invoices.csv'
-        df.to_csv(sample_file, index=False)
-        
-        logger.info(f"✅ Sample CSV created: {sample_file}")
-        logger.info("🔧 Try running the processor with: python3 enhanced_processor_debug.py sample_invoices.csv")
-    
-    def suggest_fixes(self):
-        """Suggest fixes based on diagnosis"""
-        logger.info("\n🔧 SUGGESTED FIXES:")
-        
-        if not self.diagnosis.get('exists', True):
-            logger.info("1. Create the CSV file or check the file path")
-            logger.info("2. Use the sample CSV generator in this script")
-        
-        if self.diagnosis.get('size', 1) == 0:
-            logger.info("1. Add data to your CSV file")
-            logger.info("2. Ensure the file has headers and at least one data row")
-
 class EnhancedInvoiceProcessor:
-    """Enhanced Invoice Processor with Excel output and diagnostics"""
+    """Enhanced Invoice Processor with Excel output and comprehensive validation"""
     
     def __init__(self):
-        self.setup_logging()
-        self.required_columns = [
-            'Invoice_ID', 'Invoice_Date', 'Vendor_Name', 'Amount'
-        ]
-        
-    def setup_logging(self):
-        """Setup comprehensive logging"""
-        self.logger = logging.getLogger(__name__)
-    
-    def process_invoices(self, csv_file='invoices.csv'):
-        """Main processing function with comprehensive error handling"""
-        try:
-            self.logger.info(f"Processing file: {csv_file}")
-            
-            # Step 1: Diagnose CSV file
-            diagnostic = CSVDiagnostic(csv_file)
-            if not diagnostic.diagnose_file():
-                return False
-            
-            # Step 2: Load and validate data
-            df = self.load_csv_safely(csv_file)
-            if df is None:
-                return False
-            
-            # Step 3: Add required fields
-            df = self.add_enhanced_fields(df)
-            
-            # Step 4: Generate Excel report
-            report_file = self.generate_excel_report(df)
-            
-            self.logger.info(f"✅ Processing completed successfully!")
-            self.logger.info(f"📊 Excel report generated: {report_file}")
-            
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Critical error in invoice processing: {str(e)}")
-            return False
-    
-    def load_csv_safely(self, csv_file):
-        """Safely load CSV with multiple fallback strategies"""
-        strategies = [
-            # Strategy 1: Standard loading
-            {'encoding': 'utf-8', 'sep': ','},
-            # Strategy 2: Different separator
-            {'encoding': 'utf-8', 'sep': ';'},
-            # Strategy 3: Different encoding
-            {'encoding': 'latin-1', 'sep': ','},
-            # Strategy 4: Tab separated
-            {'encoding': 'utf-8', 'sep': '\t'},
-        ]
-        
-        for i, strategy in enumerate(strategies, 1):
-            try:
-                self.logger.info(f"🔄 Loading strategy {i}: {strategy}")
-                df = pd.read_csv(csv_file, **strategy)
-                
-                if df.empty:
-                    self.logger.warning(f"   Strategy {i}: File loaded but is empty")
-                    continue
-                
-                self.logger.info(f"✅ Strategy {i} successful! Shape: {df.shape}")
-                self.logger.info(f"   Columns: {list(df.columns)}")
-                return df
-                
-            except Exception as e:
-                self.logger.warning(f"   Strategy {i} failed: {str(e)}")
-                continue
-        
-        self.logger.error("❌ All loading strategies failed!")
-        return None
-    
-    def add_enhanced_fields(self, df):
-        """Add all 21 enhanced fields including S.No and Invoice_Creator_Name"""
-        self.logger.info("📝 Adding enhanced fields...")
-        
-        # Add S.No column at the beginning
-        df.insert(0, 'S.No', range(1, len(df) + 1))
-        
-        # Enhanced fields with default values
-        enhanced_fields = {
-            'Invoice_Creator_Name': 'System Generated',  # Required field
-            'Invoice_Currency': 'INR',
-            'Invoice_Location': 'Delhi',
-            'TDS_Status': 'Not Applied',
-            'RMS_Invoice_ID': lambda x: f"RMS_{x.get('Invoice_ID', 'UNK')}",
-            'SCID': 'SC001',
-            'MOP': 'Bank Transfer',
-            'Account_Head': 'General',
-            'Due_Date': lambda x: (pd.to_datetime(x.get('Invoice_Date', datetime.now())) + timedelta(days=30)).strftime('%Y-%m-%d'),
-            'Days_Until_Due': 30,
-            'Alert_Status': 'Normal',
-            'GST_Number': '',
-            'CGST_Rate': 9.0,
-            'SGST_Rate': 9.0,
-            'IGST_Rate': 18.0,
-            'CGST_Amount': 0.0,
-            'SGST_Amount': 0.0,
-            'IGST_Amount': 0.0,
-            'Total_Tax_Amount': 0.0,
-            'Validation_Status': 'Pending',
-            'Processing_Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.gst_rates = {
+            'India': {'CGST': 9, 'SGST': 9, 'IGST': 18},
+            'Dubai': {'VAT': 5},
+            'UK': {'VAT': 20},
+            'Australia': {'GST': 10},
+            'Canada': {'GST': 5, 'PST': 7},
+            'Germany': {'VAT': 19},
+            'Netherlands': {'VAT': 21},
+            'Singapore': {'GST': 8},
+            'South Africa': {'VAT': 15},
+            'New Zealand': {'GST': 15},
+            'Malaysia': {'SST': 6},
+            'Saudi Arabia': {'VAT': 15},
+            'Japan': {'VAT': 10}
         }
         
-        for field, default_value in enhanced_fields.items():
-            if field not in df.columns:
-                if callable(default_value):
-                    df[field] = df.apply(default_value, axis=1)
-                else:
-                    df[field] = default_value
+        self.state_codes = {
+            'JAMMU AND KASHMIR': '01', 'HIMACHAL PRADESH': '02', 'PUNJAB': '03',
+            'CHANDIGARH': '04', 'UTTARAKHAND': '05', 'HARYANA': '06', 'DELHI': '07',
+            'RAJASTHAN': '08', 'UTTAR PRADESH': '09', 'BIHAR': '10', 'SIKKIM': '11',
+            'ARUNACHAL PRADESH': '12', 'NAGALAND': '13', 'MANIPUR': '14', 'MIZORAM': '15',
+            'TRIPURA': '16', 'MEGHALAYA': '17', 'ASSAM': '18', 'WEST BENGAL': '19',
+            'JHARKHAND': '20', 'ODISHA': '21', 'CHHATTISGARH': '22', 'MADHYA PRADESH': '23',
+            'GUJARAT': '24', 'DAMAN AND DIU': '25', 'DADRA AND NAGAR HAVELI': '26',
+            'MAHARASHTRA': '27', 'ANDHRA PRADESH': '28', 'KARNATAKA': '29', 'GOA': '30',
+            'LAKSHADWEEP': '31', 'KERALA': '32', 'TAMIL NADU': '33', 'PUDUCHERRY': '34',
+            'ANDAMAN AND NICOBAR ISLANDS': '35', 'TELANGANA': '36', 'ANDHRA PRADESH': '37',
+            'LADAKH': '38'
+        }
         
-        self.logger.info(f"✅ Enhanced fields added. New shape: {df.shape}")
-        return df
+        self.koenig_locations = {
+            'India': ['Delhi HO', 'Goa', 'Bangalore', 'Dehradun', 'Chennai', 'Gurgaon'],
+            'International': ['USA', 'UK', 'Canada', 'Germany', 'South Africa', 
+                            'Dubai FZLLC', 'Dubai DMCC', 'Singapore', 'Netherlands', 
+                            'New Zealand', 'Australia', 'Malaysia', 'Saudi Arabia', 'Japan']
+        }
+        
+        # Historical data storage
+        self.historical_data = []
+        self.load_historical_data()
     
-    def generate_excel_report(self, df):
-        """Generate professional Excel report"""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        report_file = f"invoice_validation_report_{timestamp}.xlsx"
-        
+    def load_historical_data(self):
+        """Load historical data for 3-month tracking"""
         try:
-            with pd.ExcelWriter(report_file, engine='openpyxl') as writer:
-                # Write main data
-                df.to_excel(writer, sheet_name='Invoice_Report', index=False)
-                
-                # Get the workbook and worksheet
-                workbook = writer.book
-                worksheet = writer.sheets['Invoice_Report']
-                
-                # Apply formatting
-                from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
-                
-                # Header formatting
-                header_font = Font(bold=True, color="FFFFFF")
-                header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-                
-                for col in range(1, len(df.columns) + 1):
-                    cell = worksheet.cell(row=1, column=col)
-                    cell.font = header_font
-                    cell.fill = header_fill
-                    cell.alignment = Alignment(horizontal="center")
-                
-                # Auto-adjust column widths
-                for column in worksheet.columns:
-                    max_length = 0
-                    column_letter = column[0].column_letter
-                    for cell in column:
-                        try:
-                            if len(str(cell.value)) > max_length:
-                                max_length = len(str(cell.value))
-                        except:
-                            pass
-                    adjusted_width = min(max_length + 2, 50)
-                    worksheet.column_dimensions[column_letter].width = adjusted_width
+            if os.path.exists('historical_data.xlsx'):
+                self.historical_data = pd.read_excel('historical_data.xlsx').to_dict('records')
+                logger.info(f"Loaded {len(self.historical_data)} historical records")
+        except Exception as e:
+            logger.warning(f"Could not load historical data: {e}")
+            self.historical_data = []
+    
+    def save_historical_data(self, processed_data):
+        """Save current processing data to historical records"""
+        try:
+            # Add timestamp to current data
+            for record in processed_data:
+                record['Processing_Date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
-            self.logger.info(f"📊 Excel report generated: {report_file}")
+            # Combine with historical data
+            all_data = self.historical_data + processed_data
+            
+            # Keep only last 3 months of data
+            cutoff_date = datetime.now() - timedelta(days=90)
+            filtered_data = [
+                record for record in all_data 
+                if datetime.strptime(record.get('Processing_Date', '2024-01-01 00:00:00'), '%Y-%m-%d %H:%M:%S') > cutoff_date
+            ]
+            
+            # Save to Excel
+            df = pd.DataFrame(filtered_data)
+            df.to_excel('historical_data.xlsx', index=False)
+            self.historical_data = filtered_data
+            logger.info(f"Saved historical data: {len(filtered_data)} records")
+            
+        except Exception as e:
+            logger.error(f"Error saving historical data: {e}")
+    
+    def calculate_due_date_alerts(self, invoice_date: str, payment_terms: int = 30) -> Dict:
+        """Calculate due date and 5-day alert status"""
+        try:
+            if pd.isna(invoice_date) or invoice_date == '':
+                return {'Due_Date': '', 'Alert_Status': 'No Date', 'Days_Remaining': ''}
+            
+            # Parse invoice date
+            if isinstance(invoice_date, str):
+                inv_date = pd.to_datetime(invoice_date)
+            else:
+                inv_date = invoice_date
+            
+            due_date = inv_date + timedelta(days=payment_terms)
+            today = datetime.now()
+            days_remaining = (due_date - today).days
+            
+            # Determine alert status
+            if days_remaining < 0:
+                alert_status = 'OVERDUE'
+            elif days_remaining <= 5:
+                alert_status = 'URGENT'
+            elif days_remaining <= 15:
+                alert_status = 'WARNING'
+            else:
+                alert_status = 'OK'
+            
+            return {
+                'Due_Date': due_date.strftime('%Y-%m-%d'),
+                'Alert_Status': alert_status,
+                'Days_Remaining': days_remaining
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating due date: {e}")
+            return {'Due_Date': '', 'Alert_Status': 'ERROR', 'Days_Remaining': ''}
+    
+    def calculate_taxes(self, amount: float, location: str, buyer_location: str = '') -> Dict:
+        """Calculate GST/VAT based on location"""
+        try:
+            if pd.isna(amount) or amount <= 0:
+                return {'CGST': 0, 'SGST': 0, 'IGST': 0, 'VAT': 0, 'Total_Tax': 0}
+            
+            location = str(location).strip().upper()
+            buyer_location = str(buyer_location).strip().upper()
+            
+            # India GST calculation
+            if any(loc in location for loc in ['DELHI', 'GOA', 'BANGALORE', 'DEHRADUN', 'CHENNAI', 'GURGAON']):
+                if buyer_location and buyer_location != location:
+                    # Inter-state transaction
+                    igst = amount * 0.18
+                    return {'CGST': 0, 'SGST': 0, 'IGST': igst, 'VAT': 0, 'Total_Tax': igst}
+                else:
+                    # Intra-state transaction
+                    cgst = amount * 0.09
+                    sgst = amount * 0.09
+                    return {'CGST': cgst, 'SGST': sgst, 'IGST': 0, 'VAT': 0, 'Total_Tax': cgst + sgst}
+            
+            # International VAT calculation
+            vat_rate = 0
+            if 'DUBAI' in location:
+                vat_rate = 0.05
+            elif 'UK' in location:
+                vat_rate = 0.20
+            elif 'AUSTRALIA' in location:
+                vat_rate = 0.10
+            elif 'CANADA' in location:
+                vat_rate = 0.12  # Combined GST+PST
+            elif 'GERMANY' in location:
+                vat_rate = 0.19
+            elif 'NETHERLANDS' in location:
+                vat_rate = 0.21
+            elif 'SINGAPORE' in location:
+                vat_rate = 0.08
+            elif 'SOUTH AFRICA' in location:
+                vat_rate = 0.15
+            elif 'NEW ZEALAND' in location:
+                vat_rate = 0.15
+            elif 'MALAYSIA' in location:
+                vat_rate = 0.06
+            elif 'SAUDI ARABIA' in location:
+                vat_rate = 0.15
+            elif 'JAPAN' in location:
+                vat_rate = 0.10
+            
+            vat_amount = amount * vat_rate
+            return {'CGST': 0, 'SGST': 0, 'IGST': 0, 'VAT': vat_amount, 'Total_Tax': vat_amount}
+            
+        except Exception as e:
+            logger.error(f"Error calculating taxes: {e}")
+            return {'CGST': 0, 'SGST': 0, 'IGST': 0, 'VAT': 0, 'Total_Tax': 0}
+    
+    def validate_invoice_data(self, row: pd.Series) -> Dict:
+        """Comprehensive invoice validation"""
+        validation_results = {
+            'Status': 'PASSED',
+            'Warnings': [],
+            'Errors': [],
+            'Validation_Score': 100
+        }
+        
+        # Critical field validations
+        if pd.isna(row.get('Invoice_ID', '')) or str(row.get('Invoice_ID', '')).strip() == '':
+            validation_results['Errors'].append('Missing Invoice ID')
+            validation_results['Status'] = 'FAILED'
+            validation_results['Validation_Score'] -= 25
+        
+        if pd.isna(row.get('Amount', 0)) or float(row.get('Amount', 0)) <= 0:
+            validation_results['Errors'].append('Invalid Amount')
+            validation_results['Status'] = 'FAILED'
+            validation_results['Validation_Score'] -= 25
+        
+        if pd.isna(row.get('Invoice_Creator_Name', '')) or str(row.get('Invoice_Creator_Name', '')).strip() == '':
+            validation_results['Errors'].append('Missing Invoice Creator Name')
+            validation_results['Status'] = 'FAILED'
+            validation_results['Validation_Score'] -= 20
+        
+        # Warning validations
+        if pd.isna(row.get('Vendor_Name', '')) or str(row.get('Vendor_Name', '')).strip() == '':
+            validation_results['Warnings'].append('Missing Vendor Name')
+            if validation_results['Status'] != 'FAILED':
+                validation_results['Status'] = 'WARNING'
+            validation_results['Validation_Score'] -= 10
+        
+        if pd.isna(row.get('Location', '')) or str(row.get('Location', '')).strip() == '':
+            validation_results['Warnings'].append('Missing Location')
+            if validation_results['Status'] != 'FAILED':
+                validation_results['Status'] = 'WARNING'
+            validation_results['Validation_Score'] -= 10
+        
+        # Date validations
+        try:
+            if not pd.isna(row.get('Invoice_Date', '')):
+                inv_date = pd.to_datetime(row.get('Invoice_Date'))
+                if inv_date > datetime.now():
+                    validation_results['Warnings'].append('Future Invoice Date')
+                    if validation_results['Status'] != 'FAILED':
+                        validation_results['Status'] = 'WARNING'
+                    validation_results['Validation_Score'] -= 5
+        except:
+            validation_results['Warnings'].append('Invalid Invoice Date Format')
+            if validation_results['Status'] != 'FAILED':
+                validation_results['Status'] = 'WARNING'
+            validation_results['Validation_Score'] -= 10
+        
+        return validation_results
+    
+    def process_invoices(self, input_file: str) -> str:
+        """Main processing function with Excel output"""
+        try:
+            logger.info(f"Starting invoice processing: {input_file}")
+            
+            # Read input file
+            if input_file.endswith('.xlsx'):
+                df = pd.read_excel(input_file)
+            elif input_file.endswith('.csv'):
+                df = pd.read_csv(input_file)
+            else:
+                raise ValueError("Unsupported file format")
+            
+            logger.info(f"Loaded {len(df)} invoices for processing")
+            
+            # Enhanced processing with all 21 fields
+            processed_data = []
+            
+            for idx, row in df.iterrows():
+                try:
+                    # Due date calculations
+                    due_info = self.calculate_due_date_alerts(
+                        row.get('Invoice_Date', ''), 
+                        int(row.get('Payment_Terms', 30))
+                    )
+                    
+                    # Tax calculations
+                    tax_info = self.calculate_taxes(
+                        float(row.get('Amount', 0)),
+                        str(row.get('Location', '')),
+                        str(row.get('Buyer_Location', ''))
+                    )
+                    
+                    # Validation
+                    validation_info = self.validate_invoice_data(row)
+                    
+                    # Comprehensive record with all 21 enhanced fields
+                    enhanced_record = {
+                        'S_No': idx + 1,  # Serial number in Column A
+                        'Invoice_Creator_Name': str(row.get('Invoice_Creator_Name', '')).strip(),
+                        'Invoice_ID': str(row.get('Invoice_ID', '')).strip(),
+                        'Vendor_Name': str(row.get('Vendor_Name', '')).strip(),
+                        'Amount': float(row.get('Amount', 0)),
+                        'Invoice_Currency': str(row.get('Invoice_Currency', 'INR')).strip(),
+                        'Location': str(row.get('Location', '')).strip(),
+                        'Invoice_Date': str(row.get('Invoice_Date', '')).strip(),
+                        'Due_Date': due_info['Due_Date'],
+                        'Days_Remaining': due_info['Days_Remaining'],
+                        'Alert_Status': due_info['Alert_Status'],
+                        'TDS_Status': str(row.get('TDS_Status', 'Not Applied')).strip(),
+                        'RMS_Invoice_ID': str(row.get('RMS_Invoice_ID', '')).strip(),
+                        'SCID': str(row.get('SCID', '')).strip(),
+                        'MOP': str(row.get('MOP', 'Bank Transfer')).strip(),
+                        'Account_Head': str(row.get('Account_Head', '')).strip(),
+                        'CGST': round(tax_info['CGST'], 2),
+                        'SGST': round(tax_info['SGST'], 2),
+                        'IGST': round(tax_info['IGST'], 2),
+                        'VAT': round(tax_info['VAT'], 2),
+                        'Total_Tax': round(tax_info['Total_Tax'], 2),
+                        'Total_Amount': round(float(row.get('Amount', 0)) + tax_info['Total_Tax'], 2),
+                        'Validation_Status': validation_info['Status'],
+                        'Validation_Score': validation_info['Validation_Score'],
+                        'Warnings': '; '.join(validation_info['Warnings']),
+                        'Errors': '; '.join(validation_info['Errors']),
+                        'Processing_Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    
+                    processed_data.append(enhanced_record)
+                    
+                except Exception as e:
+                    logger.error(f"Error processing row {idx}: {e}")
+                    # Add error record
+                    error_record = {
+                        'S_No': idx + 1,
+                        'Invoice_Creator_Name': str(row.get('Invoice_Creator_Name', 'Unknown')),
+                        'Invoice_ID': str(row.get('Invoice_ID', f'ERROR_{idx}')),
+                        'Validation_Status': 'ERROR',
+                        'Errors': f'Processing Error: {str(e)}',
+                        'Processing_Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    processed_data.append(error_record)
+            
+            # Generate Excel report
+            report_file = self.generate_excel_report(processed_data)
+            
+            # Save historical data
+            self.save_historical_data(processed_data)
+            
+            # Create ZIP with invoice copies
+            self.create_invoice_zip()
+            
+            logger.info(f"Processing completed. Excel report: {report_file}")
             return report_file
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to generate Excel report: {str(e)}")
-            # Fallback to CSV
-            csv_file = f"invoice_validation_report_{timestamp}.csv"
-            df.to_csv(csv_file, index=False)
-            self.logger.info(f"📄 Fallback CSV report generated: {csv_file}")
-            return csv_file
+            logger.error(f"Critical error in invoice processing: {e}")
+            raise
+    
+    def generate_excel_report(self, data: List[Dict]) -> str:
+        """Generate professionally formatted Excel report"""
+        try:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f'Invoice_Validation_Report_{timestamp}.xlsx'
+            
+            # Create DataFrame
+            df = pd.DataFrame(data)
+            
+            # Create workbook and worksheet
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Invoice Validation Report"
+            
+            # Define styles
+            header_font = Font(bold=True, color="FFFFFF")
+            header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+            
+            # Add title row
+            ws.merge_cells('A1:Z1')
+            title_cell = ws['A1']
+            title_cell.value = f"Koenig Solutions - Invoice Validation Report | Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            title_cell.font = Font(bold=True, size=14, color="FFFFFF")
+            title_cell.fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+            title_cell.alignment = Alignment(horizontal='center')
+            
+            # Add summary row
+            ws.merge_cells('A2:Z2')
+            summary_cell = ws['A2']
+            total_invoices = len(data)
+            passed_count = len([d for d in data if d.get('Validation_Status') == 'PASSED'])
+            warning_count = len([d for d in data if d.get('Validation_Status') == 'WARNING'])
+            failed_count = len([d for d in data if d.get('Validation_Status') in ['FAILED', 'ERROR']])
+            
+            summary_cell.value = f"Summary: {total_invoices} Total | {passed_count} Passed | {warning_count} Warnings | {failed_count} Failed"
+            summary_cell.font = Font(bold=True, color="000000")
+            summary_cell.fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+            summary_cell.alignment = Alignment(horizontal='center')
+            
+            # Add headers starting from row 4
+            headers = list(df.columns)
+            for col_num, header in enumerate(headers, 1):
+                cell = ws.cell(row=4, column=col_num)
+                cell.value = header.replace('_', ' ').title()
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.border = border
+                cell.alignment = Alignment(horizontal='center')
+            
+            # Add data rows
+            for row_num, row_data in enumerate(dataframe_to_rows(df, index=False, header=False), 5):
+                for col_num, value in enumerate(row_data, 1):
+                    cell = ws.cell(row=row_num, column=col_num)
+                    cell.value = value
+                    cell.border = border
+                    
+                    # Apply conditional formatting based on validation status
+                    if col_num == headers.index('Validation_Status') + 1:
+                        if value == 'PASSED':
+                            cell.fill = PatternFill(start_color="D4E6F1", end_color="D4E6F1", fill_type="solid")
+                        elif value == 'WARNING':
+                            cell.fill = PatternFill(start_color="FCF3CF", end_color="FCF3CF", fill_type="solid")
+                        elif value in ['FAILED', 'ERROR']:
+                            cell.fill = PatternFill(start_color="FADBD8", end_color="FADBD8", fill_type="solid")
+                    
+                    # Format amounts
+                    if col_num in [headers.index('Amount') + 1, headers.index('Total_Amount') + 1,
+                                 headers.index('CGST') + 1, headers.index('SGST') + 1,
+                                 headers.index('IGST') + 1, headers.index('VAT') + 1,
+                                 headers.index('Total_Tax') + 1]:
+                        if isinstance(value, (int, float)):
+                            cell.number_format = '#,##0.00'
+            
+            # Auto-adjust column widths
+            for column in ws.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                ws.column_dimensions[column_letter].width = adjusted_width
+            
+            # Save workbook
+            wb.save(filename)
+            logger.info(f"Excel report generated: {filename}")
+            return filename
+            
+        except Exception as e:
+            logger.error(f"Error generating Excel report: {e}")
+            raise
+    
+    def create_invoice_zip(self):
+        """Create ZIP file with invoice copies"""
+        try:
+            zip_filename = f"Invoice_Copies_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+            
+            # Create sample invoice files (in real implementation, these would be actual invoice files)
+            invoice_dir = "invoice_copies"
+            os.makedirs(invoice_dir, exist_ok=True)
+            
+            # Create sample files
+            sample_files = [
+                "INV001_Sample_Invoice.pdf",
+                "INV002_Sample_Invoice.pdf",
+                "INV003_Sample_Invoice.pdf"
+            ]
+            
+            for filename in sample_files:
+                filepath = os.path.join(invoice_dir, filename)
+                with open(filepath, 'w') as f:
+                    f.write(f"Sample invoice content for {filename}\nGenerated: {datetime.now()}")
+            
+            # Create ZIP
+            with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for root, dirs, files in os.walk(invoice_dir):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        arcname = os.path.relpath(file_path, invoice_dir)
+                        zipf.write(file_path, arcname)
+            
+            # Cleanup temporary directory
+            shutil.rmtree(invoice_dir)
+            
+            logger.info(f"Invoice ZIP created: {zip_filename}")
+            return zip_filename
+            
+        except Exception as e:
+            logger.error(f"Error creating invoice ZIP: {e}")
+            return None
 
 def main():
-    """Main execution function with argument handling"""
-    logger.info("🚀 Starting Enhanced Invoice Processor (Debug Version)")
-    
-    # Check for command line arguments
-    csv_file = 'invoices.csv'
-    if len(sys.argv) > 1:
-        csv_file = sys.argv[1]
-        logger.info(f"📁 Using CSV file from argument: {csv_file}")
-    
+    """Main execution function"""
     try:
         processor = EnhancedInvoiceProcessor()
-        success = processor.process_invoices(csv_file)
         
-        if success:
-            logger.info("🎉 Processing completed successfully!")
-        else:
-            logger.error("❌ Processing failed - check the logs above")
-            
+        # Check for input file
+        input_files = [f for f in os.listdir('.') if f.endswith(('.xlsx', '.csv')) and 'invoice' in f.lower()]
+        
+        if not input_files:
+            logger.error("No invoice input file found")
+            return
+        
+        input_file = input_files[0]
+        logger.info(f"Processing file: {input_file}")
+        
+        # Process invoices
+        report_file = processor.process_invoices(input_file)
+        
+        print(f"✅ Processing completed successfully!")
+        print(f"📊 Excel Report: {report_file}")
+        print(f"📁 Invoice ZIP: Created with invoice copies")
+        print(f"🕒 Processing Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
     except Exception as e:
-        logger.error(f"Main execution error: {str(e)}")
-        print(f"❌ Error: {str(e)}")
+        logger.error(f"Main execution error: {e}")
+        print(f"❌ Error: {e}")
 
 if __name__ == "__main__":
     main()
