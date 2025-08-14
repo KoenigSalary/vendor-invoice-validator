@@ -1,139 +1,123 @@
-name: Enhanced Invoice Validation System
+name: "Invoice Validation with ZIP Attachments"
 
 on:
   schedule:
-    # Run every 4 days at 9:00 AM UTC
-    - cron: '0 9 */4 * *'
-  workflow_dispatch:
-    # Allow manual triggering
-    inputs:
-      force_run:
-        description: 'Force run validation'
-        required: false
-        default: 'false'
+    - cron: '0 9 */4 * *'  # Every 4 days at 9 AM UTC
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches: [ main ]
 
 jobs:
   validate-invoices:
     runs-on: ubuntu-latest
     
     steps:
-    - name: 📁 Checkout Repository
+    - name: Checkout Repository
       uses: actions/checkout@v4
-      
-    - name: 🐍 Set up Python
+
+    - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
-        
-    - name: 📦 Install Dependencies
+
+    - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        # Ensure Excel support is available
-        pip install openpyxl xlsxwriter
-        
-    - name: 🔧 Setup Chrome and ChromeDriver
-      uses: browser-actions/setup-chrome@latest
-      with:
-        chrome-version: stable
-        
-    - name: 📁 Create Directory Structure
+
+    - name: Setup Chrome and ChromeDriver
       run: |
-        mkdir -p invoices/
-        mkdir -p reports/
-        mkdir -p temp/
-        mkdir -p attachments/
+        # Install Chrome
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
         
-    - name: 📊 Download and Process Invoices
+        # Install ChromeDriver
+        CHROME_VERSION=$(google-chrome --version | cut -d " " -f3 | cut -d "." -f1)
+        CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}")
+        wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
+        sudo unzip /tmp/chromedriver.zip chromedriver -d /usr/local/bin/
+        sudo chmod +x /usr/local/bin/chromedriver
+
+    - name: Create Invoice Files Directory
       run: |
-        echo "Starting invoice processing..."
-        # Create sample invoices for testing (replace with your actual data source)
-        echo "Invoice_ID,Invoice_Date,Vendor_Name,Amount,Location,Currency,Invoice_File" > invoices.csv
-        echo "INV001,2024-08-01,Vendor A,25000,Delhi,INR,INV001.pdf" >> invoices.csv
-        echo "INV002,2024-08-02,Vendor B,15000,Mumbai,INR,INV002.pdf" >> invoices.csv
-        echo "INV003,2024-08-03,Vendor C,30000,Bangalore,INR,INV003.pdf" >> invoices.csv
-        
-        # Create sample invoice files
-        echo "Sample Invoice Content A" > invoices/INV001.pdf
-        echo "Sample Invoice Content B" > invoices/INV002.pdf
-        echo "Sample Invoice Content C" > invoices/INV003.pdf
-        
-    - name: 🎯 Run Enhanced Processor
+        mkdir -p invoice_files
+        # Create sample invoice files for testing
+        echo "Sample Invoice 1" > invoice_files/INV001.pdf
+        echo "Sample Invoice 2" > invoice_files/INV002.pdf
+        echo "Sample Invoice 3" > invoice_files/INV003.pdf
+
+    - name: Prepare Invoice Data
       run: |
-        echo "Running enhanced invoice processor..."
-        python enhanced_processor.py
-        echo "Processor completed successfully"
-        
-    - name: 📋 Verify Excel Report Generated
-      run: |
-        echo "Checking for Excel reports..."
-        ls -la *.xlsx || echo "No Excel files found"
-        ls -la invoice_validation_report_*.xlsx || echo "No validation reports found"
-        
-        # Move Excel report to reports directory
-        if ls invoice_validation_report_*.xlsx 1> /dev/null 2>&1; then
-          mv invoice_validation_report_*.xlsx reports/
-          echo "Excel report moved to reports directory"
+        # Create sample invoices.csv if not exists
+        if [ ! -f invoices.csv ]; then
+          echo "Invoice_ID,Invoice_Date,Vendor_Name,Amount,Location,Currency" > invoices.csv
+          echo "INV001,2024-08-14,ABC Corp Ltd,25000,Delhi,INR" >> invoices.csv
+          echo "INV002,2024-08-13,XYZ Services,15000,Mumbai,INR" >> invoices.csv
+          echo "INV003,2024-08-12,Global Tech,30000,Bangalore,INR" >> invoices.csv
+          echo "INV004,2024-08-11,Supplies Inc,12000,Chennai,INR" >> invoices.csv
+          echo "INV005,2024-08-10,IT Solutions,45000,Gurgaon,INR" >> invoices.csv
         fi
-        
-    - name: 📁 Create ZIP with Invoices and Report
+
+    - name: Generate Excel Validation Report
       run: |
-        echo "Creating ZIP attachment..."
-        cd reports/
+        echo "🚀 Starting Invoice Processing..."
+        python enhanced_processor.py
+        echo "✅ Excel report generated successfully!"
         
-        # Find the Excel report
-        EXCEL_REPORT=$(ls invoice_validation_report_*.xlsx | head -n 1)
+        # List generated files
+        ls -la *.xlsx || echo "No Excel files found"
+        ls -la invoice_files/ || echo "No invoice files directory"
+
+    - name: Create ZIP with Reports and Invoices
+      run: |
+        echo "📦 Creating ZIP file with Excel report and invoice files..."
+        
+        # Find the latest Excel report
+        EXCEL_REPORT=$(ls -t invoice_validation_report_*.xlsx | head -n1)
         echo "Found Excel report: $EXCEL_REPORT"
         
-        # Create ZIP with both Excel report and invoice files
-        zip -r "../attachments/invoice_validation_package_$(date +%Y%m%d_%H%M%S).zip" \
-          "$EXCEL_REPORT" \
-          ../invoices/*.pdf
-          
-        echo "ZIP package created successfully"
-        ls -la ../attachments/
+        # Create ZIP filename with timestamp
+        ZIP_NAME="invoices_validation_$(date +%Y%m%d_%H%M%S).zip"
         
-    - name: 📧 Send Email Notification
+        # Create ZIP file
+        zip -r $ZIP_NAME "$EXCEL_REPORT" invoice_files/
+        
+        echo "✅ ZIP file created: $ZIP_NAME"
+        ls -la *.zip
+
+    - name: Send Email with ZIP Attachment
+      run: python email_notifier.py
       env:
-        EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
-        EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
         EMAIL_USER: ${{ secrets.EMAIL_USER }}
         EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS }}
-      run: |
-        echo "Starting email notification process..."
-        
-        # Set environment variables for the email script
-        export EXCEL_REPORT_PATH=$(ls reports/invoice_validation_report_*.xlsx | head -n 1)
-        export ZIP_ATTACHMENT_PATH=$(ls attachments/invoice_validation_package_*.zip | head -n 1)
-        
-        echo "Excel Report: $EXCEL_REPORT_PATH"
-        echo "ZIP Attachment: $ZIP_ATTACHMENT_PATH"
-        
-        # Run email notifier
-        python email_notifier.py
-        
-    - name: 🗄️ Archive Reports
-      uses: actions/upload-artifact@v4
-      if: always()
+        RECIPIENTS: ${{ secrets.RECIPIENTS }}
+
+    - name: Upload Reports as Artifacts
+      uses: actions/upload-artifact@v3
       with:
-        name: validation-reports-${{ github.run_number }}
+        name: validation-reports
         path: |
-          reports/*.xlsx
-          attachments/*.zip
+          *.xlsx
+          *.zip
         retention-days: 30
-        
-    - name: 📊 Summary Report
-      if: always()
+
+    - name: Cleanup Temporary Files
       run: |
-        echo "=== WORKFLOW SUMMARY ==="
-        echo "📁 Files processed:"
-        wc -l invoices.csv || echo "No CSV file found"
-        
-        echo "📊 Excel reports generated:"
-        ls -la reports/*.xlsx || echo "No Excel reports found"
-        
-        echo "📁 ZIP attachments created:"
-        ls -la attachments/*.zip || echo "No ZIP files found"
-        
-        echo "✅ Workflow completed at $(date)"
+        echo "🧹 Cleaning up temporary files..."
+        rm -f *.xlsx *.zip
+        echo "✅ Cleanup completed!"
+
+  send-summary:
+    needs: validate-invoices
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: Send Workflow Summary
+      run: |
+        echo "📊 Invoice Validation Workflow Completed"
+        echo "Status: ${{ needs.validate-invoices.result }}"
+        echo "Timestamp: $(date)"
