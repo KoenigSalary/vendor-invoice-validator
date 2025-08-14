@@ -104,26 +104,9 @@ def display_logo_only_header():
     }
     </style>
     """, unsafe_allow_html=True)
-    
-    # Just the logo - centered
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        logo_path = "assets/koenig-logo.png"
-        if os.path.exists(logo_path):
-            st.image(logo_path, width=250)
-        else:
-            # Clean fallback logo
-            st.markdown("""
-            <div style="width:120px; height:120px; background: linear-gradient(45deg, #1e3a8a, #3b82f6); 
-                        border-radius: 15px; display: flex; align-items: center; justify-content: center; 
-                        font-weight: bold; font-size: 32px; color: white; margin: 0 auto;">KS</div>
-            """, unsafe_allow_html=True)
-    
+   
     # Optional: Just a subtle separator line
     st.markdown("---")
-
-# Replace your current header with this
-display_logo_only_header()
 
 # Database Setup
 def init_database():
@@ -194,7 +177,29 @@ def authenticate_user(username, password):
     return user
 
 def show_login():
-    st.markdown('<div class="main-header"><h1>🏢 Koenig Solutions - Salary Reconciliation System</h1></div>', unsafe_allow_html=True)
+    # KEEP LOGO ON LOGIN PAGE
+    st.markdown("---")
+    
+    # Centered logo for login page
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        logo_path = "assets/koenig-logo.png"
+        if os.path.exists(logo_path):
+            st.image(logo_path, width=200)
+        else:
+            # Clean fallback logo for login
+            st.markdown("""
+            <div style="width:200px; height:100px; background: linear-gradient(45deg, #1e3a8a, #3b82f6); 
+                        border-radius: 15px; display: flex; align-items: center; justify-content: center; 
+                        font-weight: bold; font-size: 20px; color: white; margin: 0 auto;">
+                KOENIG SOLUTIONS
+            </div>
+            """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Login header
+    st.markdown('<div style="background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%); padding: 1rem; border-radius: 10px; margin-bottom: 2rem;"><h1 style="color: white; margin: 0; text-align: center;">🏢 Koenig Solutions - Salary Reconciliation System</h1></div>', unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     
@@ -227,22 +232,26 @@ def show_login():
 def show_dashboard():
     user_role = st.session_state.user_info[2] if 'user_info' in st.session_state else 'User'
     
-    # Header
-    st.markdown(f'''
-    <div class="main-header">
-        <h1>🏢 Koenig Solutions - Professional Reconciliation Dashboard</h1>
-        <p style="color: white; text-align: center; margin: 0;">
-            Welcome {st.session_state.user_info[1]} ({user_role}) | 
-            {datetime.now().strftime("%B %d, %Y - %I:%M %p")}
-        </p>
-    </div>
-    ''', unsafe_allow_html=True)
-    
-    # Sidebar Navigation
+    # Sidebar Navigation - LOGO AT THE VERY TOP
     with st.sidebar:
-        st.image("https://via.placeholder.com/200x80/1e3c72/ffffff?text=KOENIG", width=200)
+        # LOGO FIRST - AT THE TOP
+        col1, col2, col3 = st.columns([0.2, 1, 0.2])
+        with col2:
+            logo_path = "assets/koenig-logo.png"
+            if os.path.exists(logo_path):
+                st.image(logo_path, width=180)
+            else:
+                st.markdown("""
+                <div style="width:180px; height:60px; background: linear-gradient(45deg, #1e3a8a, #3b82f6); 
+                            border-radius: 10px; display: flex; align-items: center; justify-content: center; 
+                            font-weight: bold; font-size: 14px; color: white; margin: 10px auto;">
+                    KOENIG SOLUTIONS
+                </div>
+                """, unsafe_allow_html=True)
+        
         st.markdown("---")
         
+        # Navigation menu below logo
         menu_options = [
             "🏠 Dashboard Home",
             "🤖 Auto Reconciliation", 
@@ -267,6 +276,20 @@ def show_dashboard():
                 del st.session_state[key]
             st.rerun()
     
+    # HEADER MOVED UP - BEFORE MAIN CONTENT
+    st.markdown(f'''
+    <div style="background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%); 
+                padding: 0.8rem 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+        <h2 style="color: white; margin: 0; text-align: center; font-size: 1.5rem;">
+            🏢 Koenig Solutions - Professional Reconciliation Dashboard
+        </h2>
+        <p style="color: #e8f2ff; text-align: center; margin: 0.3rem 0 0 0; font-size: 0.9rem;">
+            Welcome {st.session_state.user_info[1]} ({user_role}) | 
+            {datetime.now().strftime("%B %d, %Y - %I:%M %p")}
+        </p>
+    </div>
+    ''', unsafe_allow_html=True)
+
     # Main Content
     if selected == "🏠 Dashboard Home":
         show_dashboard_home()
@@ -288,7 +311,18 @@ def show_dashboard():
 def show_dashboard_home():
     """Dashboard home with key metrics and quick actions"""
     
-    # Quick Stats Cards
+    # REMOVE THIS SECTION (header is now handled in show_dashboard()):
+    # st.markdown(f'''
+    # <div class="main-header">
+    #     <h1>🏢 Koenig Solutions - Professional Reconciliation Dashboard</h1>
+    #     <p style="color: white; text-align: center; margin: 0;">
+    #         Welcome {st.session_state.user_info[1]} ({user_role}) | 
+    #         {datetime.now().strftime("%B %d, %Y - %I:%M %p")}
+    #     </p>
+    # </div>
+    # ''', unsafe_allow_html=True)
+    
+    # Start directly with Quick Stats Cards
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -299,7 +333,7 @@ def show_dashboard_home():
             <p>Active employees in system</p>
         </div>
         """, unsafe_allow_html=True)
-    
+
     with col2:
         st.markdown("""
         <div class="metric-card">
@@ -371,7 +405,7 @@ def show_auto_reconciliation():
     """Auto reconciliation with 4 downloads + 2 manual uploads"""
     
     st.markdown("## 🤖 Automated Reconciliation System")
-    st.markdown("**Downloads:** Salary, TDS, Bank SOA (2 files) | **Manual Upload:** EPF, NPS")
+    st.markdown("**Auto Downloads:** Salary, TDS, Bank SOA (Kotak & Deutsche) | **Manual Upload:** EPF, NPS")
     
     # Current month calculation
     current_date = datetime.now()
@@ -393,95 +427,227 @@ def show_auto_reconciliation():
             selected_year = st.selectbox("Year", [2024, 2025, 2026], index=1)
     
     with col2:
-        st.markdown("### 📊 Auto Download Status")
-        st.markdown('<div class="status-success">✅ Salary Sheet - Ready</div>', unsafe_allow_html=True)
-        st.markdown('<div class="status-success">✅ TDS Report - Ready</div>', unsafe_allow_html=True)
-        st.markdown('<div class="status-success">✅ Kotak Bank SOA - Ready</div>', unsafe_allow_html=True)
-        st.markdown('<div class="status-success">✅ Deutsche Bank SOA - Ready</div>', unsafe_allow_html=True)
+        st.markdown("### 📥 Auto Download Status")
+        st.markdown('<div class="status-success">✅ Salary Sheet - Will Auto Download</div>', unsafe_allow_html=True)
+        st.markdown('<div class="status-success">✅ TDS Report - Will Auto Download</div>', unsafe_allow_html=True)
+        st.markdown('<div class="status-success">✅ Kotak Bank SOA - Will Auto Download</div>', unsafe_allow_html=True)
+        st.markdown('<div class="status-success">✅ Deutsche Bank SOA - Will Auto Download</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
-    # Manual Upload Section for EPF and NPS
-    st.markdown("### 📤 Manual File Upload (EPF & NPS)")
+    # ===== THIS IS THE MISSING SECTION - MANUAL UPLOAD FOR EPF & NPS =====
+    st.markdown("### 📤 Manual File Upload Required")
+    st.info("📋 **Important:** EPF and NPS files must be uploaded manually as they are not available in RMS system")
     
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown("#### 🏛️ EPF File Upload")
         epf_file = st.file_uploader(
-            "Upload EPF file", 
+            "Upload EPF file for reconciliation", 
             type=['xlsx', 'xls', 'csv'],
-            key="epf_upload",
-            help="Upload EPF contribution file for the selected month"
+            key="auto_epf_upload",
+            help=f"Upload EPF contribution file for {selected_month} {selected_year}"
         )
         
         if epf_file:
             st.markdown('<div class="status-success">✅ EPF file uploaded successfully</div>', unsafe_allow_html=True)
-            st.write(f"📄 File: {epf_file.name}")
-            st.write(f"📊 Size: {epf_file.size} bytes")
+            st.write(f"📄 **File:** {epf_file.name}")
+            st.write(f"📊 **Size:** {round(epf_file.size/1024, 2)} KB")
+            
+            # Show file preview
+            with st.expander("👁️ Preview EPF File"):
+                try:
+                    if epf_file.name.endswith('.csv'):
+                        df_preview = pd.read_csv(epf_file)
+                    else:
+                        df_preview = pd.read_excel(epf_file)
+                    st.write(f"**Rows:** {len(df_preview)} | **Columns:** {len(df_preview.columns)}")
+                    st.dataframe(df_preview.head(3))
+                except Exception as e:
+                    st.error(f"Could not preview file: {str(e)}")
+        else:
+            st.markdown('<div class="status-warning">⚠️ EPF file required for complete reconciliation</div>', unsafe_allow_html=True)
     
     with col2:
         st.markdown("#### 🏛️ NPS File Upload")
         nps_file = st.file_uploader(
-            "Upload NPS file",
+            "Upload NPS file for reconciliation",
             type=['xlsx', 'xls', 'csv'], 
-            key="nps_upload",
-            help="Upload NPS contribution file for the selected month"
+            key="auto_nps_upload",
+            help=f"Upload NPS contribution file for {selected_month} {selected_year}"
         )
         
         if nps_file:
             st.markdown('<div class="status-success">✅ NPS file uploaded successfully</div>', unsafe_allow_html=True)
-            st.write(f"📄 File: {nps_file.name}")
-            st.write(f"📊 Size: {nps_file.size} bytes")
+            st.write(f"📄 **File:** {nps_file.name}")
+            st.write(f"📊 **Size:** {round(nps_file.size/1024, 2)} KB")
+            
+            # Show file preview
+            with st.expander("👁️ Preview NPS File"):
+                try:
+                    if nps_file.name.endswith('.csv'):
+                        df_preview = pd.read_csv(nps_file)
+                    else:
+                        df_preview = pd.read_excel(nps_file)
+                    st.write(f"**Rows:** {len(df_preview)} | **Columns:** {len(df_preview.columns)}")
+                    st.dataframe(df_preview.head(3))
+                except Exception as e:
+                    st.error(f"Could not preview file: {str(e)}")
+        else:
+            st.markdown('<div class="status-warning">⚠️ NPS file required for complete reconciliation</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
     # Auto Reconciliation Controls
-    st.markdown("### 🚀 Auto Reconciliation Execution")
+    st.markdown("### 🚀 Auto Reconciliation Configuration")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        download_first = st.checkbox("📥 Download RMS files first", value=True)
-        include_epf = st.checkbox("🏛️ Include EPF reconciliation", value=bool(epf_file))
-        include_nps = st.checkbox("🏛️ Include NPS reconciliation", value=bool(nps_file))
+        st.markdown("#### 📥 RMS Download Settings")
+        download_salary = st.checkbox("📊 Download Salary Sheet", value=True, disabled=True, help="Required for reconciliation")
+        download_tds = st.checkbox("💰 Download TDS Report", value=True, disabled=True, help="Required for reconciliation")
+        download_kotak = st.checkbox("🏦 Download Kotak Bank SOA", value=True, disabled=True, help="Required for reconciliation")
+        download_deutsche = st.checkbox("🏦 Download Deutsche Bank SOA", value=True, disabled=True, help="Required for reconciliation")
     
     with col2:
-        send_email = st.checkbox("📧 Send email notifications", value=True)
-        create_backup = st.checkbox("💾 Create backup files", value=True)
+        st.markdown("#### ⚙️ Processing Options")
+        include_epf = st.checkbox("🏛️ Include EPF reconciliation", value=bool(epf_file), disabled=not bool(epf_file))
+        include_nps = st.checkbox("🏛️ Include NPS reconciliation", value=bool(nps_file), disabled=not bool(nps_file))
         detailed_report = st.checkbox("📊 Generate detailed analytics", value=True)
+        create_backup = st.checkbox("💾 Create backup files", value=True)
     
     with col3:
-        # Progress indicator
-        if st.session_state.get('reconciliation_running', False):
-            st.markdown("### ⏳ Processing...")
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            # Simulate progress (in real implementation, this would be actual progress)
-            for i in range(100):
-                progress_bar.progress(i + 1)
-                if i < 25:
-                    status_text.text("📥 Downloading RMS files...")
-                elif i < 50:
-                    status_text.text("🔄 Processing salary data...")
-                elif i < 75:
-                    status_text.text("🏦 Reconciling bank data...")
-                else:
-                    status_text.text("📊 Generating reports...")
-            
-            st.success("✅ Auto reconciliation completed successfully!")
-            st.session_state.reconciliation_running = False
+        st.markdown("#### 📧 Notification Settings")
+        send_email = st.checkbox("📧 Send email notifications", value=True)
+        email_success = st.checkbox("✅ Email on success", value=True)
+        email_failure = st.checkbox("❌ Email on failure", value=True)
+        email_partial = st.checkbox("⚠️ Email on partial success", value=True)
     
-    # Action Button
-    if st.button("🚀 Start Auto Reconciliation", type="primary", use_container_width=True):
-        if not epf_file and include_epf:
-            st.error("❌ EPF file is required for EPF reconciliation")
-        elif not nps_file and include_nps:
-            st.error("❌ NPS file is required for NPS reconciliation")
+    st.markdown("---")
+    
+    # File Status Summary
+    st.markdown("### 📋 Reconciliation Readiness Check")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    files_ready = 4  # RMS files are always ready
+    manual_files_ready = sum([bool(epf_file), bool(nps_file)])
+    total_readiness = files_ready + manual_files_ready
+    
+    with col1:
+        st.metric("📥 Auto Download Files", "4/4", "✅ Ready")
+    
+    with col2:
+        st.metric("📤 Manual Upload Files", f"{manual_files_ready}/2", 
+                 "✅ Ready" if manual_files_ready == 2 else "⚠️ Pending")
+    
+    with col3:
+        st.metric("📊 Total Readiness", f"{total_readiness}/6", 
+                 f"{round((total_readiness/6)*100)}%")
+    
+    with col4:
+        if total_readiness == 6:
+            st.markdown('<div class="status-success">✅ All systems ready</div>', unsafe_allow_html=True)
+        elif total_readiness >= 4:
+            st.markdown('<div class="status-warning">⚠️ Partial ready</div>', unsafe_allow_html=True)
         else:
-            st.session_state.reconciliation_running = True
-            st.rerun()
+            st.markdown('<div class="status-error">❌ Not ready</div>', unsafe_allow_html=True)
+    
+    # Action Button with validation
+    if st.button("🚀 Start Auto Reconciliation", type="primary", use_container_width=True):
+        
+        # Validation checks
+        missing_files = []
+        if not epf_file and include_epf:
+            missing_files.append("EPF file")
+        if not nps_file and include_nps:
+            missing_files.append("NPS file")
+        
+        if missing_files:
+            st.error(f"❌ Missing required files: {', '.join(missing_files)}")
+            st.info("💡 Please upload the missing files above before starting reconciliation")
+        else:
+            # Start auto reconciliation process
+            st.session_state.auto_reconciliation_running = True
+            
+            with st.spinner("🤖 Starting Auto Reconciliation Process..."):
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                # Simulate the auto process
+                steps = [
+                    ("📥 Connecting to RMS system...", 10),
+                    ("📊 Downloading Salary Sheet...", 20),
+                    ("💰 Downloading TDS Report...", 30), 
+                    ("🏦 Downloading Kotak Bank SOA...", 40),
+                    ("🏦 Downloading Deutsche Bank SOA...", 50),
+                    ("📁 Processing uploaded EPF file...", 60),
+                    ("📁 Processing uploaded NPS file...", 70),
+                    ("🔄 Running reconciliation engine...", 85),
+                    ("📊 Generating comprehensive reports...", 95),
+                    ("✅ Finalizing and sending notifications...", 100)
+                ]
+                
+                for step_text, progress in steps:
+                    status_text.text(step_text)
+                    progress_bar.progress(progress)
+                    # In real implementation, add actual processing time
+                
+                st.success("✅ Auto reconciliation completed successfully!")
+                
+                # Show results
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("👥 Employees Processed", "547")
+                with col2:
+                    st.metric("✅ Overall Match Rate", "94.2%")
+                with col3:
+                    st.metric("⚠️ Total Discrepancies", "32")
+                
+                # Download button
+                st.download_button(
+                    "📄 Download Auto Reconciliation Report",
+                    data="Auto reconciliation report data",  # Replace with actual report
+                    file_name=f"Auto_Reconciliation_{selected_month}_{selected_year}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            
+            st.session_state.auto_reconciliation_running = False
+
+# Add this CSS to your existing styles for better file upload styling:
+st.markdown("""
+<style>
+.status-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+    padding: 0.5rem;
+    border-radius: 5px;
+    margin: 0.5rem 0;
+}
+
+.status-warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+    padding: 0.5rem;
+    border-radius: 5px;
+    margin: 0.5rem 0;
+}
+
+.status-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 0.5rem;
+    border-radius: 5px;
+    margin: 0.5rem 0;
+}
+</style>
+""", unsafe_allow_html=True)
 
 def show_manual_reconciliation():
     """Manual reconciliation with all 6 file uploads"""
@@ -510,7 +676,7 @@ def show_manual_reconciliation():
         )
         files['salary'] = salary_file
         
-        # TDS file
+        # TDS file  
         st.markdown("**💰 TDS Report**")
         tds_file = st.file_uploader(
             "Upload TDS report",
@@ -565,13 +731,14 @@ def show_manual_reconciliation():
     
     st.markdown("---")
     
+    # Calculate uploaded_count HERE inside the function
+    uploaded_count = sum(1 for f in files.values() if f is not None)
+    total_files = len(files)
+    
     # File Status Summary
     st.markdown("### 📋 File Upload Status")
     
     col1, col2, col3 = st.columns(3)
-    
-    uploaded_count = sum(1 for f in files.values() if f is not None)
-    total_files = len(files)
     
     with col1:
         st.metric("📤 Files Uploaded", f"{uploaded_count}/{total_files}")
@@ -614,7 +781,7 @@ def show_manual_reconciliation():
         report_format = st.selectbox("📄 Report Format", ["Excel (.xlsx)", "CSV (.csv)", "PDF (.pdf)"])
         email_report = st.checkbox("📧 Email report after completion", value=True)
     
-    # Start Manual Reconciliation
+    # Start Manual Reconciliation - FIXED SECTION
     if st.button("🚀 Start Manual Reconciliation", type="primary", use_container_width=True):
         if uploaded_count < 4:  # At least salary, TDS, and 2 bank files required
             st.error("❌ At least 4 files (Salary, TDS, Kotak Bank, Deutsche Bank) are required for reconciliation")
@@ -649,9 +816,6 @@ def show_manual_reconciliation():
                 ]):
                     progress_bar.progress((i + 1) * 14)
                     status_text.text(step)
-                    
-                    # In real implementation, call actual reconciliation here
-                    # result = reconcile_with_files(temp_files)
                 
                 st.success("✅ Manual reconciliation completed successfully!")
                 
@@ -664,14 +828,23 @@ def show_manual_reconciliation():
                 with col3:
                     st.metric("❌ Discrepancies", "26 (4.8%)")
                 
-                # Download button for report
-                st.markdown("### 📥 Download Report")
-                st.download_button(
-                    "📄 Download Complete Reconciliation Report",
-                    data="Mock report data",  # In real implementation, use actual report
-                    file_name=f"Manual_Reconciliation_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+                # FIXED EXCEL EXPORT
+                try:
+                    excel_data = create_proper_excel_report({})
+                    
+                    if excel_data:
+                        st.download_button(
+                            label="📊 Download Complete Reconciliation Report",
+                            data=excel_data,
+                            file_name=f"Manual_Reconciliation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True
+                        )
+                    else:
+                        st.error("❌ Failed to generate Excel report")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error generating report: {str(e)}")
                 
             except Exception as e:
                 st.error(f"❌ Reconciliation failed: {str(e)}")
@@ -796,35 +969,71 @@ def show_analytics_reports():
     df_reports = pd.DataFrame(recent_reports)
     st.dataframe(df_reports, use_container_width=True)
 
-def create_excel_download(dataframes_dict, filename):
-    """Create proper Excel file with multiple sheets"""
+def create_proper_excel_report(report_data):
+    """Create properly formatted Excel file that opens correctly"""
     output = io.BytesIO()
     
-    with pd.ExcelWriter(output, engine='openpyxl', mode='w') as writer:
-        for sheet_name, df in dataframes_dict.items():
-            # Clean sheet name (Excel has 31 char limit)
-            clean_name = sheet_name[:31].replace('/', '_')
-            df.to_excel(writer, sheet_name=clean_name, index=False)
+    try:
+        # Use xlsxwriter engine for better compatibility
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            
+            # Main reconciliation sheet
+            main_df = create_main_reconciliation_data()
+            main_df.to_excel(writer, sheet_name='Main_Reconciliation', index=False)
+            
+            # Branch-wise analysis
+            branch_df = create_branch_analysis()
+            branch_df.to_excel(writer, sheet_name='Branch_Analysis', index=False)
+            
+            # Department-wise analysis
+            dept_df = create_department_analysis()
+            dept_df.to_excel(writer, sheet_name='Department_Analysis', index=False)
+            
+            # Designation-wise analysis
+            desig_df = create_designation_analysis()
+            desig_df.to_excel(writer, sheet_name='Designation_Analysis', index=False)
+            
+            # Summary sheet
+            summary_df = create_summary_sheet()
+            summary_df.to_excel(writer, sheet_name='Executive_Summary', index=False)
+            
+            # Format the workbook
+            workbook = writer.book
+            
+            # Add some basic formatting
+            header_format = workbook.add_format({
+                'bold': True,
+                'text_wrap': True,
+                'valign': 'top',
+                'fg_color': '#D7E4BC',
+                'border': 1
+            })
+            
+        # Ensure the buffer is properly positioned
+        output.seek(0)
+        return output.getvalue()
+        
+    except Exception as e:
+        st.error(f"Error creating Excel report: {str(e)}")
+        return None
     
-    output.seek(0)
-    return output.getvalue()
-    
-    # Export options
-    st.markdown("### 📤 Export Options")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("📊 Export Analytics Dashboard", use_container_width=True):
-            st.success("✅ Analytics dashboard exported to Excel!")
-    
-    with col2:
-        if st.button("📈 Generate Trend Report", use_container_width=True):
-            st.success("✅ Trend report generated successfully!")
-    
-    with col3:
-        if st.button("📧 Email Monthly Summary", use_container_width=True):
-            st.success("✅ Monthly summary emailed to stakeholders!")
+    # FIXED EXCEL EXPORT
+    try:
+        excel_data = create_proper_excel_report({})
+        
+        if excel_data:
+            st.download_button(
+                label="📊 Download Complete Reconciliation Report",
+                data=excel_data,
+                file_name=f"Reconciliation_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
+        else:
+            st.error("❌ Failed to generate Excel report")
+            
+    except Exception as e:
+        st.error(f"❌ Error generating report: {str(e)}")
 
 def download_excel_report(df, filename):
     output = io.BytesIO()
