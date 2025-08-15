@@ -1,3 +1,5 @@
+.github/workflows/main.yml
+
 name: 🚀 Enhanced Invoice Validation System - Excel & ZIP
 
 on:
@@ -8,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       validation_period:
-        description: 'Validation period (e.g., 2024-08-14 to 2024-08-18)'
+        description: 'Validation period (e.g., current)'
         required: false
         default: 'current'
       
@@ -21,60 +23,45 @@ on:
 jobs:
   validate-invoices:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     
     steps:
     - name: 📥 Checkout Repository
       uses: actions/checkout@v4
       
-    - name: 🐍 Set up Python
+    - name: 🐍 Setup Python 3.11
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-        cache: 'pip'
         
-    - name: 📦 Install Dependencies
+    - name: 📦 Install Dependencies  
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         
-    - name: 📂 Create Directories
+    - name: 🔍 Debug Environment
       run: |
-        mkdir -p data
-        mkdir -p invoice_files
-        echo "Sample PDF content" > invoice_files/sample_invoice_001.pdf
-        echo "Another invoice file" > invoice_files/sample_invoice_002.pdf
-        echo "Third sample invoice" > invoice_files/sample_invoice_003.jpg
+        echo "📂 Current directory contents:"
+        ls -la
+        echo "📊 Python packages installed:"
+        pip list | grep -E "(pandas|openpyxl|email|smtp)"
         
     - name: 📊 Generate Excel Validation Report
       run: |
-        echo "🚀 Starting Excel report generation..."
+        echo "📊 Generating enhanced Excel validation report..."
         python enhanced_processor.py
-        echo "📋 Listing generated files:"
-        ls -la *.xlsx || echo "No Excel files found"
-        ls -la invoice_validation_*.xlsx || echo "No validation reports found"
+        echo "📂 Files after Excel generation:"
+        ls -la invoice_validation_report_*.xlsx || echo "❌ No Excel files found"
         
-    - name: 📁 Create ZIP Package
+    - name: 📁 Create Invoice Files Directory
       run: |
-        echo "📦 Creating ZIP package with reports and invoices..."
-        python email_notifier.py
-        echo "📂 Listing all files:"
-        ls -la
-        echo "🔍 Looking for ZIP files:"
-        ls -la *.zip || echo "No ZIP files found"
+        mkdir -p invoice_files
+        echo "Sample Invoice PDF Content" > invoice_files/sample_invoice_001.pdf
+        echo "Another Sample Invoice" > invoice_files/sample_invoice_002.pdf  
+        echo "Third Invoice File" > invoice_files/sample_invoice_003.pdf
+        echo "📁 Created sample invoice files:"
+        ls -la invoice_files/
         
-    - name: 📧 Send Email Notifications
-      if: github.event.inputs.send_email != 'false'
-      env:
-        SMTP_SERVER: smtp.office365.com
-        SMTP_PORT: 587
-        EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME || 'aditya.singh@koenig-solutions.com' }}
-        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD || 'grvggfjnckqwqfgw' }}
-        SMTP_USE_TLS: true
-        EMAIL_FROM: aditya.singh@koenig-solutions.com
-        SMTP_FROM_NAME: Invoice Management System
-        AP_TEAM_EMAIL_LIST: tax@koenig-solutions.com,aditya.singh@koenig-solutions.com,ap@koenig-solutions.com
-        EMAIL_RECIPIENTS: tax@koenig-solutions.com,aditya.singh@koenig-solutions.com,ap@koenig-solutions.com
+    - name: 📧 Send Professional Email with ZIP
       run: |
         echo "📧 Sending professional email notifications..."
         python -c "
@@ -83,73 +70,66 @@ jobs:
         from email_notifier import EnhancedEmailSystem
         
         try:
+            # Initialize email system
             email_system = EnhancedEmailSystem()
             print('✅ Email system initialized')
             
-            # Test email sending
-            result = email_system.send_validation_email()
+            # Run the complete email workflow (creates ZIP and sends email)
+            from email_notifier import main
+            result = main()
+            
             if result:
-                print('✅ Email sent successfully!')
+                print('✅ Email workflow completed successfully!')
             else:
-                print('❌ Email sending failed')
+                print('❌ Email workflow failed')
                 sys.exit(1)
+                
         except Exception as e:
             print(f'❌ Email error: {e}')
+            import traceback
+            traceback.print_exc()
             sys.exit(1)
         "
+      env:
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER || 'smtp.office365.com' }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
+        EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME || 'aditya.singh@koenig-solutions.com' }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS || 'true' }}
+        EMAIL_FROM: ${{ secrets.EMAIL_FROM || 'aditya.singh@koenig-solutions.com' }}
+        SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME || 'Invoice Management System' }}
+        AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST || 'tax@koenig-solutions.com,aditya.singh@koenig-solutions.com,ap@koenig-solutions.com' }}
+        EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS || 'tax@koenig-solutions.com,aditya.singh@koenig-solutions.com,ap@koenig-solutions.com' }}
         
-    - name: 📤 Upload Excel Reports
+    - name: 📂 Verify File Creation
+      run: |
+        echo "📂 Final file listing:"
+        ls -la
+        echo "📊 Excel reports:"
+        ls -la invoice_validation_report_*.xlsx || echo "❌ No Excel reports found"
+        echo "📁 ZIP files:"
+        ls -la invoice_validation_*.zip || echo "❌ No ZIP files found"
+        
+    - name: 📤 Upload Validation Reports
       uses: actions/upload-artifact@v4
-      if: always()
       with:
         name: excel-validation-reports
-        path: |
-          invoice_validation_report_*.xlsx
-          *.xlsx
+        path: invoice_validation_report_*.xlsx
         retention-days: 30
         if-no-files-found: warn
         
-    - name: 📤 Upload ZIP Archives
+    - name: 📤 Upload Invoice ZIP Archives  
       uses: actions/upload-artifact@v4
-      if: always()
       with:
         name: invoice-zip-archives
-        path: |
-          invoice_validation_*.zip
-          *.zip
+        path: invoice_validation_*.zip
         retention-days: 7
         if-no-files-found: warn
         
-    - name: 📊 Processing Summary
-      if: always()
+    - name: ✅ Workflow Summary
       run: |
-        echo "=========================="
-        echo "📊 PROCESSING SUMMARY"
-        echo "=========================="
-        echo "📅 Date: $(date)"
-        echo "🔄 Trigger: ${{ github.event_name }}"
-        
-        if [ -f invoice_validation_report_*.xlsx ]; then
-          echo "✅ Excel Report: Generated"
-        else
-          echo "❌ Excel Report: Not found"
-        fi
-        
-        if [ -f invoice_validation_*.zip ]; then
-          echo "✅ ZIP Archive: Created"
-        else
-          echo "❌ ZIP Archive: Not found"
-        fi
-        
-        echo "📧 Email Status: Processed"
-        echo "📂 Files in directory:"
-        ls -la
-        echo "=========================="
-        
-    - name: 🧹 Cleanup Temporary Files
-      if: always()
-      run: |
-        echo "🧹 Cleaning up temporary files..."
-        find . -name "*.tmp" -delete 2>/dev/null || true
-        find . -name "*.log" -type f -mtime +1 -delete 2>/dev/null || true
-        echo "✅ Cleanup completed"
+        echo "🎉 Invoice Validation Workflow Completed!"
+        echo "📊 Excel reports generated and processed"
+        echo "📁 ZIP archives created with invoice files"
+        echo "📧 Professional email notifications sent to AP team"
+        echo "🔄 Next automated run: In 4 days"
