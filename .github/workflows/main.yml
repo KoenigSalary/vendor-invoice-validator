@@ -1,4 +1,4 @@
-name: 🚀 Enhanced Invoice Validation System - Excel & ZIP
+name: 🚀 Enhanced Invoice Validation System - Real Data
 
 on:
   schedule:
@@ -36,39 +36,22 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         
+    - name: 🌐 Setup Chrome for Selenium
+      uses: browser-actions/setup-chrome@latest
+      
     - name: 🔍 Debug Environment
       run: |
         echo "📂 Current directory contents:"
         ls -la
         echo "📊 Python packages installed:"
         pip list | grep -E "(pandas|openpyxl|selenium|dotenv|requests)"
+        echo "🌐 Chrome version:"
+        google-chrome --version
         
-    - name: 🌐 Setup Chrome for Selenium
-      uses: browser-actions/setup-chrome@latest
-      with:
-        chrome-version: stable
-        
-    - name: 📥 Download Real Invoice Data from RMS
+    - name: 📥 Run Complete Invoice Validation Workflow
       run: |
-        echo "📥 Running RMS data download..."
-        python -c "
-        try:
-            from main import run_invoice_validation
-            print('🚀 Starting invoice validation workflow...')
-            success = run_invoice_validation()
-            if success:
-                print('✅ Invoice validation completed successfully!')
-            else:
-                print('❌ Invoice validation failed!')
-                exit(1)
-        except Exception as e:
-            print(f'❌ Validation error: {e}')
-            import traceback
-            traceback.print_exc()
-            exit(1)
-        "
-        echo "📁 Downloaded files:"
-        ls -la data/$(date +%Y-%m-%d)/ || echo "No data folder found"
+        echo "🚀 Starting complete invoice validation workflow..."
+        python main.py
       env:
         RMS_USERNAME: ${{ secrets.RMS_USERNAME }}
         RMS_PASSWORD: ${{ secrets.RMS_PASSWORD }}
@@ -82,44 +65,35 @@ jobs:
         AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
         EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS }}
         
-    - name: 📂 Verify File Creation
+    - name: 📂 Verify Generated Files
       run: |
-        echo "📂 Final file listing:"
-        ls -la
-        echo "📊 Excel reports:"
-        find . -name "*.xlsx" -type f || echo "❌ No Excel reports found"
-        echo "📁 ZIP files:"
-        find . -name "*.zip" -type f || echo "❌ No ZIP files found"
-        echo "📋 Invoice files:"
-        ls -la invoice_files/ || echo "❌ No invoice files directory"
+        echo "📂 Generated files:"
+        find . -name "*.xlsx" -o -name "*.zip" -o -name "*.html" | head -20
+        echo ""
+        echo "📁 Data directory:"
+        ls -la data/ || echo "No data directory"
+        echo ""
+        echo "📋 Today's data:"
+        ls -la data/$(date +%Y-%m-%d)/ || echo "No today's data folder"
         
-    - name: 📤 Upload Validation Reports
+    - name: 📤 Upload All Validation Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: validation-reports-${{ github.run_number }}
+        name: validation-results-${{ github.run_number }}
         path: |
-          **/*.xlsx
-          data/**/*
+          data/**/*.xlsx
+          data/**/*.zip
+          data/**/*.html
+          **/*validation*.xlsx
+          **/*invoice*.zip
         retention-days: 30
-        if-no-files-found: warn
-        
-    - name: 📤 Upload Invoice Archives  
-      uses: actions/upload-artifact@v4
-      with:
-        name: invoice-archives-${{ github.run_number }}
-        path: |
-          **/*.zip
-          invoice_files/**/*
-        retention-days: 7
         if-no-files-found: warn
         
     - name: ✅ Workflow Summary
       run: |
-        echo "🎉 Invoice Validation Workflow Completed!"
-        echo "📊 Real RMS data processed"
-        echo "📁 Validation reports generated"
+        echo "🎉 Enhanced Invoice Validation Workflow Completed!"
+        echo "📥 Real RMS data downloaded"
+        echo "🔍 Invoice validation performed"
+        echo "📊 Excel reports generated with creator names"
         echo "📧 Email notifications sent to AP team"
         echo "🔄 Next automated run: In 4 days"
-        echo ""
-        echo "📋 Files created:"
-        find . -name "*.xlsx" -o -name "*.zip" | head -10
