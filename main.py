@@ -33,7 +33,6 @@ ARCHIVE_FOLDER = "archived_data"  # Folder for data older than 3 months
 
 def should_run_today():
     """Check if validation should run today based on 4-day interval"""
-    # REMOVE THIS LINE: return True  # ← ADD THIS LINE TO FORCE RUN
     
     try:
         last_run = get_last_run_date()
