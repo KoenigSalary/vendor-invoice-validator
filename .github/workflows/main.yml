@@ -50,15 +50,16 @@ jobs:
         echo "📂 Files after Excel generation:"
         ls -la invoice_validation_report_*.xlsx || echo "❌ No Excel files found"
         
-    - name: 📁 Create Invoice Files Directory
+    - name: 📥 Download Real Invoice Data
       run: |
-        mkdir -p invoice_files
-        echo "Sample Invoice PDF Content" > invoice_files/sample_invoice_001.pdf
-        echo "Another Sample Invoice" > invoice_files/sample_invoice_002.pdf  
-        echo "Third Invoice File" > invoice_files/sample_invoice_003.pdf
-        echo "📁 Created sample invoice files:"
-        ls -la invoice_files/
-        
+        echo "📥 Running RMS data download..."
+        python main.py
+        echo "📁 Downloaded files:"
+        ls -la data/$(date +%Y-%m-%d)/ || echo "No data folder found"
+      env:
+        RMS_USERNAME: ${{ secrets.RMS_USERNAME }}
+        RMS_PASSWORD: ${{ secrets.RMS_PASSWORD }}
+   
     - name: 📧 Send Professional Email with ZIP
       run: |
         echo "📧 Sending professional email notifications..."
