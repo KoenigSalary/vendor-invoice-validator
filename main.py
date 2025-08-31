@@ -1118,100 +1118,98 @@ def run_invoice_validation():
             print(f"❌ Failed to save detailed reports: {str(e)}")
             return False
 
-                print("🚀 Step 16: Applying enhanced features...")
+                       # Step 16: Enhanced processing (corrected)
+        print("🚀 Step 16: Applying enhanced features...")
         try:
             if ENHANCED_PROCESSOR_AVAILABLE:
                 # Enhance the existing results
                 enhancement_result = enhance_validation_results(detailed_df, email_summary)
-        
+                
                 if enhancement_result['success']:
                     print("✅ Enhancement successful!")
                     enhanced_df = enhancement_result['enhanced_df']
-                changes_detected = enhancement_result['changes_detected']
-                enhanced_email_content = enhancement_result['enhanced_email_content']
-        
-                # Save enhanced Excel report
-                enhanced_report_path = f"data/enhanced_invoice_validation_detailed_{today_str}.xlsx"
-        
-                with pd.ExcelWriter(enhanced_report_path, engine='openpyxl') as writer:
-                    # Main enhanced report with all new fields
-                    enhanced_df.to_excel(writer, sheet_name='Enhanced_All_Invoices', index=False)
-            
-                    # Enhanced failed invoices
-                    enhanced_failed_df = enhanced_df[enhanced_df['Validation_Status'] == '❌ FAIL']
-                    if not enhanced_failed_df.empty:
-                        enhanced_failed_df.to_excel(writer, sheet_name='Enhanced_Failed', index=False)
-            
-                    # Enhanced summary with new metrics
-                    enhanced_summary = []
+                    changes_detected = enhancement_result['changes_detected']
+                    enhanced_email_content = enhancement_result['enhanced_email_content']
                     summary = enhancement_result['summary']
-                    enhanced_summary.extend([
-                        {'Metric': 'Total Invoices', 'Value': summary['total_invoices']},
-                        {'Metric': 'Currencies Processed', 'Value': summary['currencies']},
-                        {'Metric': 'Global Locations', 'Value': summary['locations']},
-                        {'Metric': 'Urgent Due Date Alerts', 'Value': summary['urgent_dues']},
-                        {'Metric': 'Tax Calculations Completed', 'Value': summary['tax_calculated']},
-                        {'Metric': 'Historical Changes Detected', 'Value': summary['historical_changes']}
-                    ])
-                    pd.DataFrame(enhanced_summary).to_excel(writer, sheet_name='Enhanced_Summary', index=False)
-            
-                    # Currency breakdown
-                    currency_breakdown = enhanced_df['Invoice_Currency'].value_counts().reset_index()
-                    currency_breakdown.columns = ['Currency', 'Count']
-                    currency_breakdown.to_excel(writer, sheet_name='Currency_Breakdown', index=False)
-            
-                    # Location breakdown
-                    location_breakdown = enhanced_df['Location'].str.split(' -').str[0].value_counts().reset_index()
-                    location_breakdown.columns = ['Location', 'Count']
-                    location_breakdown.to_excel(writer, sheet_name='Location_Breakdown', index=False)
-            
-                    # Tax summary
-                    tax_summary = enhanced_df.groupby(['Location', 'Tax_Type'])[['Total_Tax_Calculated']].sum().reset_index()
-                    tax_summary.to_excel(writer, sheet_name='Tax_Summary', index=False)
-            
-                    # Due date alerts
-                    urgent_invoices = enhanced_df[enhanced_df['Due_Date_Notification'] == 'YES']
-                    if not urgent_invoices.empty:
-                        urgent_invoices[['Invoice_Number', 'Vendor_Name', 'Amount', 'Due_Date', 'Location']].to_excel(
-                            writer, sheet_name='Urgent_Due_Dates', index=False)
-            
-                    # Historical changes
-                    if changes_detected:
-                        changes_df = pd.DataFrame(changes_detected)
-                        changes_df.to_excel(writer, sheet_name='Historical_Changes', index=False)
-        
-                print(f"✅ Enhanced report saved: {enhanced_report_path}")
-        
-                # Update email content to enhanced version
-                if enhanced_email_content:
-                    email_summary['html_summary'] = enhanced_email_content
-                    email_summary['text_summary'] = enhanced_email_content
-            
-                    # Save enhanced email content
-                    enhanced_email_path = f"data/enhanced_email_summary_{today_str}.html"
-                    with open(enhanced_email_path, 'w', encoding='utf-8') as f:
-                        f.write(enhanced_email_content)
-                    print(f"📧 Enhanced email content saved: {enhanced_email_path}")
-        
-                # Print enhancement summary
-                print(f"🔄 Enhancement Summary:")
-                print(f"   💱 Currencies: {summary['currencies']}")
-                print(f"   🌍 Locations: {summary['locations']}")
-                print(f"   ⏰ Urgent dues: {summary['urgent_dues']}")
-                print(f"   💰 Tax calculated: {summary['tax_calculated']}")
-                print(f"   🔄 Historical changes: {summary['historical_changes']}")
-        
+                    
+                    # Save enhanced Excel report
+                    enhanced_report_path = f"data/enhanced_invoice_validation_detailed_{today_str}.xlsx"
+                    
+                    with pd.ExcelWriter(enhanced_report_path, engine='openpyxl') as writer:
+                        # Main enhanced report with all new fields
+                        enhanced_df.to_excel(writer, sheet_name='Enhanced_All_Invoices', index=False)
+                        
+                        # Enhanced failed invoices
+                        enhanced_failed_df = enhanced_df[enhanced_df['Validation_Status'] == '❌ FAIL']
+                        if not enhanced_failed_df.empty:
+                            enhanced_failed_df.to_excel(writer, sheet_name='Enhanced_Failed', index=False)
+                        
+                        # Enhanced summary with new metrics
+                        enhanced_summary = [
+                            {'Metric': 'Total Invoices', 'Value': summary['total_invoices']},
+                            {'Metric': 'Currencies Processed', 'Value': summary['currencies']},
+                            {'Metric': 'Global Locations', 'Value': summary['locations']},
+                            {'Metric': 'Urgent Due Date Alerts', 'Value': summary['urgent_dues']},
+                            {'Metric': 'Tax Calculations Completed', 'Value': summary['tax_calculated']},
+                            {'Metric': 'Historical Changes Detected', 'Value': summary['historical_changes']}
+                        ]
+                        pd.DataFrame(enhanced_summary).to_excel(writer, sheet_name='Enhanced_Summary', index=False)
+                        
+                        # Currency breakdown
+                        currency_breakdown = enhanced_df['Invoice_Currency'].value_counts().reset_index()
+                        currency_breakdown.columns = ['Currency', 'Count']
+                        currency_breakdown.to_excel(writer, sheet_name='Currency_Breakdown', index=False)
+                        
+                        # Location breakdown
+                        location_breakdown = enhanced_df['Location'].str.split(' -').str[0].value_counts().reset_index()
+                        location_breakdown.columns = ['Location', 'Count']
+                        location_breakdown.to_excel(writer, sheet_name='Location_Breakdown', index=False)
+                        
+                        # Tax summary
+                        tax_summary = enhanced_df.groupby(['Location', 'Tax_Type'])[['Total_Tax_Calculated']].sum().reset_index()
+                        tax_summary.to_excel(writer, sheet_name='Tax_Summary', index=False)
+                        
+                        # Due date alerts
+                        urgent_invoices = enhanced_df[enhanced_df['Due_Date_Notification'] == 'YES']
+                        if not urgent_invoices.empty:
+                            urgent_invoices[['Invoice_Number', 'Vendor_Name', 'Amount', 'Due_Date', 'Location']].to_excel(
+                                writer, sheet_name='Urgent_Due_Dates', index=False)
+                        
+                        # Historical changes
+                        if changes_detected:
+                            changes_df = pd.DataFrame(changes_detected)
+                            changes_df.to_excel(writer, sheet_name='Historical_Changes', index=False)
+                    
+                    print(f"✅ Enhanced report saved: {enhanced_report_path}")
+                    
+                    # Update email content to enhanced version
+                    if enhanced_email_content:
+                        email_summary['html_summary'] = enhanced_email_content
+                        email_summary['text_summary'] = enhanced_email_content
+                        
+                        # Save enhanced email content
+                        enhanced_email_path = f"data/enhanced_email_summary_{today_str}.html"
+                        with open(enhanced_email_path, 'w', encoding='utf-8') as f:
+                            f.write(enhanced_email_content)
+                        print(f"📧 Enhanced email content saved: {enhanced_email_path}")
+                    
+                    # Print enhancement summary
+                    print(f"🔄 Enhancement Summary:")
+                    print(f"   💱 Currencies: {summary['currencies']}")
+                    print(f"   🌍 Locations: {summary['locations']}")
+                    print(f"   ⏰ Urgent dues: {summary['urgent_dues']}")
+                    print(f"   💰 Tax calculated: {summary['tax_calculated']}")
+                    print(f"   🔄 Historical changes: {summary['historical_changes']}")
+                    
+                else:
+                    print(f"⚠️ Enhancement failed: {enhancement_result['error']}")
+                    print("📊 Continuing with original validation report")
             else:
-                 print(f"⚠️ Enhancement failed: {enhancement_result['error']}")
-                 print("📊 Continuing with original validation report")
-        
-        except ImportError:
-            print("⚠️ Enhanced processor not available, using standard validation")
-        else:
-            print(f"⚠️ Enhancement failed: {enhancement_result['error']}")
+                print("⚠️ Enhanced processor not available, using standard validation")
+                
+        except Exception as e:
+            print(f"⚠️ Enhancement failed: {str(e)}")
             print("📊 Continuing with original validation report")
-    else:
-        print("⚠️ Enhanced processor not available, using standard validation")
                 
         # Step 17: Send email notifications - AP TEAM ONLY
         try:
