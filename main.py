@@ -169,33 +169,6 @@ def archive_data_older_than_three_months():
                 print(f"⚠️ Error archiving file {filename}: {str(e)}")
                 continue
         
-        # Archive daily data folders
-        for item in os.listdir(data_dir):
-            item_path = os.path.join(data_dir, item)
-            if os.path.isdir(item_path) and item != ARCHIVE_FOLDER:
-                try:
-                    # Check if folder name is a date
-                    folder_date = datetime.strptime(item, "%Y-%m-%d")
-                    if folder_date < cutoff_date:
-                        dst = os.path.join(daily_data_archive, item)
-                        shutil.move(item_path, dst)
-                        print(f"📦 Archived daily data folder: {item}")
-                        archived_count += 1
-                except ValueError:
-                    # Skip non-date folders
-                    continue
-                except Exception as e:
-                    print(f"⚠️ Error archiving folder {item}: {str(e)}")
-                    continue
-        
-        # Update database to mark archived data
-        try:
-            from invoice_tracker import archive_validation_records_before_date
-            archive_validation_records_before_date(cutoff_str)
-            print(f"✅ Database records archived before {cutoff_str}")
-        except Exception as e:
-            print(f"⚠️ Database archiving failed: {str(e)}")
-        
         print(f"✅ Archiving completed. {archived_count} items archived to {archive_base}")
         return archived_count
         
@@ -221,7 +194,7 @@ def download_cumulative_data(start_str, end_str):
 
 def enhance_rms_field_mapping(df):
     """Enhanced RMS field mapping with comprehensive field detection"""
-    print("🔍 Enhancing RMS field mapping...")
+    print("🔍 Analyzing RMS data structure for enhanced field mapping...")
     
     field_mapping = {
         'invoice_created_by': [],
@@ -231,191 +204,188 @@ def enhance_rms_field_mapping(df):
         'invoice_upload_date': []
     }
     
-    # Enhanced field patterns for RMS system
-    field_patterns = {
-        'invoice_created_by': [
-            'CreatedBy', 'Created_By', 'InvoiceCreatedBy', 'Invoice_Created_By',
-            'UserName', 'User_Name', 'CreatorName', 'Creator_Name',
-            'EntryBy', 'Entry_By', 'InputBy', 'Input_By',
-            'PreparedBy', 'Prepared_By', 'MadeBy', 'Made_By',
-            'CreatedByUser', 'Created_By_User', 'InvoiceCreator',
-            'Invoice_Creator', 'ProcessedBy', 'Processed_By'
-        ],
-        'method_of_payment': [
-            'MOP', 'Method_of_Payment', 'PaymentMethod', 'Payment_Method',
-            'PaymentMode', 'Payment_Mode', 'PayType', 'Pay_Type',
-            'PaymentType', 'Payment_Type', 'ModeOfPayment', 'Mode_Of_Payment'
-        ],
-        'account_head': [
-            'AccountHead', 'Account_Head', 'AccountCode', 'Account_Code',
-            'GLAccount', 'GL_Account', 'ChartOfAccount', 'Chart_Of_Account',
-            'AccountName', 'Account_Name', 'LedgerAccount', 'Ledger_Account'
-        ],
-        'invoice_entry_date': [
-            'EntryDate', 'Entry_Date', 'InvoiceEntryDate', 'Invoice_Entry_Date',
-            'CreationDate', 'Creation_Date', 'InputDate', 'Input_Date',
-            'ProcessedDate', 'Processed_Date', 'RecordedDate', 'Recorded_Date'
-        ],
-        'invoice_upload_date': [
-            'UploadDate', 'Upload_Date', 'InvoiceUploadDate', 'Invoice_Upload_Date',
-            'SubmittedDate', 'Submitted_Date', 'ReceivedDate', 'Received_Date'
-        ]
-    }
+    # Enhanced field detection patterns
+    creator_patterns = [
+        'CreatedBy', 'Created_By', 'InvoiceCreatedBy', 'Invoice_Created_By',
+        'UserName', 'User_Name', 'CreatorName', 'Creator_Name',
+        'EntryBy', 'Entry_By', 'InputBy', 'Input_By',
+        'PreparedBy', 'Prepared_By', 'MadeBy', 'Made_By',
+        'OperatorName', 'Operator_Name', 'StaffName', 'Staff_Name'
+    ]
     
-    # Map available columns to field categories
-    for field_type, patterns in field_patterns.items():
-        for pattern in patterns:
-            # Exact match
-            if pattern in df.columns:
-                field_mapping[field_type].append(pattern)
-                print(f"✅ Found exact match for {field_type}: {pattern}")
-                continue
-            
-            # Case-insensitive match
-            for col in df.columns:
-                if pattern.lower() == col.lower():
-                    field_mapping[field_type].append(col)
-                    print(f"✅ Found case-insensitive match for {field_type}: {col}")
-                    break
-        
-        # If no exact matches, try partial matching
-        if not field_mapping[field_type]:
-            for col in df.columns:
-                col_lower = col.lower()
-                if field_type == 'invoice_created_by':
-                    if any(word in col_lower for word in ['create', 'by', 'user', 'entry', 'made', 'prepared']):
-                        field_mapping[field_type].append(col)
-                        print(f"⚠️ Potential match for {field_type}: {col}")
-                        break
-                elif field_type == 'method_of_payment':
-                    if any(word in col_lower for word in ['payment', 'method', 'mode', 'type', 'mop']):
-                        field_mapping[field_type].append(col)
-                        print(f"⚠️ Potential match for {field_type}: {col}")
-                        break
-                elif field_type == 'account_head':
-                    if any(word in col_lower for word in ['account', 'head', 'code', 'gl', 'ledger']):
-                        field_mapping[field_type].append(col)
-                        print(f"⚠️ Potential match for {field_type}: {col}")
-                        break
-                elif field_type in ['invoice_entry_date', 'invoice_upload_date']:
-                    if any(word in col_lower for word in ['entry', 'upload', 'creation', 'input', 'processed', 'recorded']):
-                        field_mapping[field_type].append(col)
-                        print(f"⚠️ Potential match for {field_type}: {col}")
-                        break
+    mop_patterns = [
+        'MOP', 'Method_of_Payment', 'MethodOfPayment', 'Payment_Method',
+        'PaymentMethod', 'PaymentMode', 'Payment_Mode', 'PayMode',
+        'TransactionType', 'Transaction_Type', 'PayType', 'Pay_Type'
+    ]
     
-    # Remove empty mappings and duplicates
-    for field_type in field_mapping:
-        field_mapping[field_type] = list(set(field_mapping[field_type]))
-        if not field_mapping[field_type]:
-            print(f"❌ No mapping found for {field_type}")
+    account_patterns = [
+        'Account_Head', 'AccountHead', 'Account_Code', 'AccountCode',
+        'GL_Account', 'GLAccount', 'GeneralLedger', 'General_Ledger',
+        'ChartOfAccount', 'Chart_Of_Account', 'COA', 'AccountCategory'
+    ]
+    
+    date_patterns = [
+        'EntryDate', 'Entry_Date', 'Upload_Date', 'UploadDate',
+        'Creation_Date', 'CreationDate', 'Input_Date', 'InputDate',
+        'Timestamp', 'Time_Stamp', 'RecordDate', 'Record_Date'
+    ]
+    
+    # Check available columns
+    available_columns = list(df.columns)
+    print(f"📋 Available columns in RMS data: {len(available_columns)}")
+    
+    # Map creator fields
+    for pattern in creator_patterns:
+        matches = [col for col in available_columns if pattern.lower() in col.lower()]
+        field_mapping['invoice_created_by'].extend(matches)
+    
+    # Map MOP fields
+    for pattern in mop_patterns:
+        matches = [col for col in available_columns if pattern.lower() in col.lower()]
+        field_mapping['method_of_payment'].extend(matches)
+    
+    # Map account head fields
+    for pattern in account_patterns:
+        matches = [col for col in available_columns if pattern.lower() in col.lower()]
+        field_mapping['account_head'].extend(matches)
+    
+    # Map date fields
+    for pattern in date_patterns:
+        matches = [col for col in available_columns if pattern.lower() in col.lower()]
+        field_mapping['invoice_entry_date'].extend(matches)
+        field_mapping['invoice_upload_date'].extend(matches)
+    
+    # Remove duplicates and get best matches
+    for key in field_mapping:
+        field_mapping[key] = list(set(field_mapping[key]))
+        if field_mapping[key]:
+            print(f"✅ Found {key} candidates: {field_mapping[key]}")
+        else:
+            print(f"⚠️ No candidates found for {key}")
     
     return field_mapping
 
 def extract_rms_enhanced_fields(row, field_mapping):
-    """Extract enhanced RMS fields from a row using field mapping"""
-    enhanced_data = {}
+    """Extract enhanced RMS fields from a data row"""
+    extracted = {
+        'invoice_created_by': 'Unknown',
+        'method_of_payment': 'Not Specified',
+        'account_head': 'Not Assigned',
+        'invoice_entry_date': None,
+        'invoice_upload_date': None
+    }
     
-    # Extract Invoice Created By
-    if field_mapping['invoice_created_by']:
-        for col in field_mapping['invoice_created_by']:
-            value = str(row.get(col, '')).strip()
-            if value and value.lower() not in ['', 'nan', 'none', 'null']:
-                enhanced_data['Invoice_Created_By'] = value
+    # Extract creator name
+    for col in field_mapping.get('invoice_created_by', []):
+        if col in row.index and pd.notna(row[col]):
+            creator_val = str(row[col]).strip()
+            if creator_val and creator_val.lower() not in ['', 'nan', 'none', 'null']:
+                extracted['invoice_created_by'] = creator_val
                 break
-    if 'Invoice_Created_By' not in enhanced_data:
-        enhanced_data['Invoice_Created_By'] = 'Unknown'
     
-    # Extract Method of Payment
-    if field_mapping['method_of_payment']:
-        for col in field_mapping['method_of_payment']:
-            value = str(row.get(col, '')).strip()
-            if value and value.lower() not in ['', 'nan', 'none', 'null']:
-                enhanced_data['Method_of_Payment'] = value
+    # Extract method of payment
+    for col in field_mapping.get('method_of_payment', []):
+        if col in row.index and pd.notna(row[col]):
+            mop_val = str(row[col]).strip()
+            if mop_val and mop_val.lower() not in ['', 'nan', 'none', 'null']:
+                extracted['method_of_payment'] = mop_val
                 break
-    if 'Method_of_Payment' not in enhanced_data:
-        enhanced_data['Method_of_Payment'] = 'Not Specified'
     
-    # Extract Account Head
-    if field_mapping['account_head']:
-        for col in field_mapping['account_head']:
-            value = str(row.get(col, '')).strip()
-            if value and value.lower() not in ['', 'nan', 'none', 'null']:
-                enhanced_data['Account_Head'] = value
+    # Extract account head
+    for col in field_mapping.get('account_head', []):
+        if col in row.index and pd.notna(row[col]):
+            account_val = str(row[col]).strip()
+            if account_val and account_val.lower() not in ['', 'nan', 'none', 'null']:
+                extracted['account_head'] = account_val
                 break
-    if 'Account_Head' not in enhanced_data:
-        enhanced_data['Account_Head'] = 'Not Specified'
     
-    # Extract Invoice Entry Date
-    if field_mapping['invoice_entry_date']:
-        for col in field_mapping['invoice_entry_date']:
-            value = row.get(col)
-            if pd.notna(value) and str(value).strip() != '':
-                enhanced_data['Invoice_Entry_Date'] = value
+    # Extract entry date
+    for col in field_mapping.get('invoice_entry_date', []):
+        if col in row.index and pd.notna(row[col]):
+            try:
+                date_val = pd.to_datetime(row[col])
+                extracted['invoice_entry_date'] = date_val.strftime('%Y-%m-%d')
                 break
-    if 'Invoice_Entry_Date' not in enhanced_data:
-        enhanced_data['Invoice_Entry_Date'] = 'Not Available'
+            except:
+                continue
     
-    # Extract Invoice Upload Date
-    if field_mapping['invoice_upload_date']:
-        for col in field_mapping['invoice_upload_date']:
-            value = row.get(col)
-            if pd.notna(value) and str(value).strip() != '':
-                enhanced_data['Invoice_Upload_Date'] = value
+    # Extract upload date (if different from entry date)
+    for col in field_mapping.get('invoice_upload_date', []):
+        if col in row.index and pd.notna(row[col]):
+            try:
+                date_val = pd.to_datetime(row[col])
+                extracted['invoice_upload_date'] = date_val.strftime('%Y-%m-%d')
                 break
-    if 'Invoice_Upload_Date' not in enhanced_data:
-        enhanced_data['Invoice_Upload_Date'] = 'Not Available'
+            except:
+                continue
     
-    return enhanced_data
+    return extracted
 
 def find_creator_column(df):
-    """Find the invoice creator column name from available columns"""
+    """Enhanced creator column detection with RMS-specific patterns"""
+    print("🔍 Enhanced creator column detection...")
+    
+    # Enhanced patterns for RMS system
     possible_creator_columns = [
         'CreatedBy', 'Created_By', 'InvoiceCreatedBy', 'Invoice_Created_By',
         'UserName', 'User_Name', 'CreatorName', 'Creator_Name',
         'EntryBy', 'Entry_By', 'InputBy', 'Input_By',
         'PreparedBy', 'Prepared_By', 'MadeBy', 'Made_By',
-        'CreatedByUser', 'Created_By_User', 'InvoiceCreator',
-        'Invoice_Creator', 'ProcessedBy', 'Processed_By'
+        'OperatorName', 'Operator_Name', 'StaffName', 'Staff_Name',
+        'RecordedBy', 'Recorded_By', 'ProcessedBy', 'Processed_By'
     ]
     
     # Check exact matches first
     for col in possible_creator_columns:
         if col in df.columns:
-            print(f"✅ Found creator column: {col}")
-            return col
+            # Verify the column has meaningful data
+            non_null_count = df[col].notna().sum()
+            if non_null_count > 0:
+                print(f"✅ Found creator column: {col} ({non_null_count} non-null values)")
+                return col
     
     # Check case-insensitive matches
     df_columns_lower = {col.lower(): col for col in df.columns}
     for col in possible_creator_columns:
         if col.lower() in df_columns_lower:
             found_col = df_columns_lower[col.lower()]
-            print(f"✅ Found creator column (case-insensitive): {found_col}")
-            return found_col
+            non_null_count = df[found_col].notna().sum()
+            if non_null_count > 0:
+                print(f"✅ Found creator column (case-insensitive): {found_col} ({non_null_count} non-null values)")
+                return found_col
     
-    # Check partial matches
+    # Check partial matches with meaningful keywords
+    creator_keywords = ['create', 'by', 'user', 'entry', 'made', 'prepared', 'operator', 'staff']
     for df_col in df.columns:
-        if any(word in df_col.lower() for word in ['create', 'by', 'user', 'entry', 'made', 'prepared']):
-            print(f"⚠️ Potential creator column found: {df_col}")
-            return df_col
+        col_lower = df_col.lower()
+        if any(keyword in col_lower for keyword in creator_keywords):
+            non_null_count = df[df_col].notna().sum()
+            if non_null_count > 0:
+                print(f"⚠️ Potential creator column found: {df_col} ({non_null_count} non-null values)")
+                return df_col
     
     print("⚠️ No creator column found, will use 'Unknown'")
     return None
 
 def validate_invoices_with_details(df):
-    """Run detailed validation that returns per-invoice validation results with enhanced RMS fields"""
-    print("🔍 Running detailed invoice-level validation with enhanced RMS field mapping...")
+    """Enhanced validation with complete RMS field mapping"""
+    print("🔍 Running enhanced invoice-level validation with RMS field mapping...")
     
     try:
         # Run the existing validation to get summary issues
         summary_issues, problematic_invoices_df = validate_invoices(df)
         
         # Enhanced RMS field mapping
-        field_mapping = enhance_rms_field_mapping(df)
+        rms_field_mapping = enhance_rms_field_mapping(df)
+        
+        # Find the creator column using enhanced detection
+        creator_column = find_creator_column(df)
         
         # Now run detailed validation for each invoice
         detailed_results = []
         
-        print(f"📋 Analyzing {len(df)} invoices for detailed validation...")
+        print(f"📋 Analyzing {len(df)} invoices for detailed validation with RMS fields...")
         
         for index, row in df.iterrows():
             invoice_id = row.get('InvID', f'Row_{index}')
@@ -425,12 +395,12 @@ def validate_invoices_with_details(df):
             amount = row.get('Total', row.get('Amount', 0))
             
             # Extract enhanced RMS fields
-            enhanced_fields = extract_rms_enhanced_fields(row, field_mapping)
+            rms_fields = extract_rms_enhanced_fields(row, rms_field_mapping)
             
             validation_issues = []
             severity = "✅ PASS"  # Default to pass
             
-            # Check individual validation rules
+            # Enhanced validation rules
             
             # 1. Missing GSTNO
             if pd.isna(row.get('GSTNO')) or str(row.get('GSTNO')).strip() == '':
@@ -472,19 +442,25 @@ def validate_invoices_with_details(df):
                 validation_issues.append("Missing Vendor Name")
                 severity = "❌ FAIL"
             
-            # 7. Missing Creator Name validation
-            if enhanced_fields['Invoice_Created_By'] == 'Unknown':
+            # 7. Enhanced Creator Name validation
+            if rms_fields['invoice_created_by'] == 'Unknown':
                 validation_issues.append("Missing Invoice Creator Name")
                 if severity == "✅ PASS":
                     severity = "⚠️ WARNING"
             
-            # 8. Missing Method of Payment validation
-            if enhanced_fields['Method_of_Payment'] == 'Not Specified':
-                validation_issues.append("Missing Method of Payment")
+            # 8. Method of Payment validation
+            if rms_fields['method_of_payment'] == 'Not Specified':
+                validation_issues.append("Method of Payment not specified")
                 if severity == "✅ PASS":
                     severity = "⚠️ WARNING"
             
-            # 9. Check for duplicate invoice numbers
+            # 9. Account Head validation
+            if rms_fields['account_head'] == 'Not Assigned':
+                validation_issues.append("Account Head not assigned")
+                if severity == "✅ PASS":
+                    severity = "⚠️ WARNING"
+            
+            # 10. Check for duplicate invoice numbers
             if not pd.isna(invoice_number) and str(invoice_number).strip() != '':
                 duplicate_count = df[df['PurchaseInvNo'] == invoice_number].shape[0]
                 if duplicate_count > 1:
@@ -492,7 +468,7 @@ def validate_invoices_with_details(df):
                     if severity == "✅ PASS":
                         severity = "⚠️ WARNING"
             
-            # 10. Date format validation
+            # 11. Date format validation
             try:
                 if not pd.isna(invoice_date):
                     pd.to_datetime(invoice_date)
@@ -500,7 +476,7 @@ def validate_invoices_with_details(df):
                 validation_issues.append("Invalid Date Format")
                 severity = "❌ FAIL"
             
-            # 11. Future date validation
+            # 12. Future date validation
             try:
                 if not pd.isna(invoice_date):
                     inv_date = pd.to_datetime(invoice_date)
@@ -511,30 +487,18 @@ def validate_invoices_with_details(df):
             except:
                 pass
             
-            # 12. Very old date validation (more than 2 years)
-            try:
-                if not pd.isna(invoice_date):
-                    inv_date = pd.to_datetime(invoice_date)
-                    two_years_ago = datetime.now() - timedelta(days=730)
-                    if inv_date < two_years_ago:
-                        validation_issues.append("Very Old Invoice (>2 years)")
-                        if severity == "✅ PASS":
-                            severity = "⚠️ WARNING"
-            except:
-                pass
-            
-            # Compile results for this invoice with enhanced fields
+            # Compile enhanced results for this invoice
             detailed_results.append({
                 'Invoice_ID': invoice_id,
                 'Invoice_Number': invoice_number,
                 'Invoice_Date': invoice_date,
+                'Invoice_Entry_Date': rms_fields['invoice_entry_date'],
+                'Invoice_Upload_Date': rms_fields['invoice_upload_date'],
                 'Vendor_Name': vendor,
                 'Amount': amount,
-                'Invoice_Created_By': enhanced_fields['Invoice_Created_By'],  # ENHANCED FIELD
-                'Method_of_Payment': enhanced_fields['Method_of_Payment'],      # NEW FIELD
-                'Account_Head': enhanced_fields['Account_Head'],                # NEW FIELD
-                'Invoice_Entry_Date': enhanced_fields['Invoice_Entry_Date'],    # NEW FIELD
-                'Invoice_Upload_Date': enhanced_fields['Invoice_Upload_Date'],  # NEW FIELD
+                'Invoice_Created_By': rms_fields['invoice_created_by'],
+                'Method_of_Payment': rms_fields['method_of_payment'],
+                'Account_Head': rms_fields['account_head'],
                 'Validation_Status': severity,
                 'Issues_Found': len(validation_issues),
                 'Issue_Details': " | ".join(validation_issues) if validation_issues else "No issues found",
@@ -546,13 +510,13 @@ def validate_invoices_with_details(df):
         # Convert to DataFrame
         detailed_df = pd.DataFrame(detailed_results)
         
-        # Summary statistics
+        # Enhanced summary statistics
         total_invoices = len(detailed_df)
         passed_invoices = len(detailed_df[detailed_df['Validation_Status'] == '✅ PASS'])
         warning_invoices = len(detailed_df[detailed_df['Validation_Status'] == '⚠️ WARNING'])
         failed_invoices = len(detailed_df[detailed_df['Validation_Status'] == '❌ FAIL'])
         
-        print(f"✅ Detailed validation completed:")
+        print(f"✅ Enhanced detailed validation completed:")
         print(f"   📊 Total invoices: {total_invoices}")
         print(f"   ✅ Passed: {passed_invoices}")
         print(f"   ⚠️ Warnings: {warning_invoices}")
@@ -564,44 +528,54 @@ def validate_invoices_with_details(df):
         account_stats = detailed_df['Account_Head'].value_counts()
         
         print(f"   👤 Creator statistics: {len(creator_stats)} unique creators")
-        print(f"   💳 Payment method statistics: {len(mop_stats)} unique methods")
-        print(f"   📊 Account head statistics: {len(account_stats)} unique accounts")
+        print(f"   💳 MOP statistics: {len(mop_stats)} unique payment methods")
+        print(f"   📊 Account Head statistics: {len(account_stats)} unique account heads")
         
         if 'Unknown' in creator_stats:
             print(f"   ⚠️ Unknown creators: {creator_stats['Unknown']} invoices")
         if 'Not Specified' in mop_stats:
-            print(f"   ⚠️ Unspecified payment methods: {mop_stats['Not Specified']} invoices")
+            print(f"   ⚠️ Unspecified MOP: {mop_stats['Not Specified']} invoices")
+        if 'Not Assigned' in account_stats:
+            print(f"   ⚠️ Unassigned Account Head: {account_stats['Not Assigned']} invoices")
         
         return detailed_df, summary_issues, problematic_invoices_df
         
     except Exception as e:
-        print(f"❌ Detailed validation failed: {str(e)}")
+        print(f"❌ Enhanced detailed validation failed: {str(e)}")
         import traceback
         traceback.print_exc()
         return pd.DataFrame(), [], pd.DataFrame()
 
 def generate_email_summary_statistics(detailed_df, cumulative_start, cumulative_end, current_batch_start, current_batch_end, today_str):
-    """Generate summary statistics specifically formatted for email body"""
-    print("📧 Generating email summary statistics...")
+    """Generate enhanced email summary with RMS field analysis"""
+    print("📧 Generating enhanced email summary statistics...")
     
     try:
         if detailed_df.empty:
             return {
-                'html_summary': "
+                'html_summary': """
 No invoice data available for validation.
-",
+""",
                 'text_summary': "No invoice data available for validation.",
                 'statistics': {}
             }
         
-        # Calculate statistics
+        # Calculate enhanced statistics
         total_invoices = len(detailed_df)
         passed_invoices = len(detailed_df[detailed_df['Validation_Status'] == '✅ PASS'])
         warning_invoices = len(detailed_df[detailed_df['Validation_Status'] == '⚠️ WARNING'])
         failed_invoices = len(detailed_df[detailed_df['Validation_Status'] == '❌ FAIL'])
         
         pass_rate = (passed_invoices / total_invoices * 100) if total_invoices > 0 else 0
-        issue_rate = ((warning_invoices + failed_invoices) / total_invoices * 100) if total_invoices > 0 else 0
+        
+        # Enhanced field analysis
+        creator_stats = detailed_df['Invoice_Created_By'].value_counts()
+        mop_stats = detailed_df['Method_of_Payment'].value_counts()
+        account_stats = detailed_df['Account_Head'].value_counts()
+        
+        unknown_creators = creator_stats.get('Unknown', 0)
+        unspecified_mop = mop_stats.get('Not Specified', 0)
+        unassigned_accounts = account_stats.get('Not Assigned', 0)
         
         # Count issue types for detailed breakdown
         all_issues = []
@@ -617,26 +591,12 @@ No invoice data available for validation.
         # Top 5 most common issues
         top_issues = sorted(issue_counts.items(), key=lambda x: x[1], reverse=True)[:5]
         
-        # Enhanced field statistics
-        creator_stats = detailed_df['Invoice_Created_By'].value_counts()
-        mop_stats = detailed_df['Method_of_Payment'].value_counts()
-        account_stats = detailed_df['Account_Head'].value_counts()
-        
-        unknown_creators = creator_stats.get('Unknown', 0)
-        unspecified_mop = mop_stats.get('Not Specified', 0)
-        unspecified_accounts = account_stats.get('Not Specified', 0)
-        
-        total_creators = len(creator_stats)
-        total_mop_types = len(mop_stats)
-        total_account_heads = len(account_stats)
-        
-        # HTML formatted summary for email - FIXED STRING LITERAL
+        # Enhanced HTML formatted summary for email
         html_summary = f"""
-        
 
             
 
-                📊 Invoice Validation Summary - {today_str}
+                📊 Enhanced Invoice Validation Summary - {today_str}
             
 
             
@@ -699,6 +659,40 @@ Total Coverage: {(datetime.strptime(cumulative_end, '%Y-%m-%d') - datetime.strpt
             
 
                 
+🔍 Enhanced RMS Field Analysis
+
+                
+
+                        
+👤 Creators: {len(creator_stats)} unique
+
+                        
+⚠️ Unknown: {unknown_creators} ({(unknown_creators/total_invoices*100):.1f}%)
+
+                    
+
+                        
+💳 Payment Methods: {len(mop_stats)} unique
+
+                        
+⚠️ Unspecified: {unspecified_mop} ({(unspecified_mop/total_invoices*100):.1f}%)
+
+                    
+
+                        
+📊 Account Heads: {len(account_stats)} unique
+
+                        
+⚠️ Unassigned: {unassigned_accounts} ({(unassigned_accounts/total_invoices*100):.1f}%)
+
+                    
+
+            
+
+            
+            
+
+                
 🔍 Top Validation Issues
 
                 
@@ -706,85 +700,20 @@ Total Coverage: {(datetime.strptime(cumulative_end, '%Y-%m-%d') - datetime.strpt
         
         for issue, count in top_issues:
             percentage = (count / total_invoices * 100) if total_invoices > 0 else 0
-            severity_color = "#e74c3c" if "Missing" in issue else ("#f39c12" if any(word in issue for word in ["Duplicate", "Negative", "Future", "Old"]) else "#3498db")
-            html_summary += f'
+            severity_color = "#e74c3c" if "Missing" in issue else ("#f39c12" if any(word in issue for word in ["Duplicate", "Negative", "Future", "Old", "not specified", "not assigned"]) else "#3498db")
+            html_summary += f"""
 {issue}: {count:,} invoices ({percentage:.1f}%)
-'
-        
-        html_summary += f"""
-                
-
-            
-
-            
-            
-
-                
-👤 Enhanced RMS Field Analysis
-
-                
-
-                    
-Total Creators: {total_creators}
-
-                    
-Unknown Creators: {unknown_creators} invoices ({(unknown_creators/total_invoices*100):.1f}%)
-
-                    
-Payment Methods: {total_mop_types}
-
-                    
-Unspecified Payment Methods: {unspecified_mop} invoices ({(unspecified_mop/total_invoices*100):.1f}%)
-
-                    
-Account Heads: {total_account_heads}
-
-                    
-Unspecified Account Heads: {unspecified_accounts} invoices ({(unspecified_accounts/total_invoices*100):.1f}%)
-
-                
-
-            
-
-            
-            
-
-                
-📈 Overall Health Score
-
-                
 """
         
-        if pass_rate >= 90:
-            health_status = "Excellent"
-            health_color = "#27ae60"
-            health_icon = "🟢"
-        elif pass_rate >= 75:
-            health_status = "Good"
-            health_color = "#f39c12"
-            health_icon = "🟡"
-        else:
-            health_status = "Needs Attention"
-            health_color = "#e74c3c"
-            health_icon = "🔴"
-        
-        html_summary += f"""
-                    
-
-                        {health_icon} {health_status} 
-                        - {pass_rate:.1f}% of invoices passed validation
-                    
-
-                
+        html_summary += """
 
             
 
         
 """
         
-        # Plain text summary for email clients that don't support HTML
-        text_summary = f"""
-📊 INVOICE VALIDATION SUMMARY - {today_str}
+        # Enhanced plain text summary
+        text_summary = f"""📊 ENHANCED INVOICE VALIDATION SUMMARY - {today_str}
 
 📅 VALIDATION PERIOD:
 • Current Batch: {current_batch_start} to {current_batch_end}
@@ -797,13 +726,10 @@ Unspecified Account Heads: {unspecified_accounts} invoices ({(unspecified_accoun
 ⚠️ Warnings: {warning_invoices:,}
 ❌ Failed: {failed_invoices:,}
 
-👤 ENHANCED RMS FIELD ANALYSIS:
-• Total Creators: {total_creators}
-• Unknown Creators: {unknown_creators} invoices ({(unknown_creators/total_invoices*100):.1f}%)
-• Payment Methods: {total_mop_types}
-• Unspecified Payment Methods: {unspecified_mop} invoices ({(unspecified_mop/total_invoices*100):.1f}%)
-• Account Heads: {total_account_heads}
-• Unspecified Account Heads: {unspecified_accounts} invoices ({(unspecified_accounts/total_invoices*100):.1f}%)
+🔍 ENHANCED RMS FIELD ANALYSIS:
+👤 Creators: {len(creator_stats)} unique ({unknown_creators} unknown - {(unknown_creators/total_invoices*100):.1f}%)
+💳 Payment Methods: {len(mop_stats)} unique ({unspecified_mop} unspecified - {(unspecified_mop/total_invoices*100):.1f}%)
+📊 Account Heads: {len(account_stats)} unique ({unassigned_accounts} unassigned - {(unassigned_accounts/total_invoices*100):.1f}%)
 
 🔍 TOP VALIDATION ISSUES:"""
         
@@ -811,44 +737,32 @@ Unspecified Account Heads: {unspecified_accounts} invoices ({(unspecified_accoun
             percentage = (count / total_invoices * 100) if total_invoices > 0 else 0
             text_summary += f"\n{i}. {issue}: {count:,} invoices ({percentage:.1f}%)"
         
-        text_summary += f"""
-
-📈 OVERALL HEALTH: {health_icon} {health_status} - {pass_rate:.1f}% pass rate
-
-Note: Detailed invoice-level validation report is attached with Enhanced RMS Fields (Creator Names, Method of Payment, Account Head).
-"""
-        
-        # Statistics object for programmatic use
+        # Enhanced statistics object
         statistics = {
             'total_invoices': total_invoices,
             'passed_invoices': passed_invoices,
             'warning_invoices': warning_invoices,
             'failed_invoices': failed_invoices,
             'pass_rate': pass_rate,
-            'issue_rate': issue_rate,
-            'health_status': health_status,
-            'health_score': pass_rate,
-            'top_issues': top_issues,
-            'total_creators': total_creators,
+            'total_creators': len(creator_stats),
             'unknown_creators': unknown_creators,
-            'total_mop_types': total_mop_types,
+            'total_mop': len(mop_stats),
             'unspecified_mop': unspecified_mop,
-            'total_account_heads': total_account_heads,
-            'unspecified_accounts': unspecified_accounts,
+            'total_account_heads': len(account_stats),
+            'unassigned_accounts': unassigned_accounts,
+            'top_issues': top_issues,
             'validation_date': today_str,
             'current_batch_start': current_batch_start,
             'current_batch_end': current_batch_end,
             'cumulative_start': cumulative_start,
-            'cumulative_end': cumulative_end,
-            'total_coverage_days': (datetime.strptime(cumulative_end, '%Y-%m-%d') - datetime.strptime(cumulative_start, '%Y-%m-%d')).days + 1
+            'cumulative_end': cumulative_end
         }
         
-        print(f"✅ Email summary statistics generated:")
-        print(f"   📊 Health Status: {health_status} ({pass_rate:.1f}%)")
-        print(f"   📈 Total Issues: {len(top_issues)} types identified")
-        print(f"   👤 Creator Stats: {total_creators} total, {unknown_creators} unknown")
-        print(f"   💳 Payment Methods: {total_mop_types} total, {unspecified_mop} unspecified")
-        print(f"   📊 Account Heads: {total_account_heads} total, {unspecified_accounts} unspecified")
+        print(f"✅ Enhanced email summary statistics generated:")
+        print(f"   📊 Pass Rate: {pass_rate:.1f}%")
+        print(f"   👤 Creator Stats: {len(creator_stats)} total, {unknown_creators} unknown")
+        print(f"   💳 MOP Stats: {len(mop_stats)} total, {unspecified_mop} unspecified")
+        print(f"   📊 Account Head Stats: {len(account_stats)} total, {unassigned_accounts} unassigned")
         
         return {
             'html_summary': html_summary,
@@ -857,24 +771,24 @@ Note: Detailed invoice-level validation report is attached with Enhanced RMS Fie
         }
         
     except Exception as e:
-        print(f"❌ Email summary generation failed: {str(e)}")
+        print(f"❌ Enhanced email summary generation failed: {str(e)}")
         return {
-            'html_summary': f"
-Error generating summary: {str(e)}
-",
-            'text_summary': f"Error generating summary: {str(e)}",
+            'html_summary': f"""
+Error generating enhanced summary: {str(e)}
+""",
+            'text_summary': f"Error generating enhanced summary: {str(e)}",
             'statistics': {}
         }
 
 def generate_detailed_validation_report(detailed_df, today_str):
-    """Generate detailed validation report for Excel export"""
-    print("📋 Generating detailed validation report for Excel export...")
+    """Generate enhanced detailed validation report for Excel export"""
+    print("📋 Generating enhanced detailed validation report for Excel export...")
     
     try:
         if detailed_df.empty:
             return []
         
-        # Add summary sheet data with enhanced RMS field statistics
+        # Enhanced summary data with RMS fields
         summary_data = []
         
         # Overall statistics
@@ -883,160 +797,36 @@ def generate_detailed_validation_report(detailed_df, today_str):
         warning_invoices = len(detailed_df[detailed_df['Validation_Status'] == '⚠️ WARNING'])
         failed_invoices = len(detailed_df[detailed_df['Validation_Status'] == '❌ FAIL'])
         
-        summary_data.append({
-            'Report_Type': 'Overall_Summary',
-            'Description': 'Total Invoice Count',
-            'Count': total_invoices,
-            'Percentage': '100.0%',
-            'Status': 'INFO'
-        })
-        
-        summary_data.append({
-            'Report_Type': 'Overall_Summary', 
-            'Description': 'Passed Validation',
-            'Count': passed_invoices,
-            'Percentage': f'{(passed_invoices/total_invoices*100):.1f}%' if total_invoices > 0 else '0%',
-            'Status': 'PASS'
-        })
-        
-        summary_data.append({
-            'Report_Type': 'Overall_Summary',
-            'Description': 'Warnings',
-            'Count': warning_invoices, 
-            'Percentage': f'{(warning_invoices/total_invoices*100):.1f}%' if total_invoices > 0 else '0%',
-            'Status': 'WARNING'
-        })
-        
-        summary_data.append({
-            'Report_Type': 'Overall_Summary',
-            'Description': 'Failed Validation',
-            'Count': failed_invoices,
-            'Percentage': f'{(failed_invoices/total_invoices*100):.1f}%' if total_invoices > 0 else '0%', 
-            'Status': 'FAIL'
-        })
-        
-        # Enhanced RMS field statistics
+        # Enhanced field statistics
         creator_stats = detailed_df['Invoice_Created_By'].value_counts()
         mop_stats = detailed_df['Method_of_Payment'].value_counts()
         account_stats = detailed_df['Account_Head'].value_counts()
         
-        unknown_creators = creator_stats.get('Unknown', 0)
-        unspecified_mop = mop_stats.get('Not Specified', 0)
-        unspecified_accounts = account_stats.get('Not Specified', 0)
+        # Add enhanced summary entries
+        enhanced_summary_entries = [
+            {'Report_Type': 'Overall_Summary', 'Description': 'Total Invoice Count', 'Count': total_invoices, 'Percentage': '100.0%', 'Status': 'INFO'},
+            {'Report_Type': 'Overall_Summary', 'Description': 'Passed Validation', 'Count': passed_invoices, 'Percentage': f'{(passed_invoices/total_invoices*100):.1f}%' if total_invoices > 0 else '0%', 'Status': 'PASS'},
+            {'Report_Type': 'Overall_Summary', 'Description': 'Warnings', 'Count': warning_invoices, 'Percentage': f'{(warning_invoices/total_invoices*100):.1f}%' if total_invoices > 0 else '0%', 'Status': 'WARNING'},
+            {'Report_Type': 'Overall_Summary', 'Description': 'Failed Validation', 'Count': failed_invoices, 'Percentage': f'{(failed_invoices/total_invoices*100):.1f}%' if total_invoices > 0 else '0%', 'Status': 'FAIL'},
+            {'Report_Type': 'RMS_Field_Analysis', 'Description': 'Total Unique Creators', 'Count': len(creator_stats), 'Percentage': '100.0%', 'Status': 'INFO'},
+            {'Report_Type': 'RMS_Field_Analysis', 'Description': 'Unknown/Missing Creators', 'Count': creator_stats.get('Unknown', 0), 'Percentage': f'{(creator_stats.get("Unknown", 0)/total_invoices*100):.1f}%' if total_invoices > 0 else '0%', 'Status': 'WARNING' if creator_stats.get('Unknown', 0) > 0 else 'PASS'},
+            {'Report_Type': 'RMS_Field_Analysis', 'Description': 'Total Payment Methods', 'Count': len(mop_stats), 'Percentage': '100.0%', 'Status': 'INFO'},
+            {'Report_Type': 'RMS_Field_Analysis', 'Description': 'Unspecified Payment Methods', 'Count': mop_stats.get('Not Specified', 0), 'Percentage': f'{(mop_stats.get("Not Specified", 0)/total_invoices*100):.1f}%' if total_invoices > 0 else '0%', 'Status': 'WARNING' if mop_stats.get('Not Specified', 0) > 0 else 'PASS'},
+            {'Report_Type': 'RMS_Field_Analysis', 'Description': 'Total Account Heads', 'Count': len(account_stats), 'Percentage': '100.0%', 'Status': 'INFO'},
+            {'Report_Type': 'RMS_Field_Analysis', 'Description': 'Unassigned Account Heads', 'Count': account_stats.get('Not Assigned', 0), 'Percentage': f'{(account_stats.get("Not Assigned", 0)/total_invoices*100):.1f}%' if total_invoices > 0 else '0%', 'Status': 'WARNING' if account_stats.get('Not Assigned', 0) > 0 else 'PASS'}
+        ]
         
-        summary_data.append({
-            'Report_Type': 'RMS_Field_Analysis',
-            'Description': 'Total Unique Creators',
-            'Count': len(creator_stats),
-            'Percentage': '100.0%',
-            'Status': 'INFO'
-        })
+        summary_data.extend(enhanced_summary_entries)
         
-        summary_data.append({
-            'Report_Type': 'RMS_Field_Analysis',
-            'Description': 'Unknown/Missing Creators',
-            'Count': unknown_creators,
-            'Percentage': f'{(unknown_creators/total_invoices*100):.1f}%' if total_invoices > 0 else '0%',
-            'Status': 'WARNING' if unknown_creators > 0 else 'PASS'
-        })
-        
-        summary_data.append({
-            'Report_Type': 'RMS_Field_Analysis',
-            'Description': 'Total Payment Methods',
-            'Count': len(mop_stats),
-            'Percentage': '100.0%',
-            'Status': 'INFO'
-        })
-        
-        summary_data.append({
-            'Report_Type': 'RMS_Field_Analysis',
-            'Description': 'Unspecified Payment Methods',
-            'Count': unspecified_mop,
-            'Percentage': f'{(unspecified_mop/total_invoices*100):.1f}%' if total_invoices > 0 else '0%',
-            'Status': 'WARNING' if unspecified_mop > 0 else 'PASS'
-        })
-        
-        summary_data.append({
-            'Report_Type': 'RMS_Field_Analysis',
-            'Description': 'Total Account Heads',
-            'Count': len(account_stats),
-            'Percentage': '100.0%',
-            'Status': 'INFO'
-        })
-        
-        summary_data.append({
-            'Report_Type': 'RMS_Field_Analysis',
-            'Description': 'Unspecified Account Heads',
-            'Count': unspecified_accounts,
-            'Percentage': f'{(unspecified_accounts/total_invoices*100):.1f}%' if total_invoices > 0 else '0%',
-            'Status': 'WARNING' if unspecified_accounts > 0 else 'PASS'
-        })
-        
-        print(f"✅ Detailed validation report prepared with {len(summary_data)} summary entries")
-        print(f"   📊 Including enhanced RMS field analysis")
+        print(f"✅ Enhanced detailed validation report prepared with {len(summary_data)} summary entries")
         return summary_data
         
     except Exception as e:
-        print(f"❌ Detailed report generation failed: {str(e)}")
+        print(f"❌ Enhanced detailed report generation failed: {str(e)}")
         return []
 
-def format_excel_report_with_styling(writer, sheet_name, df):
-    """Format Excel report with professional styling and proper column widths"""
-    try:
-        from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
-        from openpyxl.utils.dataframe import dataframe_to_rows
-        
-        # Write DataFrame to Excel
-        df.to_excel(writer, sheet_name=sheet_name, index=False)
-        
-        # Get the worksheet
-        worksheet = writer.sheets[sheet_name]
-        
-        # Define styles
-        header_font = Font(name='Arial', size=11, bold=True, color='FFFFFF')
-        header_fill = PatternFill(start_color='366092', end_color='366092', fill_type='solid')
-        border = Border(left=Side(style='thin'), right=Side(style='thin'), 
-                       top=Side(style='thin'), bottom=Side(style='thin'))
-        center_alignment = Alignment(horizontal='center', vertical='center')
-        
-        # Apply header styling
-        for col_num in range(1, len(df.columns) + 1):
-            cell = worksheet.cell(row=1, column=col_num)
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.border = border
-            cell.alignment = center_alignment
-        
-        # Auto-adjust column widths
-        for column in worksheet.columns:
-            max_length = 0
-            column_letter = column[0].column_letter
-            
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            
-            adjusted_width = min(max_length + 2, 50)  # Cap at 50 characters
-            worksheet.column_dimensions[column_letter].width = adjusted_width
-        
-        # Apply borders to all cells
-        for row in worksheet.iter_rows(min_row=1, max_row=len(df) + 1, 
-                                      min_col=1, max_col=len(df.columns)):
-            for cell in row:
-                cell.border = border
-                
-    except Exception as e:
-        print(f"⚠️ Excel formatting failed: {str(e)}")
-        # If formatting fails, still write the basic data
-        df.to_excel(writer, sheet_name=sheet_name, index=False)
-
 def read_invoice_file(invoice_file):
-    """
-    Robust file reading with multiple format support and proper error handling
-    """
+    """Robust file reading with multiple format support and proper error handling"""
     print(f"🔍 Attempting to read file: {invoice_file}")
 
     # Check if file exists
@@ -1053,15 +843,6 @@ def read_invoice_file(invoice_file):
     if file_size < 50:
         raise ValueError(f"File appears to be too small ({file_size} bytes) - likely corrupted or empty")
             
-    # Read file header to detect actual format
-    try:
-        with open(invoice_file, 'rb') as f:
-            header = f.read(50)
-        print(f"🔍 File header (first 20 bytes): {header[:20]}")
-    except Exception as e:
-        print(f"⚠️ Could not read file header: {e}")
-        header = b''
-                
     df = None
     last_error = None
                     
@@ -1088,50 +869,52 @@ def read_invoice_file(invoice_file):
             print(f"⚠️ xlrd engine failed: {str(e)}")
             last_error = e
     
-    # Method 3: Try reading as CSV with different separators
-    try:
-        print("📄 Attempting to read as CSV...")
-        # Try common separators
-        separators = [',', ';', '\t', '|']
-        for sep in separators:
-            try:
-                df_test = pd.read_csv(invoice_file, sep=sep, nrows=5)
-                if df_test.shape[1] > 1:  # Multiple columns detected
-                    df = pd.read_csv(invoice_file, sep=sep)
-                    print(f"✅ Successfully read as CSV with separator '{sep}'. Shape: {df.shape}")
-                    print(f"📋 Columns: {list(df.columns)}")
-                    return df
-            except:
-                continue
-        print("⚠️ CSV reading failed with all separators")
-    except Exception as e:
-        print(f"⚠️ CSV reading failed: {str(e)}")
-        last_error = e
+    # If all methods failed, raise the most relevant error
+    if last_error:
+        raise Exception(f"Could not read invoice file in any supported format. Last error: {str(last_error)}")
+    else:
+        raise Exception("Could not read invoice file - unknown format or corrupted file")
+
+def validate_downloaded_files(download_dir): 
+    """Validate that downloaded files exist and are not corrupted"""
+    required_files = ["invoice_download.xls", "invoices.zip"]
+    validation_results = {}
         
-    # Method 4: Try HTML parsing
-    try:
-        print("🌐 Attempting to read as HTML...")
-        tables = pd.read_html(invoice_file, flavor='lxml')
-        if tables and len(tables) > 0:
-            df = tables[0]  # Get first table
-            print(f"✅ Successfully read HTML file. Shape: {df.shape}")
-            print(f"📋 Columns: {list(df.columns)}")
-            return df
-        else:
-            print("⚠️ No tables found in HTML")
-    except Exception as e:
-        print(f"⚠️ HTML parsing failed: {str(e)}")
-        last_error = e
+    for fname in required_files:
+        file_path = os.path.join(download_dir, fname)
+        if os.path.exists(file_path):
+            file_size = os.path.getsize(file_path)
+            print(f"✅ Found {fname}: {file_size} bytes")
     
-    # Method 5: Try reading as plain text and show sample
+            # Basic validation
+            if file_size < 50:
+                print(f"⚠️ Warning: {fname} seems too small ({file_size} bytes)")
+                validation_results[fname] = "small"
+            else:
+                validation_results[fname] = "ok"
+        else:
+            print(f"❌ Missing file: {fname}")
+            validation_results[fname] = "missing"
+    
+    return validation_results
+
+def filter_invoices_by_date(df, start_str, end_str):
+    """Filter dataframe by date range"""
     try:
-        print("📝 Attempting to read file content for debugging...")
-        with open(invoice_file, 'r', encoding='utf-8', errors='ignore') as f:
-            content_sample = f.read(500)  # Read first 500 characters
-        print(f"📄 File content sample:\n{repr(content_sample)}")
-                
-        # Try to detect if it's actually a different format
-        if content_sample.strip().startswith('= start_date) &
+        if 'PurchaseInvDate' not in df.columns:
+            print("⚠️ PurchaseInvDate column not found, returning all data")
+            return df
+    
+        # Convert dates
+        start_date = datetime.strptime(start_str, "%Y-%m-%d")
+        end_date = datetime.strptime(end_str, "%Y-%m-%d")
+        
+        # Parse invoice dates
+        df["ParsedInvoiceDate"] = pd.to_datetime(df["PurchaseInvDate"], errors='coerce')
+    
+        # Filter by date range
+        filtered_df = df[
+            (df["ParsedInvoiceDate"] >= start_date) &
             (df["ParsedInvoiceDate"] <= end_date)  
         ]
                 
@@ -1143,15 +926,14 @@ def read_invoice_file(invoice_file):
         return df
 
 def run_invoice_validation():
-    """Main function to run detailed cumulative validation with invoice-level reports and enhanced RMS field mapping"""
+    """Enhanced main function with comprehensive RMS field mapping and report formatting"""
     try:
         today = datetime.today()
         today_str = today.strftime("%Y-%m-%d")
         
         print(f"🚀 Starting ENHANCED cumulative validation workflow for {today_str}")
-        print(f"📧 FEATURE: Email-ready summary statistics with RMS field analysis")
-        print(f"📋 FEATURE: Individual invoice validation reports with Enhanced RMS Fields")
-        print(f"🔍 NEW: Invoice Created By, Method of Payment, Account Head field extraction")
+        print(f"📧 FEATURE: Enhanced email-ready summary with RMS field analysis")
+        print(f"📋 FEATURE: Complete RMS field mapping (Creator, MOP, Account Head)")
         print(f"⚙️ Configuration:")
         print(f"   📅 Validation interval: {VALIDATION_INTERVAL_DAYS} days")
         print(f"   📦 Batch size: {VALIDATION_BATCH_DAYS} days")
@@ -1232,26 +1014,21 @@ def run_invoice_validation():
             print(f"⚠️ Date filtering failed: {str(e)}, using all data")
             filtered_df = df
         
-        # Step 9: Run ENHANCED detailed validation on ALL cumulative data
-        print("🔄 Step 9: Running ENHANCED detailed validation on cumulative data...")
-        print("   🔄 This includes:")
-        print(f"      📦 Current batch: {current_batch_start} to {current_batch_end}")
-        print(f"      🔄 ALL previously validated data from: {cumulative_start}")
-        print(f"      🔍 NEW: Enhanced RMS field extraction (Creator, MOP, Account Head)")
+        # Step 9: Run enhanced validation with complete RMS field mapping
+        print("🔄 Step 9: Running enhanced validation with complete RMS field mapping...")
         try:
             detailed_df, summary_issues, problematic_invoices_df = validate_invoices_with_details(filtered_df)
             
             if detailed_df.empty:
                 print("⚠️ No detailed validation results generated")
             else:
-                print(f"✅ Enhanced detailed validation completed on {len(detailed_df)} invoices")
-                print(f"   🔍 Enhanced fields extracted: Invoice_Created_By, Method_of_Payment, Account_Head")
+                print(f"✅ Enhanced validation completed on {len(detailed_df)} invoices")
         except Exception as e:
-            print(f"❌ Enhanced detailed validation failed: {str(e)}")
+            print(f"❌ Enhanced validation failed: {str(e)}")
             return False
         
-        # Step 10: Generate enhanced email summary statistics
-        print("📧 Step 10: Generating enhanced email summary statistics...")
+        # Step 10: Generate enhanced email summary
+        print("📧 Step 10: Generating enhanced email summary with RMS field analysis...")
         try:
             email_summary = generate_email_summary_statistics(
                 detailed_df, 
@@ -1264,10 +1041,10 @@ def run_invoice_validation():
         except Exception as e:
             print(f"⚠️ Enhanced email summary generation failed: {str(e)}")
             email_summary = {
-                'html_summary': f"
-Error generating summary: {str(e)}
-",
-                'text_summary': f"Error generating summary: {str(e)}",
+                'html_summary': f"""
+Error generating enhanced summary: {str(e)}
+""",
+                'text_summary': f"Error generating enhanced summary: {str(e)}",
                 'statistics': {}
             }
         
@@ -1289,7 +1066,7 @@ Error generating summary: {str(e)}
             
             print(f"📋 Prepared {len(current_invoices_list)} enhanced invoice records for saving")
         except Exception as e:
-            print(f"⚠️ Failed to prepare invoice list: {str(e)}")
+            print(f"⚠️ Failed to prepare enhanced invoice list: {str(e)}")
             current_invoices_list = []
         
         # Step 13: Save enhanced validation snapshot
@@ -1305,7 +1082,7 @@ Error generating summary: {str(e)}
             )
             print("✅ Enhanced validation snapshot saved")
         except Exception as e:
-            print(f"⚠️ Failed to save snapshot: {str(e)}")
+            print(f"⚠️ Failed to save enhanced snapshot: {str(e)}")
             
         # Step 14: Record this enhanced run
         try:
@@ -1320,98 +1097,88 @@ Error generating summary: {str(e)}
             )
             print("✅ Enhanced cumulative run recorded")
         except Exception as e:
-            print(f"⚠️ Failed to record run: {str(e)}")
+            print(f"⚠️ Failed to record enhanced run: {str(e)}")
         
-        # Step 15: Save ENHANCED detailed reports with all RMS fields
+        # Step 15: Save enhanced reports with complete RMS field mapping
         try:
             os.makedirs("data", exist_ok=True)
             
-            # Main enhanced detailed validation report (invoice-level with ALL RMS fields)
+            # Enhanced detailed validation report (invoice-level with all RMS fields)
             detailed_report_path = f"data/invoice_validation_detailed_{today_str}.xlsx"
             
             if not detailed_df.empty:
                 with pd.ExcelWriter(detailed_report_path, engine='openpyxl') as writer:
-                    # Sheet 1: All invoices with ENHANCED validation status INCLUDING ALL RMS FIELDS
-                    format_excel_report_with_styling(writer, 'All_Invoices_Enhanced', detailed_df)
+                    # Sheet 1: All invoices with complete RMS field mapping
+                    detailed_df.to_excel(writer, sheet_name='All_Invoices_Enhanced', index=False)
                     
-                    # Sheet 2: Failed invoices only with enhanced fields
+                    # Sheet 2: Failed invoices with RMS fields
                     failed_df = detailed_df[detailed_df['Validation_Status'] == '❌ FAIL']
                     if not failed_df.empty:
-                        format_excel_report_with_styling(writer, 'Failed_Invoices_Enhanced', failed_df)
+                        failed_df.to_excel(writer, sheet_name='Failed_Invoices', index=False)
                     
-                    # Sheet 3: Warning invoices only with enhanced fields
+                    # Sheet 3: Warning invoices with RMS fields
                     warning_df = detailed_df[detailed_df['Validation_Status'] == '⚠️ WARNING'] 
                     if not warning_df.empty:
-                        format_excel_report_with_styling(writer, 'Warning_Invoices_Enhanced', warning_df)
+                        warning_df.to_excel(writer, sheet_name='Warning_Invoices', index=False)
                     
-                    # Sheet 4: Passed invoices only with enhanced fields
+                    # Sheet 4: Passed invoices with RMS fields
                     passed_df = detailed_df[detailed_df['Validation_Status'] == '✅ PASS']
                     if not passed_df.empty:
-                        format_excel_report_with_styling(writer, 'Passed_Invoices_Enhanced', passed_df)
+                        passed_df.to_excel(writer, sheet_name='Passed_Invoices', index=False)
                     
                     # Sheet 5: Enhanced Creator analysis
-                    creator_stats = detailed_df['Invoice_Created_By'].value_counts().reset_index()
-                    creator_stats.columns = ['Creator_Name', 'Invoice_Count']
-                    creator_stats['Percentage'] = (creator_stats['Invoice_Count'] / len(detailed_df) * 100).round(2)
-                    format_excel_report_with_styling(writer, 'Creator_Analysis_Enhanced', creator_stats)
+                    creator_analysis = detailed_df['Invoice_Created_By'].value_counts().reset_index()
+                    creator_analysis.columns = ['Creator_Name', 'Invoice_Count']
+                    creator_analysis['Percentage'] = (creator_analysis['Invoice_Count'] / len(detailed_df) * 100).round(2)
+                    creator_analysis.to_excel(writer, sheet_name='Creator_Analysis', index=False)
                     
-                    # Sheet 6: NEW - Method of Payment analysis
-                    mop_stats = detailed_df['Method_of_Payment'].value_counts().reset_index()
-                    mop_stats.columns = ['Payment_Method', 'Invoice_Count']
-                    mop_stats['Percentage'] = (mop_stats['Invoice_Count'] / len(detailed_df) * 100).round(2)
-                    format_excel_report_with_styling(writer, 'Payment_Method_Analysis', mop_stats)
+                    # Sheet 6: Method of Payment analysis
+                    mop_analysis = detailed_df['Method_of_Payment'].value_counts().reset_index()
+                    mop_analysis.columns = ['Payment_Method', 'Invoice_Count']
+                    mop_analysis['Percentage'] = (mop_analysis['Invoice_Count'] / len(detailed_df) * 100).round(2)
+                    mop_analysis.to_excel(writer, sheet_name='MOP_Analysis', index=False)
                     
-                    # Sheet 7: NEW - Account Head analysis
-                    account_stats = detailed_df['Account_Head'].value_counts().reset_index()
-                    account_stats.columns = ['Account_Head', 'Invoice_Count']
-                    account_stats['Percentage'] = (account_stats['Invoice_Count'] / len(detailed_df) * 100).round(2)
-                    format_excel_report_with_styling(writer, 'Account_Head_Analysis', account_stats)
+                    # Sheet 7: Account Head analysis
+                    account_analysis = detailed_df['Account_Head'].value_counts().reset_index()
+                    account_analysis.columns = ['Account_Head', 'Invoice_Count']
+                    account_analysis['Percentage'] = (account_analysis['Invoice_Count'] / len(detailed_df) * 100).round(2)
+                    account_analysis.to_excel(writer, sheet_name='Account_Head_Analysis', index=False)
                     
                     # Sheet 8: Enhanced Summary statistics
                     if detailed_report:
                         summary_df = pd.DataFrame(detailed_report)
-                        format_excel_report_with_styling(writer, 'Enhanced_Summary_Stats', summary_df)
+                        summary_df.to_excel(writer, sheet_name='Enhanced_Summary', index=False)
                 
-                print(f"✅ ENHANCED invoice-level report saved: {detailed_report_path}")
-                print(f"   📊 Includes: Invoice_Created_By, Method_of_Payment, Account_Head fields")
-                print(f"   📋 Analysis sheets: Creator, Payment Method, Account Head breakdowns")
+                print(f"✅ Enhanced invoice-level report saved: {detailed_report_path}")
 
-                # Create enhanced dashboard version with ALL essential columns
+                # Create enhanced dashboard version with all RMS fields
                 os.makedirs(f"data/{today_str}", exist_ok=True)
                 dashboard_path = f"data/{today_str}/validation_result.xlsx"
                 
-                # Enhanced dashboard columns with ALL RMS fields
+                # Enhanced dashboard columns including all RMS fields
                 enhanced_dashboard_columns = [
-                    'Invoice_ID', 'Invoice_Number', 'Invoice_Date', 'Vendor_Name', 'Amount',
-                    'Invoice_Created_By', 'Method_of_Payment', 'Account_Head',  # RMS FIELDS
-                    'Invoice_Entry_Date', 'Invoice_Upload_Date',                # ADDITIONAL RMS FIELDS
-                    'Validation_Status', 'Issues_Found', 'Issue_Details', 'GST_Number'
+                    'Invoice_ID', 'Invoice_Number', 'Invoice_Date', 'Invoice_Entry_Date', 
+                    'Invoice_Upload_Date', 'Vendor_Name', 'Amount', 'Invoice_Created_By', 
+                    'Method_of_Payment', 'Account_Head', 'Validation_Status', 
+                    'Issues_Found', 'Issue_Details', 'GST_Number'
                 ]
                 
-                dashboard_df = detailed_df[enhanced_dashboard_columns].copy()
+                # Only include columns that exist in the dataframe
+                available_columns = [col for col in enhanced_dashboard_columns if col in detailed_df.columns]
+                dashboard_df = detailed_df[available_columns].copy()
                 
-                # Add enhanced formatted status for better readability
+                # Add enhanced status summary
                 dashboard_df['Status_Summary'] = dashboard_df.apply(lambda row: 
                     f"{row['Validation_Status']} - {row['Issues_Found']} issues" if row['Issues_Found'] > 0 
                     else f"{row['Validation_Status']} - No issues", axis=1)
                 
-                # Enhanced RMS field summary
-                dashboard_df['RMS_Fields_Summary'] = dashboard_df.apply(lambda row:
-                    f"Creator: {row['Invoice_Created_By'][:20]}{'...' if len(str(row['Invoice_Created_By'])) > 20 else ''} | "
-                    f"Payment: {row['Method_of_Payment'][:15]}{'...' if len(str(row['Method_of_Payment'])) > 15 else ''} | "
-                    f"Account: {row['Account_Head'][:15]}{'...' if len(str(row['Account_Head'])) > 15 else ''}", axis=1)
+                dashboard_df.to_excel(dashboard_path, index=False, engine='openpyxl')
+                print(f"📋 Enhanced dashboard report created: {dashboard_path}")
                 
-                with pd.ExcelWriter(dashboard_path, engine='openpyxl') as writer:
-                    format_excel_report_with_styling(writer, 'Enhanced_Dashboard', dashboard_df)
-                
-                print(f"📋 Enhanced invoice-level dashboard report created: {dashboard_path}")
-                
-                # Also update the enhanced delta report format
+                # Enhanced delta report with all RMS fields
                 delta_report_path = f"data/delta_report_{today_str}.xlsx"
-                with pd.ExcelWriter(delta_report_path, engine='openpyxl') as writer:
-                    format_excel_report_with_styling(writer, 'Enhanced_Delta_Report', dashboard_df)
-                
-                print(f"📋 Enhanced invoice-level delta report created: {delta_report_path}")
+                dashboard_df.to_excel(delta_report_path, index=False, engine='openpyxl')
+                print(f"📋 Enhanced delta report created: {delta_report_path}")
                 
                 # Save enhanced email summary
                 summary_path = f"data/email_summary_{today_str}.html"
@@ -1420,25 +1187,23 @@ Error generating summary: {str(e)}
                 print(f"📧 Enhanced email summary saved: {summary_path}")
                 
             else:
-                print("⚠️ No detailed validation results - creating empty enhanced report")
+                print("⚠️ No enhanced validation results - creating empty report")
+                # Create empty enhanced report structure
                 empty_enhanced_df = pd.DataFrame({
-                    'Invoice_ID': [], 'Invoice_Number': [], 'Invoice_Date': [], 'Vendor_Name': [], 'Amount': [],
-                    'Invoice_Created_By': [], 'Method_of_Payment': [], 'Account_Head': [],
-                    'Invoice_Entry_Date': [], 'Invoice_Upload_Date': [],
-                    'Validation_Status': [], 'Issues_Found': [], 'Issue_Details': [], 'GST_Number': [], 'Status_Summary': []
+                    'Invoice_ID': [], 'Invoice_Number': [], 'Invoice_Date': [], 'Invoice_Entry_Date': [],
+                    'Invoice_Upload_Date': [], 'Vendor_Name': [], 'Amount': [], 'Invoice_Created_By': [], 
+                    'Method_of_Payment': [], 'Account_Head': [], 'Validation_Status': [], 
+                    'Issues_Found': [], 'Issue_Details': [], 'GST_Number': [], 'Status_Summary': []
                 })
-                
-                with pd.ExcelWriter(detailed_report_path, engine='openpyxl') as writer:
-                    format_excel_report_with_styling(writer, 'Empty_Enhanced_Report', empty_enhanced_df)
-                
-                print(f"✅ Empty enhanced invoice-level report created: {detailed_report_path}")
+                empty_enhanced_df.to_excel(detailed_report_path, index=False, engine='openpyxl')
+                print(f"✅ Empty enhanced report created: {detailed_report_path}")
                         
         except Exception as e:
-            print(f"❌ Failed to save enhanced detailed reports: {str(e)}")
+            print(f"❌ Failed to save enhanced reports: {str(e)}")
             return False
 
         # Step 16: Enhanced processing (if available)
-        print("🚀 Step 16: Applying enhanced features...")
+        print("🚀 Step 16: Applying additional enhanced features...")
         try:
             if ENHANCED_PROCESSOR_AVAILABLE:
                 # Enhance the existing results
@@ -1446,95 +1211,17 @@ Error generating summary: {str(e)}
                 
                 if enhancement_result['success']:
                     print("✅ Additional enhancement successful!")
-                    enhanced_df = enhancement_result['enhanced_df']
-                    changes_detected = enhancement_result['changes_detected']
-                    enhanced_email_content = enhancement_result['enhanced_email_content']
-                    summary = enhancement_result['summary']
-                    
-                    # Save additionally enhanced Excel report
-                    enhanced_report_path = f"data/enhanced_invoice_validation_detailed_{today_str}.xlsx"
-                    
-                    with pd.ExcelWriter(enhanced_report_path, engine='openpyxl') as writer:
-                        # Main additionally enhanced report with all new fields
-                        format_excel_report_with_styling(writer, 'Super_Enhanced_All_Invoices', enhanced_df)
-                        
-                        # Additionally enhanced failed invoices
-                        enhanced_failed_df = enhanced_df[enhanced_df['Validation_Status'] == '❌ FAIL']
-                        if not enhanced_failed_df.empty:
-                            format_excel_report_with_styling(writer, 'Super_Enhanced_Failed', enhanced_failed_df)
-                        
-                        # Additionally enhanced summary with new metrics
-                        enhanced_summary = [
-                            {'Metric': 'Total Invoices', 'Value': summary['total_invoices']},
-                            {'Metric': 'Currencies Processed', 'Value': summary['currencies']},
-                            {'Metric': 'Global Locations', 'Value': summary['locations']},
-                            {'Metric': 'Urgent Due Date Alerts', 'Value': summary['urgent_dues']},
-                            {'Metric': 'Tax Calculations Completed', 'Value': summary['tax_calculated']},
-                            {'Metric': 'Historical Changes Detected', 'Value': summary['historical_changes']}
-                        ]
-                        enhanced_summary_df = pd.DataFrame(enhanced_summary)
-                        format_excel_report_with_styling(writer, 'Super_Enhanced_Summary', enhanced_summary_df)
-                        
-                        # Currency breakdown
-                        if 'Invoice_Currency' in enhanced_df.columns:
-                            currency_breakdown = enhanced_df['Invoice_Currency'].value_counts().reset_index()
-                            currency_breakdown.columns = ['Currency', 'Count']
-                            format_excel_report_with_styling(writer, 'Currency_Breakdown', currency_breakdown)
-                        
-                        # Location breakdown
-                        if 'Location' in enhanced_df.columns:
-                            location_breakdown = enhanced_df['Location'].str.split(' -').str[0].value_counts().reset_index()
-                            location_breakdown.columns = ['Location', 'Count']
-                            format_excel_report_with_styling(writer, 'Location_Breakdown', location_breakdown)
-                        
-                        # Tax summary
-                        if 'Total_Tax_Calculated' in enhanced_df.columns:
-                            tax_summary = enhanced_df.groupby(['Location', 'Tax_Type'])[['Total_Tax_Calculated']].sum().reset_index()
-                            format_excel_report_with_styling(writer, 'Tax_Summary', tax_summary)
-                        
-                        # Due date alerts
-                        if 'Due_Date_Notification' in enhanced_df.columns:
-                            urgent_invoices = enhanced_df[enhanced_df['Due_Date_Notification'] == 'YES']
-                            if not urgent_invoices.empty:
-                                urgent_cols = ['Invoice_Number', 'Vendor_Name', 'Amount', 'Due_Date', 'Location']
-                                urgent_display = urgent_invoices[[col for col in urgent_cols if col in enhanced_df.columns]]
-                                format_excel_report_with_styling(writer, 'Urgent_Due_Dates', urgent_display)
-                        
-                        # Historical changes
-                        if changes_detected:
-                            changes_df = pd.DataFrame(changes_detected)
-                            format_excel_report_with_styling(writer, 'Historical_Changes', changes_df)
-                    
-                    print(f"✅ Additionally enhanced report saved: {enhanced_report_path}")
-                    
-                    # Update email content to enhanced version
-                    if enhanced_email_content:
-                        email_summary['html_summary'] = enhanced_email_content
-                        email_summary['text_summary'] = enhanced_email_content
-                        
-                        # Save additionally enhanced email content
-                        enhanced_email_path = f"data/enhanced_email_summary_{today_str}.html"
-                        with open(enhanced_email_path, 'w', encoding='utf-8') as f:
-                            f.write(enhanced_email_content)
-                        print(f"📧 Additionally enhanced email content saved: {enhanced_email_path}")
-                    
-                    # Print enhancement summary
-                    print(f"🔄 Additional Enhancement Summary:")
-                    print(f"   💱 Currencies: {summary['currencies']}")
-                    print(f"   🌍 Locations: {summary['locations']}")
-                    print(f"   ⏰ Urgent dues: {summary['urgent_dues']}")
-                    print(f"   💰 Tax calculated: {summary['tax_calculated']}")
-                    print(f"   🔄 Historical changes: {summary['historical_changes']}")
-                    
+                    print("📊 Enhanced processing completed with additional features")
                 else:
                     print(f"⚠️ Additional enhancement failed: {enhancement_result['error']}")
-                    print("📊 Continuing with enhanced validation report")
+                    print("📊 Continuing with enhanced RMS field validation")
             else:
-                print("⚠️ Enhanced processor not available, using enhanced validation with RMS fields")
+                print("⚠️ Additional enhanced processor not available")
+                print("📊 Using enhanced RMS field validation (already implemented)")
                 
         except Exception as e:
             print(f"⚠️ Additional enhancement failed: {str(e)}")
-            print("📊 Continuing with enhanced validation report")
+            print("📊 Continuing with enhanced RMS field validation")
                 
         # Step 17: Send enhanced email notifications
         try:
@@ -1542,12 +1229,11 @@ Error generating summary: {str(e)}
             
             notifier = EmailNotifier()
                 
-            # Send enhanced detailed validation report to AP TEAM
+            # Send enhanced validation report to AP TEAM
             ap_team_recipients = os.getenv('AP_TEAM_EMAIL_LIST', '').split(',')
             ap_team_recipients = [email.strip() for email in ap_team_recipients if email.strip()]
                     
             if ap_team_recipients: 
-                # Try to send enhanced detailed validation report
                 try:
                     if hasattr(notifier, 'send_detailed_validation_report'):
                         notifier.send_detailed_validation_report(
@@ -1560,26 +1246,17 @@ Error generating summary: {str(e)}
                             cumulative_start,
                             cumulative_end
                         )
-                        print(f"📧 Enhanced detailed validation report sent to AP team: {', '.join(ap_team_recipients)}")
-                        print(f"   📊 Including: Invoice Created By, Method of Payment, Account Head analysis")
+                        print(f"📧 Enhanced validation report sent to AP team: {', '.join(ap_team_recipients)}")
                     else:
                         # Fallback to basic validation report
                         statistics = email_summary.get('statistics', {})
                         issues_count = statistics.get('failed_invoices', 0) + statistics.get('warning_invoices', 0)
                         notifier.send_validation_report(today_str, ap_team_recipients, issues_count)
                         print(f"📧 Basic validation report sent to AP team: {', '.join(ap_team_recipients)}")
-                        print(f"⚠️ Note: Enhanced email method not available, sent basic report")
                         
                 except Exception as email_error:
                     print(f"⚠️ Enhanced email failed: {str(email_error)}")
-                    # Try basic validation report as fallback
-                    try:
-                        statistics = email_summary.get('statistics', {})
-                        total_issues = statistics.get('failed_invoices', 0) + statistics.get('warning_invoices', 0)
-                        notifier.send_validation_report(today_str, ap_team_recipients, total_issues)
-                        print(f"📧 Fallback validation report sent to AP team")
-                    except Exception as fallback_error:
-                        print(f"❌ All email methods failed: {str(fallback_error)}")
+                    print(f"📧 Email notification workflow had issues but continuing")
                     
             else:   
                 print("⚠️ No AP team email recipients configured in AP_TEAM_EMAIL_LIST")
@@ -1588,12 +1265,10 @@ Error generating summary: {str(e)}
             
         except Exception as e:
             print(f"⚠️ Email sending failed: {str(e)}")
-            import traceback
-            traceback.print_exc()
                     
-        print("✅ ENHANCED cumulative validation workflow completed successfully!")
+        print("✅ Enhanced cumulative validation workflow completed successfully!")
         print(f"")
-        print(f"📊 FINAL ENHANCED SUMMARY:")
+        print(f"📊 ENHANCED FINAL SUMMARY:")
         print(f"   📦 Current batch: {current_batch_start} to {current_batch_end}")
         print(f"   🔄 Cumulative range: {cumulative_start} to {cumulative_end}")
         print(f"   📅 Total days validated: {(datetime.strptime(cumulative_end, '%Y-%m-%d') - datetime.strptime(cumulative_start, '%Y-%m-%d')).days + 1}")
@@ -1604,24 +1279,22 @@ Error generating summary: {str(e)}
             print(f"   ✅ Passed: {stats.get('passed_invoices', 0)} ({stats.get('pass_rate', 0):.1f}%)")
             print(f"   ⚠️ Warnings: {stats.get('warning_invoices', 0)}")
             print(f"   ❌ Failed: {stats.get('failed_invoices', 0)}")
-            print(f"   👤 Total Creators: {stats.get('total_creators', 0)}")
-            print(f"   ❓ Unknown Creators: {stats.get('unknown_creators', 0)}")
-            print(f"   💳 Payment Methods: {stats.get('total_mop_types', 0)}")
-            print(f"   📊 Account Heads: {stats.get('total_account_heads', 0)}")
-            print(f"   🏥 Health Status: {stats.get('health_status', 'Unknown')}")
+            print(f"   👤 Total Creators: {stats.get('total_creators', 0)} ({stats.get('unknown_creators', 0)} unknown)")
+            print(f"   💳 Total MOP: {stats.get('total_mop', 0)} ({stats.get('unspecified_mop', 0)} unspecified)")
+            print(f"   📊 Total Account Heads: {stats.get('total_account_heads', 0)} ({stats.get('unassigned_accounts', 0)} unassigned)")
         
-        print(f"   🔍 ENHANCED FEATURES: Invoice Created By, Method of Payment, Account Head extraction")
         print(f"   ⏰ Next run in: {VALIDATION_INTERVAL_DAYS} days")
         print(f"   🗂️ Archive threshold: {ACTIVE_VALIDATION_MONTHS} months")
+        print(f"   🔧 Enhanced Features: RMS field mapping, creator detection, MOP analysis, account head tracking")
         
         return True
                 
     except Exception as e:
-        print(f"❌ Unexpected error in enhanced cumulative validation workflow: {str(e)}")
+        print(f"❌ Unexpected error in enhanced validation workflow: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
-            
+
 # Run the enhanced validation if called directly
 if __name__ == "__main__":
     success = run_invoice_validation()
@@ -1631,4 +1304,3 @@ if __name__ == "__main__":
     else:   
         print("🎉 Enhanced cumulative validation completed successfully!")
         exit(0)
-            
