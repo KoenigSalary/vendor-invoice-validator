@@ -17,7 +17,15 @@ import pandas as pd
 import os
 import shutil
 from pathlib import Path
-from enhanced_processor import enhance_validation_results
+# Conditional import for enhanced processor
+try:
+    from enhanced_processor import enhance_validation_results
+    ENHANCED_PROCESSOR_AVAILABLE = True
+except ImportError:
+    print("⚠️ Enhanced processor not available, using standard validation")
+    ENHANCED_PROCESSOR_AVAILABLE = False
+    def enhance_validation_results(df, email_summary):
+        return {'success': False, 'error': 'Enhanced processor not available'}
 
 # Load environment variables
 load_dotenv()
@@ -1115,13 +1123,13 @@ def run_invoice_validation():
 
         print("🚀 Step 16: Applying enhanced features...")
         try:
-    
-            # Enhance the existing results
-            enhancement_result = enhance_validation_results(detailed_df, email_summary)
-    
-            if enhancement_result['success']:
-                print("✅ Enhancement successful!")
-                enhanced_df = enhancement_result['enhanced_df']
+            if ENHANCED_PROCESSOR_AVAILABLE:
+                # Enhance the existing results
+                enhancement_result = enhance_validation_results(detailed_df, email_summary)
+        
+                if enhancement_result['success']:
+                    print("✅ Enhancement successful!")
+                    enhanced_df = enhancement_result['enhanced_df']
                 changes_detected = enhancement_result['changes_detected']
                 enhanced_email_content = enhancement_result['enhanced_email_content']
         
@@ -1202,9 +1210,11 @@ def run_invoice_validation():
         
         except ImportError:
             print("⚠️ Enhanced processor not available, using standard validation")
-        except Exception as e:
-            print(f"⚠️ Enhancement failed: {str(e)}")
+        else:
+            print(f"⚠️ Enhancement failed: {enhancement_result['error']}")
             print("📊 Continuing with original validation report")
+    else:
+        print("⚠️ Enhanced processor not available, using standard validation")
                 
         # Step 17: Send email notifications - AP TEAM ONLY
         try:
