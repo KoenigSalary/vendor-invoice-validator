@@ -1118,10 +1118,7 @@ def run_invoice_validation():
             print(f"❌ Failed to save detailed reports: {str(e)}")
             return False
 
-        enhancement_result = enhance_validation_results(detailed_df, email_summary)
-        if enhancement_result['success']: enhanced_df = enhancement_result['enhanced_df']
-
-        print("🚀 Step 16: Applying enhanced features...")
+                print("🚀 Step 16: Applying enhanced features...")
         try:
             if ENHANCED_PROCESSOR_AVAILABLE:
                 # Enhance the existing results
