@@ -33,9 +33,6 @@ ARCHIVE_FOLDER = "archived_data"  # Folder for data older than 3 months
 
 def should_run_today():
     """Check if validation should run today based on 4-day interval"""
-    # For GitHub Actions, we want to respect the cron schedule
-    # Remove the forced return True to enable proper 4-day logic
-    
     try:
         last_run = get_last_run_date()
         if not last_run:
