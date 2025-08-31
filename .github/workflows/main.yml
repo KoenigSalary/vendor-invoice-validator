@@ -41,94 +41,85 @@ jobs:
         echo "📂 Current directory contents:"
         ls -la
         echo "📊 Python packages installed:"
-        pip list | grep -E "(pandas|openpyxl|email|smtp)"
+        pip list | grep -E "(pandas|openpyxl|selenium|dotenv|requests)"
         
-    - name: 📊 Generate Excel Validation Report
-      run: |
-        echo "📊 Generating enhanced Excel validation report..."
-        python enhanced_processor.py
-        echo "📂 Files after Excel generation:"
-        ls -la invoice_validation_report_*.xlsx || echo "❌ No Excel files found"
+    - name: 🌐 Setup Chrome for Selenium
+      uses: browser-actions/setup-chrome@latest
+      with:
+        chrome-version: stable
         
-    - name: 📥 Download Real Invoice Data
+    - name: 📥 Download Real Invoice Data from RMS
       run: |
         echo "📥 Running RMS data download..."
-        python main.py
+        python -c "
+        try:
+            from main import run_invoice_validation
+            print('🚀 Starting invoice validation workflow...')
+            success = run_invoice_validation()
+            if success:
+                print('✅ Invoice validation completed successfully!')
+            else:
+                print('❌ Invoice validation failed!')
+                exit(1)
+        except Exception as e:
+            print(f'❌ Validation error: {e}')
+            import traceback
+            traceback.print_exc()
+            exit(1)
+        "
         echo "📁 Downloaded files:"
         ls -la data/$(date +%Y-%m-%d)/ || echo "No data folder found"
       env:
         RMS_USERNAME: ${{ secrets.RMS_USERNAME }}
         RMS_PASSWORD: ${{ secrets.RMS_PASSWORD }}
-   
-    - name: 📧 Send Professional Email with ZIP
-      run: |
-        echo "📧 Sending professional email notifications..."
-        python -c "
-        import os
-        import sys
-        from email_notifier import EnhancedEmailSystem
-        
-        try:
-            # Initialize email system
-            email_system = EnhancedEmailSystem()
-            print('✅ Email system initialized')
-            
-            # Run the complete email workflow (creates ZIP and sends email)
-            from email_notifier import main
-            result = main()
-            
-            if result:
-                print('✅ Email workflow completed successfully!')
-            else:
-                print('❌ Email workflow failed')
-                sys.exit(1)
-                
-        except Exception as e:
-            print(f'❌ Email error: {e}')
-            import traceback
-            traceback.print_exc()
-            sys.exit(1)
-        "
-      env:
         SMTP_SERVER: ${{ secrets.SMTP_SERVER || 'smtp.office365.com' }}
         SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
-        EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME || 'aditya.singh@koenig-solutions.com' }}
+        EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
         EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
         SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS || 'true' }}
-        EMAIL_FROM: ${{ secrets.EMAIL_FROM || 'aditya.singh@koenig-solutions.com' }}
+        EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
         SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME || 'Invoice Management System' }}
-        AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST || 'tax@koenig-solutions.com,aditya.singh@koenig-solutions.com,ap@koenig-solutions.com' }}
-        EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS || 'tax@koenig-solutions.com,aditya.singh@koenig-solutions.com,ap@koenig-solutions.com' }}
+        AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
+        EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS }}
         
     - name: 📂 Verify File Creation
       run: |
         echo "📂 Final file listing:"
         ls -la
         echo "📊 Excel reports:"
-        ls -la invoice_validation_report_*.xlsx || echo "❌ No Excel reports found"
+        find . -name "*.xlsx" -type f || echo "❌ No Excel reports found"
         echo "📁 ZIP files:"
-        ls -la invoice_validation_*.zip || echo "❌ No ZIP files found"
+        find . -name "*.zip" -type f || echo "❌ No ZIP files found"
+        echo "📋 Invoice files:"
+        ls -la invoice_files/ || echo "❌ No invoice files directory"
         
     - name: 📤 Upload Validation Reports
       uses: actions/upload-artifact@v4
       with:
-        name: excel-validation-reports
-        path: invoice_validation_report_*.xlsx
+        name: validation-reports-${{ github.run_number }}
+        path: |
+          **/*.xlsx
+          data/**/*
         retention-days: 30
         if-no-files-found: warn
         
-    - name: 📤 Upload Invoice ZIP Archives  
+    - name: 📤 Upload Invoice Archives  
       uses: actions/upload-artifact@v4
       with:
-        name: invoice-zip-archives
-        path: invoice_validation_*.zip
+        name: invoice-archives-${{ github.run_number }}
+        path: |
+          **/*.zip
+          invoice_files/**/*
         retention-days: 7
         if-no-files-found: warn
         
     - name: ✅ Workflow Summary
       run: |
         echo "🎉 Invoice Validation Workflow Completed!"
-        echo "📊 Excel reports generated and processed"
-        echo "📁 ZIP archives created with invoice files"
-        echo "📧 Professional email notifications sent to AP team"
+        echo "📊 Real RMS data processed"
+        echo "📁 Validation reports generated"
+        echo "📧 Email notifications sent to AP team"
         echo "🔄 Next automated run: In 4 days"
+        echo ""
+        echo "📋 Files created:"
+        find . -name "*.xlsx" -o -name "*.zip" | head -10
