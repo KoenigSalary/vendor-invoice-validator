@@ -405,6 +405,58 @@ class EmailNotifier:
             print(f"❌ Error in send_validation_report: {str(e)}")
             return False
 
+# Add this to your EmailNotifier class in email_notifier.py
+
+def test_email_connection(self):
+    """Test email connection and authentication"""
+    try:
+        print("🔍 Testing email connection...")
+        print(f"📧 SMTP Server: {self.email_system.smtp_server}")
+        print(f"📧 SMTP Port: {self.email_system.smtp_port}")
+        print(f"📧 Username: {self.email_system.username}")
+        print(f"📧 Recipients: {len(self.email_system.default_recipients)} configured")
+        
+        # Test SMTP connection
+        import smtplib
+        with smtplib.SMTP(self.email_system.smtp_server, self.email_system.smtp_port) as server:
+            server.starttls()
+            server.login(self.email_system.username, self.email_system.password)
+            print("✅ SMTP connection successful")
+            return True
+            
+    except Exception as e:
+        print(f"❌ Email connection failed: {e}")
+        return False
+        
+def send_test_email(self):
+    """Send a simple test email"""
+    try:
+        if not self.test_email_connection():
+            return False
+            
+        # Send simple test
+        test_subject = "🧪 Invoice System Test Email"
+        test_body = """
+        <html><body>
+        <h2>Test Email from Invoice Validation System</h2>
+        <p>If you receive this email, the system is working correctly.</p>
+        <p>Time: {}</p>
+        </body></html>
+        """.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        
+        success = self.email_system.send_email_with_attachments(
+            self.email_system.default_recipients,
+            test_subject,
+            test_body,
+            None  # No attachment
+        )
+        
+        return success
+        
+    except Exception as e:
+        print(f"❌ Test email failed: {e}")
+        return False
+
 def main():
     """Test the enhanced email system"""
     print("🧪 Testing email system...")
