@@ -321,10 +321,7 @@ import logging
             """
             
             # Insert enhanced summary into the HTML body
-            html_body = html_body.replace(
-                '',
-                f'\n{enhanced_summary}'
-            )
+            html_body = html_body + enhanced_summary
             
             # Create subject line with validation statistics
             pass_rate = (passed_invoices / total_invoices * 100) if total_invoices > 0 else 0
