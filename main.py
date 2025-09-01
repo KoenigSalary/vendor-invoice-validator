@@ -4,6 +4,7 @@ from updater import update_invoice_status
 from reporter import save_snapshot_report
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+from pathlib import Path
 from invoice_tracker import (
     create_tables,
     save_invoice_snapshot,
@@ -16,9 +17,7 @@ from invoice_tracker import (
 import pandas as pd
 import os
 import shutil
-from pathlib import Path
 
-# Conditional import for enhanced processor
 try:
     from enhanced_processor import enhance_validation_results
     ENHANCED_PROCESSOR_AVAILABLE = True
@@ -39,6 +38,178 @@ VALIDATION_INTERVAL_DAYS = 4
 VALIDATION_BATCH_DAYS = 4
 ACTIVE_VALIDATION_MONTHS = 3
 ARCHIVE_FOLDER = "archived_data"
+
+def map_method_of_payment(row):
+    """Map Method of Payment from available RMS fields"""
+    
+    # Priority 1: Extract from PaytyAmt patterns (payment amount indicates method)
+    if 'PaytyAmt' in row and pd.notna(row['PaytyAmt']):
+        party_amt = float(row.get('PaytyAmt', 0))
+        total_amt = float(row.get('Total', 0))
+        
+        if party_amt == 0:
+            return "Credit"
+        elif party_amt == total_amt:
+            return "Cash"
+        else:
+            return "Partial Payment"
+    
+    # Priority 2: Extract from Dr/Cr indicators
+    dr_cr_fields = ['Dr/Cr1', 'Dr/Cr2', 'Dr/Cr3']
+    for field in dr_cr_fields:
+        if field in row and pd.notna(row[field]):
+            dr_cr = str(row[field]).strip().upper()
+            if dr_cr == 'DR':
+                return "Cash/Bank Transfer"
+            elif dr_cr == 'CR':  
+                return "Credit"
+    
+    # Priority 3: Analyze Currency field
+    if 'Currency' in row and pd.notna(row['Currency']):
+        currency = str(row['Currency']).strip()
+        if currency != 'INR':
+            return f"Foreign Currency ({currency})"
+    
+    # Priority 4: Extract from Narration
+    if 'Narration' in row and pd.notna(row['Narration']):
+        narration = str(row['Narration']).lower()
+        payment_keywords = {
+            'cash': 'Cash',
+            'bank': 'Bank Transfer', 
+            'cheque': 'Cheque',
+            'credit': 'Credit',
+            'online': 'Online Transfer',
+            'neft': 'NEFT',
+            'rtgs': 'RTGS',
+            'upi': 'UPI'
+        }
+        
+        for keyword, method in payment_keywords.items():
+            if keyword in narration:
+                return method
+    
+    # Priority 5: Check TDS field (indicates cash vs credit)
+    if 'TDS' in row and pd.notna(row['TDS']):
+        tds = float(row.get('TDS', 0))
+        if tds > 0:
+            return "Cash (TDS Deducted)"
+    
+    return "Payment Method Not Specified"
+
+def map_account_head(row):
+    """Map Account Head from available RMS ledger fields"""
+    
+    # Priority 1: Use PurchaseLEDGER (main account head)
+    if 'PurchaseLEDGER' in row and pd.notna(row['PurchaseLEDGER']):
+        ledger = str(row['PurchaseLEDGER']).strip()
+        if ledger and ledger.lower() not in ['', 'nan', 'none']:
+            return ledger
+    
+    # Priority 2: Use OtherLedger fields
+    other_ledgers = ['OtherLedger1', 'OtherLedger2', 'OtherLedger3']
+    for ledger_field in other_ledgers:
+        if ledger_field in row and pd.notna(row[ledger_field]):
+            ledger = str(row[ledger_field]).strip()
+            if ledger and ledger.lower() not in ['', 'nan', 'none']:
+                return ledger
+    
+    # Priority 3: Use IGST/VAT ledger fields
+    tax_ledgers = ['IGST/VATInputLedger', 'CGSTInputLedger', 'SGSTInputLedger']
+    for tax_field in tax_ledgers:
+        if tax_field in row and pd.notna(row[tax_field]):
+            ledger = str(row[tax_field]).strip()
+            if ledger and ledger.lower() not in ['', 'nan', 'none']:
+                return f"Tax: {ledger}"
+    
+    # Priority 4: Derive from VoucherTypeName
+    if 'VoucherTypeName' in row and pd.notna(row['VoucherTypeName']):
+        voucher_type = str(row['VoucherTypeName']).strip()
+        
+        # Map voucher types to account heads
+        type_mapping = {
+            'purchase': 'Purchase Account',
+            'expense': 'Expense Account', 
+            'training': 'Training Expenses',
+            'travel': 'Travel Expenses',
+            'office': 'Office Expenses',
+            'maintenance': 'Maintenance Expenses',
+            'professional': 'Professional Fees'
+        }
+        
+        for keyword, account in type_mapping.items():
+            if keyword in voucher_type.lower():
+                return account
+    
+    # Priority 5: Derive from PartyName (vendor category)
+    if 'PartyName' in row and pd.notna(row['PartyName']):
+        party = str(row['PartyName']).lower()
+        
+        vendor_mapping = {
+            'training': 'Training Expenses',
+            'hotel': 'Travel & Accommodation',
+            'transport': 'Travel Expenses', 
+            'office': 'Office Expenses',
+            'computer': 'IT Expenses',
+            'software': 'Software Expenses',
+            'consultant': 'Consultancy Fees'
+        }
+        
+        for keyword, account in vendor_mapping.items():
+            if keyword in party:
+                return account
+    
+    return "General Expenses"
+
+def map_invoice_entry_date(row):
+    """Map Invoice Entry Date from available RMS fields"""
+    
+    # Priority 1: Use Voucherdate (this is the entry date in RMS)
+    if 'Voucherdate' in row and pd.notna(row['Voucherdate']):
+        try:
+            return pd.to_datetime(row['Voucherdate']).strftime('%Y-%m-%d')
+        except:
+            pass
+    
+    # Priority 2: Use PurchaseInvDate as fallback
+    if 'PurchaseInvDate' in row and pd.notna(row['PurchaseInvDate']):
+        try:
+            return pd.to_datetime(row['PurchaseInvDate']).strftime('%Y-%m-%d')
+        except:
+            pass
+    
+    # Priority 3: Use OrderDate as fallback
+    if 'OrderDate' in row and pd.notna(row['OrderDate']):
+        try:
+            return pd.to_datetime(row['OrderDate']).strftime('%Y-%m-%d')
+        except:
+            pass
+    
+    return "Entry Date Not Available"
+
+def map_invoice_creator_name(row):
+    """Map Invoice Creator Name from available RMS fields"""
+    
+    # Priority 1: Extract from Narration field (often contains user info)
+    if 'Narration' in row and pd.notna(row['Narration']):
+        narration = str(row['Narration']).strip()
+        
+        # Look for user patterns in narration
+        user_patterns = [
+            r'Created by[:\s]+([A-Za-z\s]+)',
+            r'User[:\s]+([A-Za-z\s]+)',
+            r'By[:\s]+([A-Za-z\s]+)',
+            r'Entered by[:\s]+([A-Za-z\s]+)',
+        ]
+        
+        for pattern in user_patterns:
+            import re
+            match = re.search(pattern, narration, re.IGNORECASE)
+            if match:
+                creator = match.group(1).strip()
+                if len(creator) > 2 and creator.lower() not in ['n/a', 'none', 'null']:
+                    return creator
+    
+    return "Creator Info Not Available"
 
 def should_run_today():
     """Check if validation should run today based on 4-day interval"""
@@ -552,16 +723,17 @@ def validate_invoices_with_details(df):
             except:
                 pass
             
+            # Compile results for this invoice
             detailed_results.append({
                 'Invoice_ID': invoice_id,
                 'Invoice_Number': invoice_number,
                 'Invoice_Date': invoice_date,
-                'Invoice_Entry_Date': entry_date,
+                'Invoice_Entry_Date': invoice_entry_date,
                 'Vendor_Name': vendor,
                 'Amount': amount,
                 'Invoice_Creator_Name': creator_name,
-                'Method_of_Payment': method_of_payment,
-                'Account_Head': account_head,
+                'Method_of_Payment': method_of_payment,  # NEW FIELD
+                'Account_Head': account_head,  # NEW FIELD
                 'Validation_Status': severity,
                 'Issues_Found': len(validation_issues),
                 'Issue_Details': " | ".join(validation_issues) if validation_issues else "No issues found",
