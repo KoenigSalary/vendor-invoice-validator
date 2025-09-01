@@ -57,11 +57,12 @@ jobs:
         RMS_PASSWORD: ${{ secrets.RMS_PASSWORD }}
         SMTP_SERVER: ${{ secrets.SMTP_SERVER || 'smtp.office365.com' }}
         SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
-        EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
-        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS || 'true' }}
+        SMTP_USER: ${{ secrets.SMTP_USER }}
+        SMTP_PASS: ${{ secrets.SMTP_PASS }}
+        SMTP_USE_TLS: true
+        SMTP_PORT: 587
         EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
-        SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME || 'Invoice Management System' }}
+        SMTP_FROM_NAME: Invoice Management System
         AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
         EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS }}
         
