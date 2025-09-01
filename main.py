@@ -890,8 +890,9 @@ def run_invoice_validation():
                 run_type="enhanced_cumulative_4day",
                 cumulative_start=cumulative_start,
                 cumulative_end=cumulative_end,
-                total_days_validated=(datetime.strptime(cumulative_end, "%Y-%m-%d") - datetime.strptime(cumulative_start, "%Y-%m-%d')).days + 1
+                total_days_validated=(datetime.strptime(cumulative_end, "%Y-%m-%d") - datetime.strptime(cumulative_start, "%Y-%m-%d")).days + 1
             )
+            
             print("✅ Enhanced cumulative run recorded")
         except Exception as e:
             print(f"⚠️ Failed to record run: {e}")
