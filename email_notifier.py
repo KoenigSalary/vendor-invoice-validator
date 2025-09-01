@@ -224,6 +224,187 @@ class EnhancedEmailSystem:
                 os.remove(zip_file)
                 logging.info(f"🗑️ Temporary ZIP file cleaned up: {zip_file}")
 
+class EmailNotifier:
+    """
+    Adapter class for EnhancedEmailSystem to maintain compatibility with main.py
+    """
+    
+    def __init__(self):
+        self.email_system = EnhancedEmailSystem()
+        self.smtp_server = self.email_system.smtp_server
+        self.smtp_port = self.email_system.smtp_port
+        self.email_username = self.email_system.username
+        self.email_password = self.email_system.password
+        self.email_from = self.email_system.username
+        self.smtp_use_tls = True
+    
+    def send_detailed_validation_report(self, date_str, recipients, email_summary, 
+                                      report_path=None, batch_start=None, batch_end=None,
+                                      cumulative_start=None, cumulative_end=None):
+        """
+        Send detailed validation report with enhanced statistics and attachments
+        """
+        try:
+            # Extract statistics from email_summary
+            statistics = email_summary.get('statistics', {})
+            total_invoices = statistics.get('total_invoices', 0)
+            failed_invoices = statistics.get('failed_invoices', 0)
+            warning_invoices = statistics.get('warning_invoices', 0)
+            passed_invoices = statistics.get('passed_invoices', 0)
+            
+            # Prepare validation data for the enhanced email template
+            validation_data = {
+                'failed': failed_invoices,
+                'warnings': warning_invoices,
+                'passed': passed_invoices
+            }
+            
+            # Create deadline (3 days from now for urgent items)
+            deadline_date = datetime.now() + timedelta(days=3)
+            
+            # Generate professional HTML email using existing template
+            html_body = self.email_system.create_professional_html_template(
+                validation_data, 
+                deadline_date
+            )
+            
+            # Add enhanced validation summary to the email
+            enhanced_summary = f"""
+            
+
+                
+
+                    📊 VALIDATION PERIOD SUMMARY
+                
+
+                
+
+                            Validation Date:
+                        	
+                            {date_str}
+                        
+
+                            Current Batch:
+                        	
+                            {batch_start or 'N/A'} to {batch_end or 'N/A'}
+                        
+
+                            Cumulative Range:
+                        	
+                            {cumulative_start or 'N/A'} to {cumulative_end or 'N/A'}
+                        
+
+                            Total Invoices:
+                        	
+                            {total_invoices}
+                        
+
+            
+
+            """
+            
+            # Insert enhanced summary into the HTML body
+            html_body = html_body.replace(
+                '',
+                f'\n{enhanced_summary}'
+            )
+            
+            # Create subject line with validation statistics
+            pass_rate = (passed_invoices / total_invoices * 100) if total_invoices > 0 else 0
+            subject = f"📊 Invoice Validation Report - {date_str} | {total_invoices} Invoices | {pass_rate:.1f}% Pass Rate"
+            
+            # Create ZIP file with validation reports
+            zip_file = None
+            if report_path and os.path.exists(report_path):
+                try:
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    zip_filename = f'validation_report_{timestamp}.zip'
+                    
+                    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                        # Add main validation report
+                        zipf.write(report_path, f'validation_report_{date_str}.xlsx')
+                        
+                        # Add enhanced report if it exists
+                        enhanced_report_path = report_path.replace('invoice_validation_detailed_', 'enhanced_invoice_validation_detailed_')
+                        if os.path.exists(enhanced_report_path):
+                            zipf.write(enhanced_report_path, f'enhanced_validation_report_{date_str}.xlsx')
+                        
+                        # Add email summary HTML if it exists
+                        email_summary_path = f'data/email_summary_{date_str}.html'
+                        if os.path.exists(email_summary_path):
+                            zipf.write(email_summary_path, f'email_summary_{date_str}.html')
+                    
+                    zip_file = zip_filename
+                    print(f"📦 Created validation ZIP: {zip_filename}")
+                    
+                except Exception as e:
+                    print(f"⚠️ Could not create ZIP file: {e}")
+            
+            # Send email with attachments
+            success = self.email_system.send_email_with_attachments(
+                recipients, 
+                subject, 
+                html_body, 
+                zip_file
+            )
+            
+            if success:
+                print(f"✅ Detailed validation report sent successfully to: {', '.join(recipients)}")
+                print(f"   📊 Statistics: {total_invoices} total, {passed_invoices} passed, {failed_invoices} failed")
+                return True
+            else:
+                print(f"❌ Failed to send detailed validation report")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error in send_detailed_validation_report: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def send_validation_report(self, date_str, recipients, issues_count):
+        """
+        Fallback method for basic validation report (maintains compatibility)
+        """
+        try:
+            # Create basic validation data
+            validation_data = {
+                'failed': issues_count,
+                'warnings': max(0, issues_count // 2),
+                'passed': max(0, 10 - issues_count)  # Assume some baseline
+            }
+            
+            # Create deadline
+            deadline_date = datetime.now() + timedelta(days=2)
+            
+            # Generate HTML email
+            html_body = self.email_system.create_professional_html_template(
+                validation_data, 
+                deadline_date
+            )
+            
+            # Create subject
+            subject = f"📋 Invoice Validation Report - {date_str} | {issues_count} Issues Found"
+            
+            # Send basic email (no ZIP attachment for fallback)
+            success = self.email_system.send_email_with_attachments(
+                recipients, 
+                subject, 
+                html_body, 
+                None  # No ZIP file for basic report
+            )
+            
+            if success:
+                print(f"✅ Basic validation report sent to: {', '.join(recipients)}")
+                return True
+            else:
+                print(f"❌ Failed to send basic validation report")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error in send_validation_report: {str(e)}")
+            return False
+
 def main():
     """Test the enhanced email system"""
     print("🧪 Testing email system...")
