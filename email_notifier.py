@@ -9,24 +9,29 @@ import zipfile
 import glob
 import logging
 
-class EnhancedEmailSystem:
-    def __init__(self):
-        self.smtp_host = os.getenv("SMTP_HOST", "smtp.office365.com")
-        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
-        self.smtp_user = os.getenv("SMTP_USER") or os.getenv("EMAIL_USERNAME")
-        self.smtp_pass = os.getenv("SMTP_PASS") or os.getenv("EMAIL_PASSWORD")
-        self.smtp_use_tls = str(os.getenv("SMTP_USE_TLS", "true")).lower() in ("1", "true", "yes")
-        self.from_name = os.getenv("SMTP_FROM_NAME", "Invoice Management System")
-        self.from_addr = self.smtp_user  # O365 requires From == authenticated user
-
-        # ---- Legacy aliases to satisfy EmailNotifier ----
-        self.smtp_server = self.smtp_host
-        self.username = self.smtp_user
-        self.password = self.smtp_pass
-        self.use_tls = self.smtp_use_tls
-        self.from_email = self.from_addr
-
-        FROM_ADDR = SMTP_USER
+ class EnhancedEmailSystem:
+     def __init__(self):
+-        self.smtp_host = os.getenv("SMTP_HOST", "smtp.office365.com")
++        # Accept either SMTP_HOST or SMTP_SERVER (workflow uses SMTP_SERVER)
++        self.smtp_host = os.getenv("SMTP_HOST") or os.getenv("SMTP_SERVER") or "smtp.office365.com"
+         self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
+-        self.smtp_user = os.getenv("SMTP_USER") or os.getenv("EMAIL_USERNAME")
+-        self.smtp_pass = os.getenv("SMTP_PASS") or os.getenv("EMAIL_PASSWORD")
++        self.smtp_user = os.getenv("SMTP_USER") or os.getenv("EMAIL_USERNAME")
++        # Accept both SMTP_PASS and SMTP_PASSWORD
++        self.smtp_pass = os.getenv("SMTP_PASS") or os.getenv("SMTP_PASSWORD") or os.getenv("EMAIL_PASSWORD")
+         self.smtp_use_tls = str(os.getenv("SMTP_USE_TLS", "true")).lower() in ("1", "true", "yes")
+         self.from_name = os.getenv("SMTP_FROM_NAME", "Invoice Management System")
+         self.from_addr = self.smtp_user  # O365 requires From == authenticated user
+ 
+         # ---- Legacy aliases to satisfy EmailNotifier ----
+         self.smtp_server = self.smtp_host
+         self.username = self.smtp_user
+         self.password = self.smtp_pass
+         self.use_tls = self.smtp_use_tls
+         self.from_email = self.from_addr
+-
+-        FROM_ADDR = SMTP_USER   # ❌ This references an undefined name; remove it
         
         # Recipients Configuration
         recipients_str = (
@@ -233,19 +238,22 @@ class EnhancedEmailSystem:
                 os.remove(zip_file)
                 logging.info(f"🗑️ Temporary ZIP file cleaned up: {zip_file}")
 
-class EmailNotifier:
-    """
-    Adapter class for EnhancedEmailSystem to maintain compatibility with main.py
-    """
-    
-    def __init__(self):
-        self.smtp_server = getattr(self.email_system, "smtp_server", None) or getattr(self.email_system, "smtp_host", "smtp.office365.com")
-        self.smtp_port   = getattr(self.email_system, "smtp_port", 587)
-        self.username    = getattr(self.email_system, "username", None) or getattr(self.email_system, "smtp_user", None)
-        self.password    = getattr(self.email_system, "password", None) or getattr(self.email_system, "smtp_pass", None)
-        self.use_tls     = getattr(self.email_system, "use_tls", None) or getattr(self.email_system, "smtp_use_tls", True)
-        self.from_email  = getattr(self.email_system, "from_email", None) or getattr(self.email_system, "from_addr", self.username)
-        self.from_name   = getattr(self.email_system, "from_name", "Invoice Management System")
+ class EmailNotifier:
+     """
+     Adapter class for EnhancedEmailSystem to maintain compatibility with main.py
+     """
+     
+     def __init__(self):
++        # Create the underlying email system FIRST
++        self.email_system = EnhancedEmailSystem()
+-        self.smtp_server = getattr(self.email_system, "smtp_server", None) or getattr(self.email_system, "smtp_host", "smtp.office365.com")
++        self.smtp_server = getattr(self.email_system, "smtp_server", None) or getattr(self.email_system, "smtp_host", "smtp.office365.com")
+         self.smtp_port   = getattr(self.email_system, "smtp_port", 587)
+         self.username    = getattr(self.email_system, "username", None) or getattr(self.email_system, "smtp_user", None)
+         self.password    = getattr(self.email_system, "password", None) or getattr(self.email_system, "smtp_pass", None)
+         self.use_tls     = getattr(self.email_system, "use_tls", None) or getattr(self.email_system, "smtp_use_tls", True)
+         self.from_email  = getattr(self.email_system, "from_email", None) or getattr(self.email_system, "from_addr", self.username)
+         self.from_name   = getattr(self.email_system, "from_name", "Invoice Management System")
     
     def send_detailed_validation_report(self, date_str, recipients, email_summary, 
                                       report_path=None, batch_start=None, batch_end=None,
