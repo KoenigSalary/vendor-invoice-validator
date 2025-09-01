@@ -14,10 +14,14 @@ class EnhancedEmailSystem:
 
     def __init__(self, smtp_server=None, smtp_port=None, username=None, password=None):
         # SMTP Configuration
-        self.smtp_server = smtp_server or os.getenv('SMTP_SERVER', 'smtp.office365.com')
-        self.smtp_port = int(smtp_port or os.getenv('SMTP_PORT', '587'))
-        self.username = username or os.getenv('EMAIL_USERNAME')
-        self.password = password or os.getenv('EMAIL_PASSWORD')
+        SMTP_USER = os.getenv("SMTP_USER")
+        SMTP_PASS = os.getenv("SMTP_PASS")
+        SMTP_HOST = os.getenv("SMTP_HOST", "smtp.office365.com")
+        SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+        SMTP_USE_TLS = str(os.getenv("SMTP_USE_TLS", "true")).lower() in ("1", "true", "yes")
+        SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Invoice Management System")
+
+        FROM_ADDR = SMTP_USER
         
         # Recipients Configuration
         recipients_str = (
