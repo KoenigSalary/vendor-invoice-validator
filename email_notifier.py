@@ -9,29 +9,29 @@ import zipfile
 import glob
 import logging
 
- class EnhancedEmailSystem:
-     def __init__(self):
--        self.smtp_host = os.getenv("SMTP_HOST", "smtp.office365.com")
-+        # Accept either SMTP_HOST or SMTP_SERVER (workflow uses SMTP_SERVER)
-+        self.smtp_host = os.getenv("SMTP_HOST") or os.getenv("SMTP_SERVER") or "smtp.office365.com"
-         self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
--        self.smtp_user = os.getenv("SMTP_USER") or os.getenv("EMAIL_USERNAME")
--        self.smtp_pass = os.getenv("SMTP_PASS") or os.getenv("EMAIL_PASSWORD")
-+        self.smtp_user = os.getenv("SMTP_USER") or os.getenv("EMAIL_USERNAME")
-+        # Accept both SMTP_PASS and SMTP_PASSWORD
-+        self.smtp_pass = os.getenv("SMTP_PASS") or os.getenv("SMTP_PASSWORD") or os.getenv("EMAIL_PASSWORD")
-         self.smtp_use_tls = str(os.getenv("SMTP_USE_TLS", "true")).lower() in ("1", "true", "yes")
-         self.from_name = os.getenv("SMTP_FROM_NAME", "Invoice Management System")
-         self.from_addr = self.smtp_user  # O365 requires From == authenticated user
+class EnhancedEmailSystem:
+    def __init__(self):
+-       self.smtp_host = os.getenv("SMTP_HOST", "smtp.office365.com")
++       # Accept either SMTP_HOST or SMTP_SERVER (workflow uses SMTP_SERVER)
++       self.smtp_host = os.getenv("SMTP_HOST") or os.getenv("SMTP_SERVER") or "smtp.office365.com"
+        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
+-       self.smtp_user = os.getenv("SMTP_USER") or os.getenv("EMAIL_USERNAME")
+-       self.smtp_pass = os.getenv("SMTP_PASS") or os.getenv("EMAIL_PASSWORD")
++       self.smtp_user = os.getenv("SMTP_USER") or os.getenv("EMAIL_USERNAME")
++       # Accept both SMTP_PASS and SMTP_PASSWORD
++       self.smtp_pass = os.getenv("SMTP_PASS") or os.getenv("SMTP_PASSWORD") or os.getenv("EMAIL_PASSWORD")
+        self.smtp_use_tls = str(os.getenv("SMTP_USE_TLS", "true")).lower() in ("1", "true", "yes"
+        self.from_name = os.getenv("SMTP_FROM_NAME", "Invoice Management System")
+        self.from_addr = self.smtp_user  # O365 requires From == authenticated user
  
-         # ---- Legacy aliases to satisfy EmailNotifier ----
-         self.smtp_server = self.smtp_host
-         self.username = self.smtp_user
-         self.password = self.smtp_pass
-         self.use_tls = self.smtp_use_tls
-         self.from_email = self.from_addr
+        # ---- Legacy aliases to satisfy EmailNotifier ----
+        self.smtp_server = self.smtp_host
+        self.username = self.smtp_user
+        self.password = self.smtp_pass
+        self.use_tls = self.smtp_use_tls
+        self.from_email = self.from_addr
 -
--        FROM_ADDR = SMTP_USER   # ❌ This references an undefined name; remove it
+-       FROM_ADDR = SMTP_USER   # ❌ This references an undefined name; remove it
         
         # Recipients Configuration
         recipients_str = (
