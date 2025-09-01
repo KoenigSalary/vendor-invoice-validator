@@ -6,7 +6,7 @@ from validator_utils import validate_invoices
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from pathlib import Path
-from email_notifiew import EmailNotifier
+from email_notifier import EmailNotifier
 from invoice_tracker import (
     create_tables,
     save_invoice_snapshot,
