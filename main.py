@@ -1026,68 +1026,92 @@ def run_invoice_validation():
                 from email_notifier import EmailNotifier
                 notifier = EmailNotifier()
 
-                ap_team_recipients = [e.strip() for e in os.getenv('AP_TEAM_EMAIL_LIST', '').split(',') if e.strip()]
+                # --- Decide whether invoices.zip is valid and attachable ---
+                invoice_zip_path = None
+                try:
+                    # validation_results should come from your Step 5 "Verifying files" section
+                    # and download_dir is the folder used there (e.g., f"data/{today_str}")
+                    if (
+                        isinstance(validation_results, dict)
+                        and validation_results.get("invoices.zip") == "ok"
+                    ):
+                        candidate = os.path.join(download_dir, "invoices.zip")
+                        if os.path.exists(candidate) and os.path.getsize(candidate) > 0:
+                            invoice_zip_path = candidate
+                            print(f"📎 Will attach invoice copies: {invoice_zip_path}")
+                        else:
+                            print("⚠️ invoices.zip path missing or empty; not attaching.")
+                    else:
+                        print("ℹ️ invoices.zip not marked OK; not attaching.")
+                except Exception as _zip_err:
+                    print(f"⚠️ Could not evaluate invoices.zip for attachment: {_zip_err}")
+
+                ap_team_recipients = [
+                    e.strip()
+                    for e in os.getenv('AP_TEAM_EMAIL_LIST', '').split(',')
+                    if e.strip()
+                ]
+
                 if ap_team_recipients:
                     ok = False
                     try:
                         if hasattr(notifier, 'send_detailed_validation_report'):
-                            ok = notifier.send_detailed_validation_report(
-                                today_str,
-                                ap_team_recipients,
-                                email_summary,
-                                detailed_report_path if not detailed_df.empty else None,
-                                current_batch_start,
-                                current_batch_end,
-                                cumulative_start,
-                                cumulative_end
+                            # Build kwargs to support newer notifier with extra_attachments
+                            kwargs = dict(
+                                date_str=today_str,
+                                recipients=ap_team_recipients,
+                                email_summary=email_summary,
+                                report_path=(detailed_report_path if not detailed_df.empty else None),
+                                batch_start=current_batch_start,
+                                batch_end=current_batch_end,
+                                cumulative_start=cumulative_start,
+                                cumulative_end=cumulative_end,
                             )
-                            print(f"📧 Detailed validation report sent to AP team: {', '.join(ap_team_recipients)}") if ok else print("❌ Failed to send detailed validation report")
-                        else:
-                            stats = email_summary.get('statistics', {})
-                            total_issues = stats.get('failed_invoices', 0) + stats.get('warning_invoices', 0)
-                            ok = notifier.send_validation_report(today_str, ap_team_recipients, total_issues)
-                            print(f"📧 Basic validation report sent to AP team: {', '.join(ap_team_recipients)}") if ok else print("❌ Failed to send basic validation report")
-                    except Exception as email_error:
-                        print(f"⚠️ Enhanced email failed: {email_error}")
-                        try:
-                            stats = email_summary.get('statistics', {})
-                            total_issues = stats.get('failed_invoices', 0) + stats.get('warning_invoices', 0)
-                            ok = notifier.send_validation_report(today_str, ap_team_recipients, total_issues)
-                            print("📧 Fallback validation report sent to AP team") if ok else print("❌ Fallback email also failed")
-                        except Exception as fallback_error:
-                            print(f"❌ All email methods failed: {fallback_error}")
+                            if invoice_zip_path:
+                                kwargs["extra_attachments"] = [invoice_zip_path]
+
+                            try:
+                        ok = notifier.send_detailed_validation_report(**kwargs)
+                    except TypeError:
+                        # Notifier doesn't support extra_attachments; retry without it
+                        ok = notifier.send_detailed_validation_report(
+                            today_str,
+                            ap_team_recipients,
+                            email_summary,
+                            (detailed_report_path if not detailed_df.empty else None),
+                            current_batch_start,
+                            current_batch_end,
+                            cumulative_start,
+                            cumulative_end
+                        )
+
+                    if ok:
+                        msg_tail = " (with invoice copies)" if invoice_zip_path else ""
+                        print(f"📧 Detailed validation report sent to AP team{msg_tail}: {', '.join(ap_team_recipients)}")
+                    else:
+                        print("❌ Failed to send detailed validation report")
                 else:
-                    print("⚠️ No AP team email recipients configured in AP_TEAM_EMAIL_LIST")
-                print("📧 Email notification workflow completed!")
-            except Exception as e:
-                print(f"⚠️ Email sending failed: {e}")
-                import traceback; traceback.print_exc()
+                    stats = email_summary.get('statistics', {})
+                    total_issues = stats.get('failed_invoices', 0) + stats.get('warning_invoices', 0)
+                    ok = notifier.send_validation_report(today_str, ap_team_recipients, total_issues)
+                    print(f"📧 Basic validation report sent to AP team: {', '.join(ap_team_recipients)}") if ok else print("❌ Failed to send basic validation report")
+            except Exception as email_error:
+                print(f"⚠️ Enhanced email failed: {email_error}")
+                try:
+                    stats = email_summary.get('statistics', {})
+                    total_issues = stats.get('failed_invoices', 0) + stats.get('warning_invoices', 0)
+                    ok = notifier.send_validation_report(today_str, ap_team_recipients, total_issues)
+                    print("📧 Fallback validation report sent to AP team") if ok else print("❌ Fallback email also failed")
+                except Exception as fallback_error:
+                    print(f"❌ All email methods failed: {fallback_error}")
         else:
-            print("📧 Email is disabled by configuration; skipping notifications.")
-
-        # Final summary
-        print("✅ Enhanced cumulative validation workflow completed successfully!\n")
-        print("📊 FINAL SUMMARY:")
-        print(f"   📦 Current batch: {current_batch_start} to {current_batch_end}")
-        print(f"   🔄 Cumulative range: {cumulative_start} to {cumulative_end}")
-        print(f"   📅 Total days validated: {(datetime.strptime(cumulative_end, '%Y-%m-%d') - datetime.strptime(cumulative_start, '%Y-%m-%d')).days + 1}")
-        print(f"   📋 Total invoices processed: {len(detailed_df) if not detailed_df.empty else 0}")
-        if not detailed_df.empty:
-            stats = email_summary.get('statistics', {})
-            print(f"   ✅ Passed: {stats.get('passed_invoices', 0)} ({stats.get('pass_rate', 0):.1f}%)")
-            print(f"   ⚠️ Warnings: {stats.get('warning_invoices', 0)}")
-            print(f"   ❌ Failed: {stats.get('failed_invoices', 0)}")
-            print(f"   👤 Total Creators: {stats.get('total_creators', 0)}")
-            print(f"   ❓ Unknown Creators: {stats.get('unknown_creators', 0)}")
-        print(f"   ⏰ Next run in: {VALIDATION_INTERVAL_DAYS} days")
-        print(f"   🗂️ Archive threshold: {ACTIVE_VALIDATION_MONTHS} months")
-
-        return True
-
+            print("⚠️ No AP team email recipients configured in AP_TEAM_EMAIL_LIST")
+        print("📧 Email notification workflow completed!")
     except Exception as e:
-        print(f"❌ Unexpected error in enhanced validation workflow: {e}")
+        print(f"⚠️ Email sending failed: {e}")
         import traceback; traceback.print_exc()
-        return False
+else:
+    print("📧 Email is disabled by configuration; skipping notifications.")
 
 # ---------- Quick self-test (optional) ----------
 def test_validation_functions():
