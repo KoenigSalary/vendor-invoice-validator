@@ -310,6 +310,11 @@ def validate_downloaded_files(download_dir):
             results[fname] = "missing"
     return results
 
+invoice_zip_ok = validation_results.get("invoices.zip") == "ok"
+invoice_zip_path = (
+    os.path.join(download_dir, "invoices.zip") if invoice_zip_ok else None
+)
+
 # ---------- Column detection ----------
 def find_creator_column(df):
     """Find creator column name (case-insensitive fallback)."""
