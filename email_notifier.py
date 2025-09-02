@@ -192,42 +192,44 @@ class EnhancedEmailSystem:
             logging.error(f"❌ Error creating ZIP: {e}")
             return None
 
-    def send_email_with_attachments(self, recipients, subject, html_body, zip_file):
-        """Send professional HTML email with ZIP attachment"""
-        try:
-            msg = MIMEMultipart()
-            msg["From"] = f"{self.from_name} <{self.from_email}>"
-            msg["To"] = ", ".join(recipients)
-            msg["Subject"] = subject
+    def send_email_with_attachments(self, recipients, subject, html_body, attachments=None):
+    """
+    attachments: str path OR list of paths OR None
+    Backwards compatible: if a single string is passed, we attach just that.
+    """
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = f"{self.from_name} <{self.from_email}>"
+        msg["To"] = ", ".join(recipients)
+        msg["Subject"] = subject
+        msg.attach(MIMEText(html_body, "html"))
 
-            # Attach HTML body
-            msg.attach(MIMEText(html_body, "html"))
+        paths = []
+        if isinstance(attachments, str):
+            paths = [attachments]
+        elif isinstance(attachments, (list, tuple)):
+            paths = list(attachments)
 
-            # Attach ZIP file
-            if zip_file and os.path.exists(zip_file):
-                with open(zip_file, "rb") as attachment:
+        for p in paths:
+            if p and os.path.exists(p) and os.path.getsize(p) > 0:
+                with open(p, "rb") as f:
                     part = MIMEBase("application", "octet-stream")
-                    part.set_payload(attachment.read())
-                    encoders.encode_base64(part)
-                    part.add_header(
-                        "Content-Disposition",
-                        f'attachment; filename="{os.path.basename(zip_file)}"',
-                    )
-                    msg.attach(part)
+                    part.set_payload(f.read())
+                encoders.encode_base64(part)
+                part.add_header("Content-Disposition", f'attachment; filename="{os.path.basename(p)}"')
+                msg.attach(part)
 
-            # Send email via SMTP
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                if self.use_tls:
-                    server.starttls()
-                server.login(self.username, self.password)
-                server.send_message(msg)
+        with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+            if self.use_tls:
+                server.starttls()
+            server.login(self.username, self.password)
+            server.send_message(msg)
 
-            logging.info(f"✅ Email sent successfully to: {', '.join(recipients)}")
-            return True
-
-        except Exception as e:
-            logging.error(f"❌ Error sending email: {e}")
-            return False
+        logging.info(f"✅ Email sent successfully to: {', '.join(recipients)}")
+        return True
+    except Exception as e:
+        logging.error(f"❌ Error sending email: {e}")
+        return False
 
         finally:
             # Cleanup temporary ZIP file
@@ -264,16 +266,10 @@ class EmailNotifier:
         )
         self.from_name = getattr(self.email_system, "from_name", "Invoice Management System")
 
-    def send_detailed_validation_report(
-        self,
-        date_str,
-        recipients,
-        email_summary,
-        report_path=None,
-        batch_start=None,
-        batch_end=None,
-        cumulative_start=None,
-        cumulative_end=None,
+    def send_detailed_validation_report(self, date_str, recipients, email_summary,
+                                    report_path=None, batch_start=None, batch_end=None,
+                                    cumulative_start=None, cumulative_end=None,
+                                    extra_attachments=None):
     ):
         """
         Send detailed validation report with enhanced statistics and attachments
@@ -325,51 +321,41 @@ class EmailNotifier:
             """
             html_body = html_body + enhanced_summary
 
-            # Create subject line with validation statistics
-            pass_rate = (passed_invoices / total_invoices * 100) if total_invoices > 0 else 0
-            subject = f"📊 Invoice Validation Report - {date_str} | {total_invoices} Invoices | {pass_rate:.1f}% Pass Rate"
+            built_zip = None
+    if report_path and os.path.exists(report_path):
+        try:
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            zip_filename = f"validation_report_{ts}.zip"
+            with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
+                zipf.write(report_path, f"validation_report_{date_str}.xlsx")
+                enhanced_report_path = report_path.replace(
+                    "invoice_validation_detailed_", "enhanced_invoice_validation_detailed_"
+                )
+                if os.path.exists(enhanced_report_path):
+                    zipf.write(enhanced_report_path, f"enhanced_validation_report_{date_str}.xlsx")
+                email_summary_path = f"data/email_summary_{date_str}.html"
+                if os.path.exists(email_summary_path):
+                    zipf.write(email_summary_path, f"email_summary_{date_str}.html")
+            built_zip = zip_filename
+            print(f"📦 Created validation ZIP: {zip_filename}")
+        except Exception as e:
+            print(f"⚠️ Could not create ZIP file: {e}")
 
-            # Create ZIP file with validation reports
-            zip_file = None
-            if report_path and os.path.exists(report_path):
-                try:
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    zip_filename = f"validation_report_{timestamp}.zip"
+    # Combine attachments: built zip + any extra_attachments (e.g., invoices.zip)
+    attach_list = []
+    if built_zip: attach_list.append(built_zip)
+    if extra_attachments:
+        for p in extra_attachments:
+            if p and os.path.exists(p) and os.path.getsize(p) > 0:
+                attach_list.append(p)
 
-                    with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                        # Add main validation report
-                        zipf.write(report_path, f"validation_report_{date_str}.xlsx")
-
-                        # Add enhanced report if it exists
-                        enhanced_report_path = report_path.replace(
-                            "invoice_validation_detailed_", "enhanced_invoice_validation_detailed_"
-                        )
-                        if os.path.exists(enhanced_report_path):
-                            zipf.write(enhanced_report_path, f"enhanced_validation_report_{date_str}.xlsx")
-
-                        # Add email summary HTML if it exists
-                        email_summary_path = f"data/email_summary_{date_str}.html"
-                        if os.path.exists(email_summary_path):
-                            zipf.write(email_summary_path, f"email_summary_{date_str}.html")
-
-                    zip_file = zip_filename
-                    print(f"📦 Created validation ZIP: {zip_filename}")
-
-                except Exception as e:
-                    print(f"⚠️ Could not create ZIP file: {e}")
-
-            # Resolve recipients
-            if not recipients:
-                recipients = self.email_system.default_recipients
-
-            # Send email with attachments
-            success = self.email_system.send_email_with_attachments(
-                recipients,
-                subject,
-                html_body,
-                zip_file,
-            )
-
+    # Send
+    success = self.email_system.send_email_with_attachments(
+        recipients, subject, html_body, attachments=attach_list
+    )
+    # ... print success/failure as you already do ...
+    return bool(success)
+                                        
             if success:
                 print(
                     f"✅ Detailed validation report sent successfully to: {', '.join(recipients)}"
