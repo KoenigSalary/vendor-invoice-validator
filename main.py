@@ -73,193 +73,150 @@ def map_account_head(row):
         return str(row['PurchaseLEDGER']).strip()
     return "Unknown"
 
+import re
+
+def _first_nonempty(row, cols):
+    for c in cols:
+        if c in row and pd.notna(row[c]):
+            v = str(row[c]).strip()
+            if v and v.lower() not in ("nan","none","null"):
+                return v
+    return None
+
+def _to_date_safe(v):
+    try:
+        return pd.to_datetime(v, errors="coerce")
+    except Exception:
+        return pd.NaT
+
+def _fmt_date_or_default(dt, default):
+    return dt.strftime("%Y-%m-%d") if pd.notna(dt) else default
+
 def map_invoice_entry_date(row):
-    """
-    Map Invoice Entry Date from available RMS fields.
-    Priority: explicit 'entry/created' columns, then Voucherdate, then PurchaseInvDate.
-    """
+    # Tries every likely label
     candidates = [
-        "EntryDate", "InvoiceEntryDate", "Entry_Date", "CreatedOn", "CreatedDate",
-        "Created_Date", "Entry_Timestamp", "EntryTime", "Entry_On",
-        "Voucherdate",           # often available
-        "PurchaseInvDate"        # fallback to invoice date if nothing else
+        "Inv Entry Date","Invoice Entry Date","InvEntryDate","InvoiceEntryDate",
+        "Entry Date","Entry_Date","EntryDate",
+        "Created On","CreatedOn","CreatedDate","Created_Date",
+        "Voucher Entry Date","VoucherEntryDate","Voucherdate",   # last-resort
+        "PurchaseInvDate"                                       # very last
     ]
     v = _first_nonempty(row, candidates)
-    if not v:
-        return "Entry Date Not Available"
-    dt = _to_date_safe(v)
-    return _fmt_date_or_default(dt, "Entry Date Not Available")
+    if not v: return "Entry Date Not Available"
+    return _fmt_date_or_default(_to_date_safe(v), "Entry Date Not Available")
 
 def map_invoice_modify_date(row):
-    """
-    Map Invoice Modify/Update Date (new).
-    """
     candidates = [
-        "ModifiedOn", "ModifiedDate", "Modified_Date", "LastUpdated", "UpdatedOn",
-        "UpdatedDate", "Update_Timestamp", "Last_Changed"
+        "Inv Mod Date","Invoice Modify Date","Invoice_Modify_Date",
+        "Modified On","ModifiedOn","ModifiedDate","Modified_Date",
+        "Updated On","UpdatedOn","UpdatedDate","LastUpdated","Last_Changed","ModDate"
     ]
     v = _first_nonempty(row, candidates)
-    if not v:
-        return "Modify Date Not Available"
-    dt = _to_date_safe(v)
-    return _fmt_date_or_default(dt, "Modify Date Not Available")
+    if not v: return "Modify Date Not Available"
+    return _fmt_date_or_default(_to_date_safe(v), "Modify Date Not Available")
 
 def map_invoice_creator_name(row):
-    """
-    Creator name resolution:
-    1) Look for explicit creator/user columns
-    2) Try other weak signals only if nothing explicit is present
-    """
     explicit_cols = [
-        "CreatedBy", "Created_By", "InvoiceCreatedBy", "Invoice_Created_By",
-        "UserName", "User_Name", "CreatorName", "Creator_Name",
-        "EntryBy", "Entry_By", "InputBy", "Input_By",
-        "PreparedBy", "Prepared_By", "MadeBy", "Made_By",
-        "EnteredBy", "Entered_By", "Operator", "Operator_Name"
+        "Inv Created By","Invoice Created By","Invoice_Created_By",
+        "CreatedBy","Created_By","Creator","CreatorName","Creator_Name",
+        "EntryBy","Entry_By","InputBy","Input_By",
+        "UserName","User_Name","PreparedBy","Prepared_By","MadeBy","Made_By",
+        "EnteredBy","Entered_By","Operator","Operator_Name"
     ]
     v = _first_nonempty(row, explicit_cols)
-    if v:
-        return v
-
-    # Weak fallbacks (only if absolutely nothing explicit is available)
-    # Keep these VERY conservative:
-    if 'VoucherTypeName' in row and pd.notna(row['VoucherTypeName']):
-        vtype = str(row['VoucherTypeName']).strip()
-        if 'Voucherdate' in row and pd.notna(row['Voucherdate']):
-            try:
-                vd = pd.to_datetime(row['Voucherdate'], errors='coerce')
-                h = getattr(vd, 'hour', 12)
-                if pd.notna(vd):
-                    if h < 10: return f"Early User ({vtype})"
-                    if h > 18: return f"Late User ({vtype})"
-                    return f"Business Hours User ({vtype})"
-            except Exception:
-                pass
-
+    if v: return v
+    # Fallbacks: try to mine Narration/Remarks for "by <name>"
+    txt = _first_nonempty(row, ["Narration","Remarks","Description","Notes"])
+    if txt:
+        m = re.search(r"\bby\s+([A-Za-z][A-Za-z\.\s'-]{2,60})", str(txt), flags=re.I)
+        if m:
+            guess = m.group(1).strip()
+            if len(guess) > 2:
+                return guess
     return "Unknown"
 
-def _normalize_mop(val):
-    """Normalize free-text payment mode to canonical labels."""
-    s = (val or "").strip().lower()
-    # direct matches
-    if s in {"bank", "neft", "rtgs", "imps", "wire", "bank transfer", "online bank"}:
-        return "Bank Transfer"
-    if s in {"cash", "cash payment"}:
-        return "Cash"
-    if s in {"card", "credit card", "debit card", "card payment"}:
-        return "Credit Card"
-    if s in {"cheque", "check"}:
-        return "Cheque"
-    if s in {"upi", "gpay", "google pay", "phonepe", "paytm", "upi payment"}:
-        return "UPI"
-    if s in {"wallet"}:
-        return "Wallet"
-    if s in {"credit", "on credit", "credit terms"}:
-        return "Credit Terms"
-    # keyword contains
-    if "neft" in s or "rtgs" in s or "imps" in s or "wire" in s or "bank" in s or "transfer" in s:
-        return "Bank Transfer"
-    if "card" in s:
-        return "Credit Card"
-    if "upi" in s or "gpay" in s or "google pay" in s or "phonepe" in s or "paytm" in s:
-        return "UPI"
-    if "cheque" in s or "check" in s:
-        return "Cheque"
-    if "cash" in s:
-        return "Cash"
-    if "credit" in s or "on account" in s or "to pay" in s:
-        return "Credit Terms"
-    if "wallet" in s:
-        return "Wallet"
-    if s:
-        # some other explicit but unknown word
-        return s.title()
+_MOP_REGEXES = [
+    (re.compile(r"\b(neft|rtgs|imps|wire|bank\s*transfer|swift|tt)\b", re.I), "Bank Transfer"),
+    (re.compile(r"\b(credit|debit)\s*card\b|\b(card\s*payment)\b|\bpos\b", re.I), "Credit Card"),
+    (re.compile(r"\bupi\b|\bgpay\b|\bgoogle\s*pay\b|\bphonepe\b|\bpaytm\b|vpa@", re.I), "UPI"),
+    (re.compile(r"\bcash\b", re.I), "Cash"),
+    (re.compile(r"\bcheque|\bcheck\b|\bdd\s*demand\s*draft\b", re.I), "Cheque"),
+    (re.compile(r"\bwallet\b", re.I), "Wallet"),
+]
+
+def _normalize_mop_text(val):
+    if not val: return None
+    s = str(val)
+    for rx, label in _MOP_REGEXES:
+        if rx.search(s):
+            return label
     return None
 
 def map_method_of_payment(row):
-    """
-    Map Method of Payment to business-friendly labels:
-    Bank Transfer / Credit Card / Cash / UPI / Cheque / Wallet / Credit Terms / Advance Payment / Payment with TDS.
-    Priority:
-    1) Explicit MOP columns
-    2) Narration text hints
-    3) Amount-based heuristic (PaytyAmt vs Total) – for Credit Terms/Full/Partial/Advance
-    4) Voucher type hints (last resort)
-    """
-    explicit_cols = [
-        "MOP", "ModeOfPayment", "Mode_of_Payment", "PaymentMode",
-        "Payment_Mode", "PaymentMethod", "Payment_Method", "Method_of_Payment"
-    ]
-    v = _first_nonempty(row, explicit_cols)
-    label = _normalize_mop(v)
-    if label:
-        return label
+    # 1) True MOP columns if they exist
+    explicit = _first_nonempty(row, [
+        "MOP","Mop","ModeOfPayment","Mode_of_Payment","PaymentMode","Payment_Mode",
+        "PaymentMethod","Payment_Method","Method_of_Payment"
+    ])
+    label = _normalize_mop_text(explicit)
+    if label: return label
 
-    # Narration hints
-    narr = _first_nonempty(row, ["Narration", "Remarks", "Description", "Notes"])
-    label = _normalize_mop(narr)
-    if label:
-        return label
+    # 2) Narration/Remarks – strongest real-world signal
+    narr = _first_nonempty(row, ["Narration","Remarks","Description","Notes"])
+    label = _normalize_mop_text(narr)
+    if label: return label
 
-    # Amount-based heuristic (Credit/Full/Partial/Advance)
+    # 3) Amount logic (keep only as final fallback)
     try:
-        party_amt = float(str(row.get("PaytyAmt", "")).replace(",", "") or 0)
-        total_amt = float(str(row.get("Total", "")).replace(",", "") or 0)
+        party_amt = float(str(row.get("PaytyAmt","")).replace(",","") or 0)
+        total_amt = float(str(row.get("Total","")).replace(",","") or 0)
         if total_amt > 0:
-            if party_amt == 0:
-                return "Credit Terms"
-            if party_amt == total_amt:
-                return "Full Payment"
-            if 0 < party_amt < total_amt:
-                return "Partial Payment"
-            if party_amt > total_amt:
-                return "Advance Payment"
+            if party_amt == 0: return "Credit Terms"
+            if party_amt == total_amt: return "Full Payment"
+            if 0 < party_amt < total_amt: return "Partial Payment"
+            if party_amt > total_amt: return "Advance Payment"
     except Exception:
         pass
 
-    # TDS hint
-    try:
-        if float(str(row.get("TDS", "")).replace(",", "") or 0) > 0:
-            return "Payment with TDS"
-    except Exception:
-        pass
-
-    # Voucher type hint (very weak)
-    vt = str(row.get("VoucherTypeName", "")).lower()
-    if "bank" in vt:
-        return "Bank Transfer"
-    if "cash" in vt:
-        return "Cash"
-    if "cheque" in vt or "check" in vt:
-        return "Cheque"
+    # 4) Tiny hints from VoucherTypeName
+    vt = str(row.get("VoucherTypeName","")).lower()
+    if "bank" in vt: return "Bank Transfer"
+    if "cash" in vt: return "Cash"
+    if ("cheque" in vt) or ("check" in vt): return "Cheque"
 
     return "Standard Payment Terms"
 
 def map_invoice_currency(row):
-    """Resolve currency symbol/code from common columns, default to INR if absent."""
-    v = _first_nonempty(row, ["Currency", "InvoiceCurrency", "CurrencyCode", "Curr"])
-    if not v:
-        return "INR"
-    v = v.strip().upper()
-    # normalize a few common variants
-    if v in {"RUPEE", "RS", "₹", "INR"}:
-        return "INR"
-    if v in {"USD", "US$", "$"}:
-        return "USD"
-    if v in {"EUR", "€"}:
-        return "EUR"
-    if v in {"GBP", "£"}:
-        return "GBP"
+    v = _first_nonempty(row, ["Inv Currency","Invoice Currency","InvoiceCurrency","Currency","CurrencyCode","Curr"])
+    if not v: return "INR"
+    v = str(v).strip().upper()
+    if v in {"₹","RUPEE","RS","INR"}: return "INR"
+    if v in {"USD","US$","$"}: return "USD"
+    if v in {"EUR","€"}: return "EUR"
+    if v in {"GBP","£"}: return "GBP"
     return v
 
-def map_invoice_location(row):
-    """Resolve location/branch/store; use State/City if nothing else."""
-    v = _first_nonempty(row, ["Location", "Branch", "Store", "Site", "Office"])
-    if v:
-        return v
-    v = _first_nonempty(row, ["State", "City"])
-    return v or "Unknown"
+# Known short codes you showed (e.g., DELHI 1)
+_LOCATION_TOKENS = [
+    "DELHI 1","DELHI 2","DELHI 3","NOIDA","GURGAON","MUMBAI","PUNE","BENGALURU","BANGALORE",
+    "HYDERABAD","CHENNAI","KOLKATA","JAIPUR","GOA","DUBAI","LONDON","US","USA"
+]
 
+def map_invoice_location(row):
+    # 1) Obvious columns
+    v = _first_nonempty(row, ["Location","Inv Location","Invoice Location","Branch","Office","Site"])
+    if v: return v
+    # 2) State/City
+    v = _first_nonempty(row, ["State","City"])
+    if v: return v
+    # 3) Scan all text-like fields for well-known tokens (e.g., “DELHI 1”)
+    for col in ["Narration","Remarks","Description","Invoice Address","Address","PartyName"]:
+        s = str(row.get(col,""))
+        for token in _LOCATION_TOKENS:
+            if token.lower() in s.lower():
+                return token
+    return "Unknown"
+    
 # ---------- Scheduling ----------
 def should_run_today():
     """Check if validation should run today based on 4-day interval."""
@@ -431,6 +388,7 @@ def find_creator_column(df):
 
 # ---------- File reader (TSV-first heuristic) ----------
 def read_invoice_file(invoice_file):
+df = enrich_missing_fields(df)
     """Robust reader; prefer TSV for RMS 'xls', fallback to real Excel/CSV/HTML."""
     print(f"🔍 Attempting to read file: {invoice_file}")
     if not os.path.exists(invoice_file):
@@ -542,6 +500,22 @@ def read_invoice_file(invoice_file):
 
     raise Exception("Could not read invoice file in any supported format.")
 
+def enrich_missing_fields(df):
+    # Make sure the final columns exist
+    for col in ["Invoice_Entry_Date","Invoice_Modify_Date","Invoice_Creator_Name",
+                "Method_of_Payment","Invoice_Currency","Invoice_Location","Account_Head"]:
+        if col not in df.columns:
+            df[col] = None
+
+    df["Invoice_Entry_Date"]   = df.apply(map_invoice_entry_date, axis=1)
+    df["Invoice_Modify_Date"]  = df.apply(map_invoice_modify_date, axis=1)
+    df["Invoice_Creator_Name"] = df.apply(map_invoice_creator_name, axis=1)
+    df["Method_of_Payment"]    = df.apply(map_method_of_payment, axis=1)
+    df["Invoice_Currency"]     = df.apply(map_invoice_currency, axis=1)
+    df["Invoice_Location"]     = df.apply(map_invoice_location, axis=1)
+    df["Account_Head"]         = df.apply(map_account_head, axis=1)
+    return df
+    
 # ---------- Filtering ----------
 def filter_invoices_by_date(df, start_str, end_str):
     """Filter dataframe by PurchaseInvDate within [start, end]."""
