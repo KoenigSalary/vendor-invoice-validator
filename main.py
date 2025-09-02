@@ -1070,7 +1070,7 @@ def run_invoice_validation():
                             if invoice_zip_path:
                                 kwargs["extra_attachments"] = [invoice_zip_path]
 
-                            try:
+                    try:
                         ok = notifier.send_detailed_validation_report(**kwargs)
                     except TypeError:
                         # Notifier doesn't support extra_attachments; retry without it
