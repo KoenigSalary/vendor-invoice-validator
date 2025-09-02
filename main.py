@@ -40,84 +40,172 @@ ARCHIVE_FOLDER = "archived_data"
 EMAIL_ENABLED = True  # set False to skip email notifications
 
 # ---------- Helpers: field mappers ----------
+# ---------- Helpers: field mappers (REPLACE THIS WHOLE BLOCK) ----------
+def _first_nonempty(row, cols):
+    """Return the first non-empty string value from the given columns in this row."""
+    for c in cols:
+        if c in row and pd.notna(row[c]):
+            v = str(row[c]).strip()
+            if v and v.lower() not in ("nan", "none", "null"):
+                return v
+    return None
+
+def _to_date_safe(v):
+    try:
+        return pd.to_datetime(v, errors="coerce")
+    except Exception:
+        return pd.NaT
+
+def _fmt_date_or_default(dt, default="Entry Date Not Available"):
+    return dt.strftime("%Y-%m-%d") if pd.notna(dt) else default
+
 def map_account_head(row):
     """Best-effort Account Head mapping from common RMS columns."""
-    for col in ['Account_Head', 'AccountHead', 'GL_Account', 'GLAccount', 'HeadAccount', 'Head_Account']:
-        if col in row and pd.notna(row[col]) and str(row[col]).strip():
-            return str(row[col]).strip()
+    prefer_cols = [
+        "Account_Head", "AccountHead", "GL_Account", "GLAccount",
+        "HeadAccount", "Head_Account", "ExpenseHead", "Expense_Head"
+    ]
+    v = _first_nonempty(row, prefer_cols)
+    if v:
+        return v
+    # RMS export often puts the logical head in PurchaseLEDGER
     if 'PurchaseLEDGER' in row and pd.notna(row['PurchaseLEDGER']) and str(row['PurchaseLEDGER']).strip():
         return str(row['PurchaseLEDGER']).strip()
     return "Unknown"
 
 def map_invoice_entry_date(row):
-    """Map Invoice Entry Date from available RMS fields."""
-    try:
-        if 'Voucherdate' in row and pd.notna(row['Voucherdate']):
-            return pd.to_datetime(row['Voucherdate']).strftime('%Y-%m-%d')
-        if 'PurchaseInvDate' in row and pd.notna(row['PurchaseInvDate']):
-            return pd.to_datetime(row['PurchaseInvDate']).strftime('%Y-%m-%d')
+    """
+    Map Invoice Entry Date from available RMS fields.
+    Priority: explicit 'entry/created' columns, then Voucherdate, then PurchaseInvDate.
+    """
+    candidates = [
+        "EntryDate", "InvoiceEntryDate", "Entry_Date", "CreatedOn", "CreatedDate",
+        "Created_Date", "Entry_Timestamp", "EntryTime", "Entry_On",
+        "Voucherdate",           # often available
+        "PurchaseInvDate"        # fallback to invoice date if nothing else
+    ]
+    v = _first_nonempty(row, candidates)
+    if not v:
         return "Entry Date Not Available"
-    except Exception:
-        return "Entry Date Not Available"
+    dt = _to_date_safe(v)
+    return _fmt_date_or_default(dt, "Entry Date Not Available")
+
+def map_invoice_modify_date(row):
+    """
+    Map Invoice Modify/Update Date (new).
+    """
+    candidates = [
+        "ModifiedOn", "ModifiedDate", "Modified_Date", "LastUpdated", "UpdatedOn",
+        "UpdatedDate", "Update_Timestamp", "Last_Changed"
+    ]
+    v = _first_nonempty(row, candidates)
+    if not v:
+        return "Modify Date Not Available"
+    dt = _to_date_safe(v)
+    return _fmt_date_or_default(dt, "Modify Date Not Available")
 
 def map_invoice_creator_name(row):
-    """Heuristic Invoice Creator Name (fallback -> 'Unknown' to align stats)."""
-    # Priority 1: VoucherNo pattern (rarely used but harmless)
-    if 'VoucherNo' in row and pd.notna(row['VoucherNo']):
-        v = str(row['VoucherNo'])
-        if len(v) > 3:
-            return f"User ID: {v}"
+    """
+    Creator name resolution:
+    1) Look for explicit creator/user columns
+    2) Try other weak signals only if nothing explicit is present
+    """
+    explicit_cols = [
+        "CreatedBy", "Created_By", "InvoiceCreatedBy", "Invoice_Created_By",
+        "UserName", "User_Name", "CreatorName", "Creator_Name",
+        "EntryBy", "Entry_By", "InputBy", "Input_By",
+        "PreparedBy", "Prepared_By", "MadeBy", "Made_By",
+        "EnteredBy", "Entered_By", "Operator", "Operator_Name"
+    ]
+    v = _first_nonempty(row, explicit_cols)
+    if v:
+        return v
 
-    # Priority 2: State sometimes carries short user/location codes
-    if 'State' in row and pd.notna(row['State']):
-        s = str(row['State']).strip()
-        if s and len(s) < 20:
-            return f"Location User: {s}"
-
-    # Priority 3: Internal patterns in PartyName
-    if 'PartyName' in row and pd.notna(row['PartyName']):
-        party = str(row['PartyName']).strip()
-        for pattern in ['koenig', 'admin', 'system', 'internal', 'user']:
-            if pattern in party.lower():
-                return f"Internal: {party}"
-
-    # Priority 4: VoucherTypeName + time-of-day heuristics
+    # Weak fallbacks (only if absolutely nothing explicit is available)
+    # Keep these VERY conservative:
     if 'VoucherTypeName' in row and pd.notna(row['VoucherTypeName']):
         vtype = str(row['VoucherTypeName']).strip()
         if 'Voucherdate' in row and pd.notna(row['Voucherdate']):
             try:
-                vd = pd.to_datetime(row['Voucherdate'])
-                h = getattr(vd, 'hour', 9)
-                if h < 10: return f"Early User ({vtype})"
-                if h > 18: return f"Late User ({vtype})"
-                return f"Business Hours User ({vtype})"
+                vd = pd.to_datetime(row['Voucherdate'], errors='coerce')
+                h = getattr(vd, 'hour', 12)
+                if pd.notna(vd):
+                    if h < 10: return f"Early User ({vtype})"
+                    if h > 18: return f"Late User ({vtype})"
+                    return f"Business Hours User ({vtype})"
             except Exception:
                 pass
 
-    # Priority 5: InvID tail
-    if 'InvID' in row and pd.notna(row['InvID']):
-        inv_id = str(row['InvID'])
-        if len(inv_id) >= 2:
-            return f"System User {inv_id[-2:]}"
-
-    # Priority 6: Some informative default
-    tokens = []
-    if 'PurchaseLEDGER' in row and pd.notna(row['PurchaseLEDGER']):
-        tokens.append(str(row['PurchaseLEDGER']).split()[0])
-    if 'VoucherTypeName' in row and pd.notna(row['VoucherTypeName']):
-        tokens.append(str(row['VoucherTypeName']))
-    if tokens:
-        return f"{'_'.join(tokens)}_User"
-
     return "Unknown"
 
+def _normalize_mop(val):
+    """Normalize free-text payment mode to canonical labels."""
+    s = (val or "").strip().lower()
+    # direct matches
+    if s in {"bank", "neft", "rtgs", "imps", "wire", "bank transfer", "online bank"}:
+        return "Bank Transfer"
+    if s in {"cash", "cash payment"}:
+        return "Cash"
+    if s in {"card", "credit card", "debit card", "card payment"}:
+        return "Credit Card"
+    if s in {"cheque", "check"}:
+        return "Cheque"
+    if s in {"upi", "gpay", "google pay", "phonepe", "paytm", "upi payment"}:
+        return "UPI"
+    if s in {"wallet"}:
+        return "Wallet"
+    if s in {"credit", "on credit", "credit terms"}:
+        return "Credit Terms"
+    # keyword contains
+    if "neft" in s or "rtgs" in s or "imps" in s or "wire" in s or "bank" in s or "transfer" in s:
+        return "Bank Transfer"
+    if "card" in s:
+        return "Credit Card"
+    if "upi" in s or "gpay" in s or "google pay" in s or "phonepe" in s or "paytm" in s:
+        return "UPI"
+    if "cheque" in s or "check" in s:
+        return "Cheque"
+    if "cash" in s:
+        return "Cash"
+    if "credit" in s or "on account" in s or "to pay" in s:
+        return "Credit Terms"
+    if "wallet" in s:
+        return "Wallet"
+    if s:
+        # some other explicit but unknown word
+        return s.title()
+    return None
+
 def map_method_of_payment(row):
-    """Map Method of Payment from available RMS fields (single, improved version)."""
-    # Priority 1: Use PaytyAmt vs Total (handle comma-formatted numbers)
+    """
+    Map Method of Payment to business-friendly labels:
+    Bank Transfer / Credit Card / Cash / UPI / Cheque / Wallet / Credit Terms / Advance Payment / Payment with TDS.
+    Priority:
+    1) Explicit MOP columns
+    2) Narration text hints
+    3) Amount-based heuristic (PaytyAmt vs Total) – for Credit Terms/Full/Partial/Advance
+    4) Voucher type hints (last resort)
+    """
+    explicit_cols = [
+        "MOP", "ModeOfPayment", "Mode_of_Payment", "PaymentMode",
+        "Payment_Mode", "PaymentMethod", "Payment_Method", "Method_of_Payment"
+    ]
+    v = _first_nonempty(row, explicit_cols)
+    label = _normalize_mop(v)
+    if label:
+        return label
+
+    # Narration hints
+    narr = _first_nonempty(row, ["Narration", "Remarks", "Description", "Notes"])
+    label = _normalize_mop(narr)
+    if label:
+        return label
+
+    # Amount-based heuristic (Credit/Full/Partial/Advance)
     try:
-        if 'PaytyAmt' in row and pd.notna(row['PaytyAmt']):
-            party_amt = float(str(row['PaytyAmt']).replace(',', '') or 0)
-            total_amt = float(str(row.get('Total', 0)).replace(',', '') or 0)
+        party_amt = float(str(row.get("PaytyAmt", "")).replace(",", "") or 0)
+        total_amt = float(str(row.get("Total", "")).replace(",", "") or 0)
+        if total_amt > 0:
             if party_amt == 0:
                 return "Credit Terms"
             if party_amt == total_amt:
@@ -129,43 +217,48 @@ def map_method_of_payment(row):
     except Exception:
         pass
 
-    # Priority 2: Voucher type hints
-    if 'VoucherTypeName' in row and pd.notna(row['VoucherTypeName']):
-        vt = str(row['VoucherTypeName']).lower().strip()
-        mapping = {
-            'purchase': 'Purchase Payment',
-            'cash': 'Cash Payment',
-            'bank': 'Bank Transfer',
-            'cheque': 'Cheque Payment',
-            'credit': 'Credit Terms',
-            'advance': 'Advance Payment',
-        }
-        for kw, label in mapping.items():
-            if kw in vt:
-                return label
-        if vt == 'purchase':
-            return "Standard Purchase"
-
-    # Priority 3: Dr/Cr hints
-    for col in ['Dr/Cr1', 'Dr/Cr2', 'Dr/Cr3']:
-        if col in row and pd.notna(row[col]):
-            v = str(row[col]).strip().upper()
-            if v == 'DR': return "Cash/Debit"
-            if v == 'CR': return "Credit/Payable"
-
-    # Priority 4: TDS suggests payment with deduction
+    # TDS hint
     try:
-        if 'TDS' in row and pd.notna(row['TDS']) and float(row['TDS']) > 0:
+        if float(str(row.get("TDS", "")).replace(",", "") or 0) > 0:
             return "Payment with TDS"
     except Exception:
         pass
 
-    # Priority 5: Currency
-    if 'Currency' in row and pd.notna(row['Currency']):
-        cur = str(row['Currency']).strip()
-        return "Foreign Currency Payment" if cur and cur.upper() != 'INR' else "INR Payment"
+    # Voucher type hint (very weak)
+    vt = str(row.get("VoucherTypeName", "")).lower()
+    if "bank" in vt:
+        return "Bank Transfer"
+    if "cash" in vt:
+        return "Cash"
+    if "cheque" in vt or "check" in vt:
+        return "Cheque"
 
     return "Standard Payment Terms"
+
+def map_invoice_currency(row):
+    """Resolve currency symbol/code from common columns, default to INR if absent."""
+    v = _first_nonempty(row, ["Currency", "InvoiceCurrency", "CurrencyCode", "Curr"])
+    if not v:
+        return "INR"
+    v = v.strip().upper()
+    # normalize a few common variants
+    if v in {"RUPEE", "RS", "₹", "INR"}:
+        return "INR"
+    if v in {"USD", "US$", "$"}:
+        return "USD"
+    if v in {"EUR", "€"}:
+        return "EUR"
+    if v in {"GBP", "£"}:
+        return "GBP"
+    return v
+
+def map_invoice_location(row):
+    """Resolve location/branch/store; use State/City if nothing else."""
+    v = _first_nonempty(row, ["Location", "Branch", "Store", "Site", "Office"])
+    if v:
+        return v
+    v = _first_nonempty(row, ["State", "City"])
+    return v or "Unknown"
 
 # ---------- Scheduling ----------
 def should_run_today():
@@ -519,9 +612,12 @@ def validate_invoices_with_details(df):
 
                 # compute mappers
                 invoice_entry_date = map_invoice_entry_date(row)
-                creator_name = map_invoice_creator_name(row)
-                method_of_payment = map_method_of_payment(row)
-                account_head = map_account_head(row)
+                invoice_modify_date = map_invoice_modify_date(row)
+                creator_name       = map_invoice_creator_name(row)
+                method_of_payment  = map_method_of_payment(row)
+                account_head       = map_account_head(row)
+                invoice_currency   = map_invoice_currency(row)
+                invoice_location   = map_invoice_location(row)
 
                 # validation rules
                 validation_issues = []
@@ -545,11 +641,14 @@ def validate_invoices_with_details(df):
                     'Invoice_Number': invoice_number,
                     'Invoice_Date': invoice_date,
                     'Invoice_Entry_Date': invoice_entry_date,
-                    'Vendor_Name': vendor,
-                    'Amount': amount,
+                    'Invoice_Modify_Date': invoice_modify_date,
                     'Invoice_Creator_Name': creator_name,
                     'Method_of_Payment': method_of_payment,
                     'Account_Head': account_head,
+                    'Invoice_Currency': invoice_currency,
+                    'Invoice_Location': invoice_location,
+                    'Vendor_Name': vendor,
+                    'Amount': amount,
                     'Validation_Status': severity,
                     'Issues_Found': len(validation_issues),
                     'Issue_Details': " | ".join(validation_issues) if validation_issues else "No issues found",
