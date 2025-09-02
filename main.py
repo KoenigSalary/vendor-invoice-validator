@@ -1086,9 +1086,9 @@ def run_invoice_validation():
 
                             if ok:
                                 msg_tail = " (with invoice copies)" if invoice_zip_path else ""
-                               print(
-                                   f"📧 Detailed validation report sent to AP team{msg_tail}: {', '.join(ap_team_recipients)}"
-                               )
+                                print(
+                                    f"📧 Detailed validation report sent to AP team{msg_tail}: {', '.join(ap_team_recipients)}"
+                                )
                             else:
                                 print("❌ Failed to send detailed validation report")
                         else:
