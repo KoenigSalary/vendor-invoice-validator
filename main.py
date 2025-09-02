@@ -310,11 +310,6 @@ def validate_downloaded_files(download_dir):
             results[fname] = "missing"
     return results
 
-invoice_zip_ok = validation_results.get("invoices.zip") == "ok"
-invoice_zip_path = (
-    os.path.join(download_dir, "invoices.zip") if invoice_zip_ok else None
-)
-
 # ---------- Column detection ----------
 def find_creator_column(df):
     """Find creator column name (case-insensitive fallback)."""
@@ -632,35 +627,35 @@ def generate_email_summary_statistics(detailed_df, cumulative_start, cumulative_
         total_creators = len(creator_stats)
 
         html = f"""
-        <div style="font-family:Arial,Helvetica,sans-serif">
-          <h2>📊 Invoice Validation Summary - {today_str}</h2>
-          <h3>📅 Validation Period</h3>
-          <ul>
-            <li>Current Batch: {current_batch_start} to {current_batch_end}</li>
-            <li>Cumulative Range: {cumulative_start} to {cumulative_end}</li>
-            <li>Total Coverage: {(datetime.strptime(cumulative_end, '%Y-%m-%d') - datetime.strptime(cumulative_start, '%Y-%m-%d')).days + 1} days</li>
-          </ul>
-          <h3>Results</h3>
-          <ul>
-            <li>✅ Total Invoices: {total_invoices:,}</li>
-            <li>✅ Passed: {passed:,} ({pass_rate:.1f}%)</li>
-            <li>⚠️ Warnings: {warnings:,}</li>
-            <li>❌ Failed: {failed:,}</li>
-          </ul>
-          <h3>🔍 Top Validation Issues</h3>
-          <ul>
+        
+          📊 Invoice Validation Summary - {today_str}
+          📅 Validation Period
+          
+            Current Batch: {current_batch_start} to {current_batch_end}
+            Cumulative Range: {cumulative_start} to {cumulative_end}
+            Total Coverage: {(datetime.strptime(cumulative_end, '%Y-%m-%d') - datetime.strptime(cumulative_start, '%Y-%m-%d')).days + 1} days
+          
+          Results
+          
+            ✅ Total Invoices: {total_invoices:,}
+            ✅ Passed: {passed:,} ({pass_rate:.1f}%)
+            ⚠️ Warnings: {warnings:,}
+            ❌ Failed: {failed:,}
+          
+          🔍 Top Validation Issues
+          
         """
         for issue, count in top_issues:
             pct = (count / total_invoices * 100) if total_invoices else 0
-            html += f"<li>{issue}: {count:,} invoices ({pct:.1f}%)</li>"
+            html += f"{issue}: {count:,} invoices ({pct:.1f}%)"
         html += f"""
-          </ul>
-          <h3>👤 Invoice Creator Analysis</h3>
-          <ul>
-            <li>Total Creators: {total_creators}</li>
-            <li>Unknown Creators: {unknown_creators} invoices ({(unknown_creators/total_invoices*100):.1f}%)</li>
-          </ul>
-        </div>
+          
+          👤 Invoice Creator Analysis
+          
+            Total Creators: {total_creators}
+            Unknown Creators: {unknown_creators} invoices ({(unknown_creators/total_invoices*100):.1f}%)
+          
+        
         """
 
         text = f"""📊 INVOICE VALIDATION SUMMARY - {today_str}
@@ -790,7 +785,7 @@ def run_invoice_validation():
             print(f"❌ Cumulative data download failed: {e}")
             return False
 
-        # Step 5
+        # Step 5 - FIXED: Define variables before use
         download_dir = os.path.join("data", today_str)
         print(f"🔍 Step 5: Verifying files in directory: {download_dir}")
         validation_results = validate_downloaded_files(download_dir)
@@ -1020,7 +1015,7 @@ def run_invoice_validation():
         except Exception as e:
             print(f"⚠️ Enhancement failed: {e}")
 
-        # Step 17: Email notifications
+        # Step 17: Email notifications - FIXED INDENTATION
         if EMAIL_ENABLED:
             try:
                 from email_notifier import EmailNotifier
@@ -1044,22 +1039,25 @@ def run_invoice_validation():
                 except Exception as _zip_err:
                     print(f"⚠️ Could not evaluate invoices.zip for attachment: {_zip_err}")
 
+                # --- Recipients from environment ---
                 ap_team_recipients = [
                     e.strip()
-                    for e in os.getenv('AP_TEAM_EMAIL_LIST', '').split(',')
+                    for e in os.getenv("AP_TEAM_EMAIL_LIST", "").split(",")
                     if e.strip()
                 ]
 
                 if ap_team_recipients:
                     ok = False
                     try:
-                        if hasattr(notifier, 'send_detailed_validation_report'):
-                            # Build kwargs to support newer notifier with extra_attachments
+                        if hasattr(notifier, "send_detailed_validation_report"):
+                            # Build kwargs to support newer notifier with optional attachments
                             kwargs = dict(
                                 date_str=today_str,
                                 recipients=ap_team_recipients,
                                 email_summary=email_summary,
-                                report_path=(detailed_report_path if not detailed_df.empty else None),
+                                report_path=(
+                                    detailed_report_path if not detailed_df.empty else None
+                                ),
                                 batch_start=current_batch_start,
                                 batch_end=current_batch_end,
                                 cumulative_start=cumulative_start,
@@ -1077,11 +1075,14 @@ def run_invoice_validation():
                                     ap_team_recipients,
                                     email_summary,
                                     (
-                                        detailed_report_path if not detailed_df.empty else None),
+                                        detailed_report_path
+                                        if not detailed_df.empty
+                                        else None
+                                    ),
                                     current_batch_start,
                                     current_batch_end,
                                     cumulative_start,
-                                    cumulative_end
+                                    cumulative_end,
                                 )
 
                             if ok:
@@ -1092,47 +1093,57 @@ def run_invoice_validation():
                             else:
                                 print("❌ Failed to send detailed validation report")
                         else:
-                            stats = email_summary.get('statistics', {})
-                            total_issues = stats.get('failed_invoices', 0) + stats.get(
-                                "warning_invoices', 0
+                            stats = email_summary.get("statistics", {})
+                            total_issues = (
+                                stats.get("failed_invoices", 0)
+                                + stats.get("warning_invoices", 0)
                             )
                             ok = notifier.send_validation_report(
                                 today_str, ap_team_recipients, total_issues
                             )
-                            print(
-                                f"📧 Basic validation report sent to AP team: {', '.join(ap_team_recipients)}") 
-                                if ok 
-                                else "❌ Failed to send basic validation report"
-                            )
+                            if ok:
+                                print(
+                                    f"📧 Basic validation report sent to AP team: {', '.join(ap_team_recipients)}"
+                                )
+                            else:
+                                print("❌ Failed to send basic validation report")
                     except Exception as email_error:
                         print(f"⚠️ Enhanced email failed: {email_error}")
                         try:
-                            stats = email_summary.get('statistics', {})
-                            total_issues = stats.get('failed_invoices', 0) + stats.get(
-                                "warning_invoices', 0
+                            stats = email_summary.get("statistics", {})
+                            total_issues = (
+                                stats.get("failed_invoices", 0)
+                                + stats.get("warning_invoices", 0)
                             )
                             ok = notifier.send_validation_report(
                                 today_str, ap_team_recipients, total_issues
                             )
-                            print(
-                                "📧 Fallback validation report sent to AP team") 
-                                if ok 
-                                else "❌ Fallback email also failed"
-                            )
+                            if ok:
+                                print("📧 Fallback validation report sent to AP team")
+                            else:
+                                print("❌ Fallback email also failed")
                         except Exception as fallback_error:
                             print(f"❌ All email methods failed: {fallback_error}")
                 else:
                     print("⚠️ No AP team email recipients configured in AP_TEAM_EMAIL_LIST")
-                
+
                 print("📧 Email notification workflow completed!")
-            
+
             except Exception as e:
                 print(f"⚠️ Email sending failed: {e}")
-                import traceback; 
-                
+                import traceback
                 traceback.print_exc()
         else:
             print("📧 Email is disabled by configuration; skipping notifications.")
+        
+        print("🎉 Enhanced cumulative validation workflow completed successfully!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Main workflow failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 # ---------- Quick self-test (optional) ----------
 def test_validation_functions():
@@ -1169,3 +1180,4 @@ if __name__ == "__main__":
     # Uncomment to run quick test before full workflow
     # test_validation_functions()
     success = run_invoice_validation()
+    print(f"🏁 Invoice validation completed with status: {'SUCCESS' if success else 'FAILURE'}")
