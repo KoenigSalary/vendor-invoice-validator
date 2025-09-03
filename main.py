@@ -387,7 +387,7 @@ def find_creator_column(df):
     return None
 
 # ---------- File reader (TSV-first heuristic) ----------
-def = enrich_missing_fields(df)
+def read_invoice_file(invoice_file):
     """Robust reader; prefer TSV for RMS 'xls', fallback to real Excel/CSV/HTML."""
     print(f"🔍 Attempting to read file: {invoice_file}")
     if not os.path.exists(invoice_file):
@@ -409,8 +409,8 @@ def = enrich_missing_fields(df)
         header = b""
 
     # Heuristics
-    is_xlsx = header.startswith(b'PK')  # zip
-    is_old_xls = header.startswith(b'\xD0\xCF\x11\xE0')  # OLE
+    is_xlsx = header.startswith(b'PK')                   # XLSX (zip)
+    is_old_xls = header.startswith(b'\xD0\xCF\x11\xE0')  # Legacy XLS (OLE)
     looks_like_tsv = (b'\t' in header[:20]) or header[:20].strip().replace(b'_', b'').isalnum()
 
     # 1) TSV preferred (RMS 'xls' is typically TSV)
@@ -499,9 +499,10 @@ def = enrich_missing_fields(df)
 
     raise Exception("Could not read invoice file in any supported format.")
 
+
 def enrich_missing_fields(df):
     """
-    Enriches the dataframe with missing invoice fields.
+    Enrich the dataframe with missing invoice fields.
     Ensures all required fields are present and mapped properly.
     """
     # Ensure all required columns exist
@@ -512,7 +513,7 @@ def enrich_missing_fields(df):
         if col not in df.columns:
             df[col] = None
 
-    # Apply mapping functions
+    # Apply mapping functions (these must exist above: map_invoice_entry_date, map_invoice_modify_date, etc.)
     df["Invoice_Entry_Date"]   = df.apply(map_invoice_entry_date, axis=1)
     df["Invoice_Modify_Date"]  = df.apply(map_invoice_modify_date, axis=1)
     df["Invoice_Creator_Name"] = df.apply(map_invoice_creator_name, axis=1)
@@ -522,7 +523,7 @@ def enrich_missing_fields(df):
     df["Account_Head"]         = df.apply(map_account_head, axis=1)
 
     return df
-
+    
 # ---------- Filtering ----------
 def filter_invoices_by_date(df, start_str, end_str):
     """Filter dataframe by PurchaseInvDate within [start, end]."""
