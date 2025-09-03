@@ -388,7 +388,7 @@ def find_creator_column(df):
 
 # ---------- File reader (TSV-first heuristic) ----------
 def read_invoice_file(invoice_file):
-df = enrich_missing_fields(df)
+def = enrich_missing_fields(df)
     """Robust reader; prefer TSV for RMS 'xls', fallback to real Excel/CSV/HTML."""
     print(f"🔍 Attempting to read file: {invoice_file}")
     if not os.path.exists(invoice_file):
