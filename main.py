@@ -501,12 +501,19 @@ df = enrich_missing_fields(df)
     raise Exception("Could not read invoice file in any supported format.")
 
 def enrich_missing_fields(df):
-    # Make sure the final columns exist
-    for col in ["Invoice_Entry_Date","Invoice_Modify_Date","Invoice_Creator_Name",
-                "Method_of_Payment","Invoice_Currency","Invoice_Location","Account_Head"]:
+    """
+    Enriches the dataframe with missing invoice fields.
+    Ensures all required fields are present and mapped properly.
+    """
+    # Ensure all required columns exist
+    for col in [
+        "Invoice_Entry_Date", "Invoice_Modify_Date", "Invoice_Creator_Name",
+        "Method_of_Payment", "Invoice_Currency", "Invoice_Location", "Account_Head"
+    ]:
         if col not in df.columns:
             df[col] = None
 
+    # Apply mapping functions
     df["Invoice_Entry_Date"]   = df.apply(map_invoice_entry_date, axis=1)
     df["Invoice_Modify_Date"]  = df.apply(map_invoice_modify_date, axis=1)
     df["Invoice_Creator_Name"] = df.apply(map_invoice_creator_name, axis=1)
@@ -514,8 +521,9 @@ def enrich_missing_fields(df):
     df["Invoice_Currency"]     = df.apply(map_invoice_currency, axis=1)
     df["Invoice_Location"]     = df.apply(map_invoice_location, axis=1)
     df["Account_Head"]         = df.apply(map_account_head, axis=1)
+
     return df
-    
+
 # ---------- Filtering ----------
 def filter_invoices_by_date(df, start_str, end_str):
     """Filter dataframe by PurchaseInvDate within [start, end]."""
