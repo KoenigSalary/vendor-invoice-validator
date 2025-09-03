@@ -13,7 +13,7 @@ import numpy as np
 # Page configuration
 st.set_page_config(
     page_title="Enhanced Invoice Validation Dashboard",
-    page_icon="ðŸ“Š",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -58,6 +58,12 @@ st.markdown("""
 class ImprovedDashboard:
     def __init__(self):
         self.setup_data_sources()
+        
+        def parse_validation_status(self, status_col):
+            """Parse validation status with proper emoji handling"""
+            passed = len(status_col[status_col.str.contains('PASS|✅', case=False, na=False)])
+            failed = len(status_col[status_col.str.contains('FAIL|❌', case=False, na=False)])
+            return passed, failed
 
     def setup_data_sources(self):
         """Setup data sources and check availability"""
@@ -115,12 +121,13 @@ class ImprovedDashboard:
         for report in self.recent_reports:
             try:
                 # Priority order for sheet detection based on analysis
+                # Enhanced sheet detection
                 sheet_priority = [
-                    'Enhanced_All_Invoices',  # Enhanced reports
-                    'All_Invoices',           # Standard reports
-                    'Enhanced_Report',        # Alternative naming
-                    'Invoice_Data',           # Generic naming
-                    0                         # First sheet fallback
+                    'Enhanced_All_Invoices',
+                    'All_Invoices', 
+                    'Enhanced_Report',
+                    'Invoice_Data',
+                    0  # First sheet fallback
                 ]
 
                 df = None
@@ -301,14 +308,13 @@ class ImprovedDashboard:
         # Handle different status formats
         if 'Validation_Status' in df.columns:
             status_col = df['Validation_Status'].astype(str)
-            passed = len(status_col[status_col.str.contains('PASS|Passed', case=False, na=False)])
-            failed = len(status_col[status_col.str.contains('FAIL|Failed', case=False, na=False)])
+            passed, failed = self.parse_validation_status(status_col)
             warnings = total_invoices - passed - failed
         else:
             passed = int(total_invoices * 0.57)
             failed = int(total_invoices * 0.43) 
             warnings = 0
-
+            
         # Financial calculations
         amount_col = pd.to_numeric(df['Amount'], errors='coerce').fillna(0)
         total_amount = amount_col.sum()
