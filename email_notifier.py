@@ -269,8 +269,8 @@ class EmailNotifier:
     def send_detailed_validation_report(self, date_str, recipients, email_summary,
                                     report_path=None, batch_start=None, batch_end=None,
                                     cumulative_start=None, cumulative_end=None,
-                                    extra_attachments=None):
-        )
+                                    extra_attachments=None
+        ):
         """
         Send detailed validation report with enhanced statistics and attachments
         """
