@@ -227,16 +227,10 @@ class EnhancedEmailSystem:
 
         logging.info(f"✅ Email sent successfully to: {', '.join(recipients)}")
         return True
+
     except Exception as e:
         logging.error(f"❌ Error sending email: {e}")
         return False
-
-        finally:
-            # Cleanup temporary ZIP file
-            if zip_file and os.path.exists(zip_file):
-                os.remove(zip_file)
-                logging.info(f"🗑️ Temporary ZIP file cleaned up: {zip_file}")
-
 
 class EmailNotifier:
     """
@@ -322,24 +316,24 @@ class EmailNotifier:
             html_body = html_body + enhanced_summary
 
             built_zip = None
-    if report_path and os.path.exists(report_path):
-        try:
-            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-            zip_filename = f"validation_report_{ts}.zip"
-            with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                zipf.write(report_path, f"validation_report_{date_str}.xlsx")
-                enhanced_report_path = report_path.replace(
-                    "invoice_validation_detailed_", "enhanced_invoice_validation_detailed_"
-                )
-                if os.path.exists(enhanced_report_path):
-                    zipf.write(enhanced_report_path, f"enhanced_validation_report_{date_str}.xlsx")
-                email_summary_path = f"data/email_summary_{date_str}.html"
-                if os.path.exists(email_summary_path):
-                    zipf.write(email_summary_path, f"email_summary_{date_str}.html")
-            built_zip = zip_filename
-            print(f"📦 Created validation ZIP: {zip_filename}")
-        except Exception as e:
-            print(f"⚠️ Could not create ZIP file: {e}")
+        if report_path and os.path.exists(report_path):
+            try:
+                ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                zip_filename = f"validation_report_{ts}.zip"
+                with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
+                    zipf.write(report_path, f"validation_report_{date_str}.xlsx")
+                    enhanced_report_path = report_path.replace(
+                        "invoice_validation_detailed_", "enhanced_invoice_validation_detailed_"
+                    )
+                    if os.path.exists(enhanced_report_path):
+                        zipf.write(enhanced_report_path, f"enhanced_validation_report_{date_str}.xlsx")
+                    email_summary_path = f"data/email_summary_{date_str}.html"
+                    if os.path.exists(email_summary_path):
+                        zipf.write(email_summary_path, f"email_summary_{date_str}.html")
+                built_zip = zip_filename
+                print(f"📦 Created validation ZIP: {zip_filename}")
+            except Exception as e:
+                print(f"⚠️ Could not create ZIP file: {e}")
 
     # Combine attachments: built zip + any extra_attachments (e.g., invoices.zip)
     attach_list = []
