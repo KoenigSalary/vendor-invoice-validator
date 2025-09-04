@@ -11,6 +11,7 @@ import os
 import sys
 import json
 import requests
+import emoji.fix.py
 from datetime import datetime, timedelta
 from io import BytesIO
 import base64
