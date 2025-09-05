@@ -4,6 +4,7 @@ from updater import update_invoice_status
 from reporter import save_snapshot_report
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+from emoji.fix.py
 from invoice_tracker import (
     create_tables,
     save_invoice_snapshot,
@@ -16,7 +17,6 @@ from invoice_tracker import (
 import pandas as pd
 import os
 import shutil
-import emoji.fix.py
 from pathlib import Path
 from enhanced_processor import enhance_validation_results
 
