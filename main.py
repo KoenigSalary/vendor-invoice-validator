@@ -16,6 +16,7 @@ from invoice_tracker import (
 import pandas as pd
 import os
 import shutil
+import emoji.fix.py
 from pathlib import Path
 from enhanced_processor import enhance_validation_results
 
