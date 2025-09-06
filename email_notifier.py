@@ -10,6 +10,10 @@ import glob
 import logging
 import re
 from pathlib import Path
+from typing import List, Optional
+
+__all__ = ["EnhancedEmailSystem", "EmailNotifier"]
+
 
 class EnhancedEmailSystem:
     """Enhanced email system with professional HTML templates and robust error handling"""
@@ -373,6 +377,109 @@ This is an automated report containing confidential information
             
         return issues
 
+
+# --- BEGIN: Compatibility wrapper for callers expecting `EmailNotifier` ---
+
+class EmailNotifier:
+    """
+    Compatibility wrapper around EnhancedEmailSystem so code can:
+        from email_notifier import EmailNotifier
+    and then call:
+        - send(subject, html_body, attachments=None, recipients=None)
+        - send_report(...)
+        - send_validation_email(...)
+    It maps SMTP_* env vars (GitHub Secrets) to the engine’s expected fields.
+    """
+
+    def __init__(self, smtp_host: Optional[str] = None, smtp_port: Optional[int] = None,
+                 smtp_user: Optional[str] = None, smtp_pass: Optional[str] = None,
+                 use_tls: Optional[bool] = None, from_name: Optional[str] = None,
+                 recipients: Optional[List[str]] = None):
+
+        # Prefer SMTP_*; fallback to EMAIL_* for compatibility
+        host = smtp_host or os.getenv("SMTP_HOST") or os.getenv("SMTP_SERVER", "smtp.office365.com")
+        port = int(smtp_port or os.getenv("SMTP_PORT", "587"))
+        user = smtp_user or os.getenv("SMTP_USER") or os.getenv("EMAIL_USERNAME")
+        pwd  = smtp_pass or os.getenv("SMTP_PASS")  or os.getenv("EMAIL_PASSWORD")
+
+        self._engine = EnhancedEmailSystem(
+            smtp_server=host,
+            smtp_port=port,
+            username=user,
+            password=pwd,
+        )
+
+        self._from_name = from_name or os.getenv("SMTP_FROM_NAME", "")
+
+        # Override recipients if provided explicitly
+        if recipients:
+            # Validate and override default recipients
+            validated: List[str] = []
+            for r in (recipients if isinstance(recipients, list) else [recipients]):
+                if self._engine._validate_email_list(r):
+                    validated.append(r)
+            if validated:
+                self._engine.default_recipients = validated
+
+    def _zip_attachments_if_needed(self, attachments) -> Optional[str]:
+        """
+        Accepts:
+          - None
+          - path to a .zip
+          - list of file paths (bundles into a temporary zip)
+        Returns a zip path or None.
+        """
+        if not attachments:
+            return None
+
+        # single zip path passthrough
+        if (isinstance(attachments, list) and len(attachments) == 1 and
+            str(attachments[0]).lower().endswith(".zip") and os.path.isfile(attachments[0])):
+            return attachments[0]
+
+        # Bundle arbitrary files into a temporary ZIP
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        zip_path = f"email_attachments_{ts}.zip"
+        try:
+            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                files = attachments if isinstance(attachments, list) else [attachments]
+                for p in files:
+                    if p and os.path.isfile(p):
+                        zf.write(p, arcname=os.path.basename(p))
+            return zip_path
+        except Exception as e:
+            logging.error(f"EmailNotifier: Failed to bundle attachments: {e}")
+            try:
+                if os.path.exists(zip_path):
+                    os.remove(zip_path)
+            except Exception:
+                pass
+            return None
+
+    def send(self, subject: str, html_body: str, attachments=None, recipients: Optional[List[str]] = None,
+             from_email: Optional[str] = None) -> bool:
+        # Optionally swap recipients for this send
+        if recipients:
+            self._engine.default_recipients = recipients if isinstance(recipients, list) else [recipients]
+
+        zip_file = self._zip_attachments_if_needed(attachments)
+        return self._engine.send_email_with_attachments(
+            self._engine.default_recipients,
+            subject,
+            html_body,
+            zip_file
+        )
+
+    # Backward-compatible aliases
+    def send_report(self, subject: str, html_body: str, attachments=None, recipients: Optional[List[str]] = None) -> bool:
+        return self.send(subject, html_body, attachments, recipients)
+
+    def send_validation_email(self, subject: str, html_body: str, attachments=None, recipients: Optional[List[str]] = None) -> bool:
+        return self.send(subject, html_body, attachments, recipients)
+
+# --- END: Compatibility wrapper ---
+
+
 def main():
     """Test the enhanced email system with comprehensive validation"""
     print("🧪 Testing enhanced email system...")
@@ -434,6 +541,7 @@ def main():
     else:
         print("❌ Email sending failed")
         return "Failed"
+
 
 if __name__ == "__main__":
     # Setup enhanced logging
