@@ -1222,12 +1222,22 @@ def run_invoice_validation():
             # Enhance the existing results
             enhancement_result = enhance_validation_results(detailed_df, email_summary)
     
-            if enhancement_result['success']:
+            # enhancement_result is expected to be a dict from enhance_validation_results(...)
+            if isinstance(enhancement_result, dict) and enhancement_result.get('success', False):
                 print("✅ Enhancement successful!")
-                enhanced_df = enhancement_result['enhanced_df']
-                changes_detected = enhancement_result['changes_detected']
-                enhanced_email_content = enhancement_result['enhanced_email_content']
-        
+                enhanced_df = enhancement_result.get('enhanced_df', detailed_df)
+                changes_detected = enhancement_result.get('changes_detected', False)
+                enhanced_email_content = (
+                    enhancement_result.get('enhanced_email_content') or email_summary
+                )
+            else:
+                # Enhancement failed or returned legacy type; keep running safely
+                print(f"⚠️ Enhancement failed: {getattr(enhancement_result, 'message', 'unknown error')}")
+                enhanced_df = (enhancement_result.get('enhanced_df', detailed_df)
+                               if isinstance(enhancement_result, dict) else detailed_df)
+                changes_detected = False
+                enhanced_email_content = email_summary
+
                 # Save enhanced Excel report
                 enhanced_report_path = f"data/enhanced_invoice_validation_detailed_{today_str}.xlsx"
         
