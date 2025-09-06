@@ -1,31 +1,36 @@
 name: Invoice Validation
 
+# Trigger the workflow on push to main and on a scheduled basis
 on:
   push:
     branches:
       - main
   schedule:
-    - cron: '0 6 * * *'  # Run at 6 AM every day
+    - cron: '0 6 * * *'  # Run at 6 AM UTC daily
 
 jobs:
   invoice-validation:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the repository
       - name: Checkout Repository
         uses: actions/checkout@v2
 
+      # Step 2: Set up Python environment
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
+          python-version: '3.8'  # Ensure the required Python version is set up
 
+      # Step 3: Install dependencies from requirements.txt
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Set environment variables from GitHub Secrets
+      # Step 4: Set environment variables from GitHub Secrets
+      - name: Set environment variables
         run: |
           echo "RMS_BASE_URL=https://rms.koenig-solutions.com" >> $GITHUB_ENV
           echo "DB_PATH=invoice_validation.db" >> $GITHUB_ENV
@@ -41,5 +46,23 @@ jobs:
           echo "AP_TEAM_EMAIL_LIST=${{ secrets.AP_TEAM_EMAIL_LIST }}" >> $GITHUB_ENV
           echo "EMAIL_DEBUG=${{ secrets.EMAIL_DEBUG }}" >> $GITHUB_ENV
 
+      # Step 5: Install WebDriver Manager for Selenium
+      - name: Install WebDriver Manager
+        run: |
+          python -m pip install webdriver-manager
+
+      # Step 6: Run the Invoice Validation System
       - name: Run Invoice Validation
-        run: python3 main.py run  # Assuming 'run' is your command in main.py
+        run: python3 main.py run  # This assumes the 'run' command triggers the validation in main.py
+
+      # Step 7: (Optional) Archive results if required
+      - name: Archive Results (Optional)
+        run: |
+          mkdir -p archive
+          mv invoice_validation_report.xlsx archive/
+          mv logs/ archive/  # Move logs to archive for historical purposes
+
+      # Step 8: (Optional) Clean up old data from the repository
+      - name: Cleanup old data
+        run: |
+          python3 main.py cleanup  # Assuming there's a cleanup command in main.py
