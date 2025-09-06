@@ -118,40 +118,70 @@ class EnhancedEmailSystem:
         return html_template
 
     def create_invoice_zip(self, invoice_files=None, validation_period: Optional[str] = None) -> Optional[str]:
-        """Create ZIP file with invoice copies and Excel report"""
+        """Create ZIP file bundling latest reports under data/ and invoices.zip if present"""
         zip_filename: Optional[str] = None
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            period = validation_period or "current"
             zip_filename = f"invoice_validation_{timestamp}.zip"
 
-            with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                # Add latest Excel validation report
-                excel_files = glob.glob("invoice_validation_report_*.xlsx")
-                if excel_files:
-                    latest_excel = max(excel_files, key=os.path.getctime)
-                    if os.path.exists(latest_excel):
-                        zipf.write(latest_excel, "validation_report.xlsx")
-                        self.logger.info(f"Added Excel report to ZIP: {latest_excel}")
-                    else:
-                        self.logger.warning(f"Excel file not found: {latest_excel}")
+            # Collect candidate artifacts
+            candidates: List[str] = []
 
-                # Add invoice files
+            # 1) Legacy summary (if any)
+            candidates += glob.glob("invoice_validation_report_*.xlsx")
+
+            # 2) Detailed invoice-level reports
+            candidates += glob.glob("data/invoice_validation_detailed_*.xlsx")
+
+            # 3) Dashboard / delta reports
+            candidates += glob.glob("data/*/validation_result.xlsx")
+            candidates += glob.glob("data/delta_report_*.xlsx")
+
+            # 4) Email summary HTML
+            candidates += glob.glob("data/email_summary_*.html")
+
+            # 5) The big invoices zip (prefer newest under data/*/)
+            invoice_zips = []
+            invoice_zips += glob.glob("data/*/invoices.zip")
+            invoice_zips += glob.glob("invoices.zip")
+            if invoice_zips:
+                newest_invoice_zip = max(invoice_zips, key=os.path.getctime)
+                candidates.append(newest_invoice_zip)
+
+            invoice_dir = Path("invoice_files")
+
+            with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
+                added = 0
+                for path in sorted(set(candidates)):
+                    try:
+                        if not os.path.isfile(path):
+                            continue
+                        base = os.path.basename(path)
+                        arc = f"reports/{base}"
+                        zipf.write(path, arc)
+                        added += 1
+                        self.logger.info(f"Added artifact to ZIP: {path} -> {arc}")
+                    except Exception as e:
+                        self.logger.warning(f"Failed to add artifact {path}: {e}")
+
+                # Add individual invoice files if present
                 invoice_count = 0
-                invoice_dir = Path("invoice_files")
                 if invoice_dir.exists():
-                    for file_path in invoice_dir.rglob("*"):
-                        if file_path.is_file() and file_path.suffix.lower() in [".pdf", ".png", ".jpg", ".jpeg"]:
+                    for fp in invoice_dir.rglob("*"):
+                        if fp.is_file() and fp.suffix.lower() in [".pdf", ".png", ".jpg", ".jpeg"]:
                             try:
-                                zipf.write(str(file_path), f"invoice_files/{file_path.name}")
+                                zipf.write(str(fp), f"invoice_files/{fp.name}")
                                 invoice_count += 1
                             except Exception as e:
-                                self.logger.warning(f"Failed to add file {file_path}: {e}")
+                                self.logger.warning(f"Failed to add file {fp}: {e}")
 
                 # Verify
                 if os.path.exists(zip_filename) and os.path.getsize(zip_filename) > 0:
-                    self.logger.info(f"ZIP created successfully: {zip_filename} ({invoice_count} invoice files)")
+                    self.logger.info(
+                        f"ZIP created successfully: {zip_filename} ({added} report artifacts, {invoice_count} invoice files)"
+                    )
                     return zip_filename
+
                 self.logger.error("ZIP file creation failed or file is empty")
                 return None
 
@@ -383,6 +413,15 @@ class EmailNotifier:
             if validated:
                 self._engine.default_recipients = validated
 
+        # Auto-build a zip if caller didn't pass attachments
+        if attachments is None:
+            try:
+                auto_zip = self._engine.create_invoice_zip()
+                if auto_zip:
+                    attachments = auto_zip
+            except Exception as _e:
+                logging.warning(f"EmailNotifier: auto ZIP build skipped: {_e}")
+
         zip_file = self._zip_attachments_if_needed(attachments)
         return self._engine.send_email_with_attachments(
             self._engine.default_recipients,
@@ -419,7 +458,6 @@ if __name__ == "__main__":
             print("  -", i)
     else:
         print(f"✅ Config OK. Default recipients: {engine.default_recipients}")
-        # Build a tiny HTML and try without attachments (dry test envs may block SMTP login)
         html = engine.create_professional_html_template(
             {"failed": 1, "warnings": 2, "passed": 3},
             datetime.now() + timedelta(days=3),
