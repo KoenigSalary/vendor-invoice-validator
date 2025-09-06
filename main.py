@@ -18,6 +18,7 @@ import pandas as pd
 import os
 import shutil
 from pathlib import Path
+import re, json, glob
 
 # Load environment variables
 load_dotenv()
@@ -855,6 +856,251 @@ def filter_invoices_by_date(df, start_str, end_str):
     except Exception as e:
         print(f"⚠️ Date filtering failed: {str(e)}, returning all data")
         return df
+
+GST_STATE_MAP = {
+    "01":"Jammu & Kashmir","02":"Himachal Pradesh","03":"Punjab","04":"Chandigarh","05":"Uttarakhand",
+    "06":"Haryana","07":"Delhi","08":"Rajasthan","09":"Uttar Pradesh","10":"Bihar","11":"Sikkim",
+    "12":"Arunachal Pradesh","13":"Nagaland","14":"Manipur","15":"Mizoram","16":"Tripura","17":"Meghalaya",
+    "18":"Assam","19":"West Bengal","20":"Jharkhand","21":"Odisha","22":"Chhattisgarh","23":"Madhya Pradesh",
+    "24":"Gujarat","25":"Daman & Diu","26":"Dadra & Nagar Haveli and Daman & Diu","27":"Maharashtra",
+    "28":"Andhra Pradesh (Old)","29":"Karnataka","30":"Goa","31":"Lakshadweep","32":"Kerala","33":"Tamil Nadu",
+    "34":"Puducherry","35":"Andaman & Nicobar Islands","36":"Telangana","37":"Andhra Pradesh","38":"Ladakh"
+}
+
+def _try_load_creator_map(run_dir: str) -> dict:
+    """
+    Looks for a creators map the scraper may have written (json/csv).
+    Keys supported: PurchaseInvNo / InvID / VoucherNo → creator name.
+    """
+    creators = {}
+    for p in glob.glob(os.path.join(run_dir, "*creator*.*")):
+        try:
+            if p.lower().endswith(".json"):
+                with open(p, "r", encoding="utf-8") as f:
+                    creators.update(json.load(f))
+            else:
+                import pandas as _pd
+                cdf = _pd.read_csv(p)
+                key_col = next((c for c in cdf.columns if c.lower() in ("purchaseinvno","invid","voucherno","invoice_number")), None)
+                val_col = next((c for c in cdf.columns if "creator" in c.lower()), None)
+                if key_col and val_col:
+                    creators.update(dict(zip(cdf[key_col].astype(str), cdf[val_col].astype(str))))
+        except Exception as e:
+            logger.warning(f"Creator map load failed for {p}: {e}")
+    return creators
+
+def _derive_location(row) -> str:
+    # 1) use explicit columns if present
+    for c in ("Location", "Branch", "State"):
+        v = row.get(c)
+        if isinstance(v, str) and v.strip():
+            return v.strip()
+    # 2) GST state code → state name
+    gst = str(row.get("GSTNO", "")).strip()
+    m = re.match(r"^(\d{2})", gst)
+    if m and m.group(1) in GST_STATE_MAP:
+        return GST_STATE_MAP[m.group(1)]
+    # 3) parse from narration
+    narr = str(row.get("Narration", ""))
+    m = re.search(r"(?:Location|Loc)[:\- ]+([A-Za-z .]+)", narr, flags=re.I)
+    if m:
+        return m.group(1).strip().title()
+    return ""
+
+def _derive_payment_method(row) -> str:
+    blob = " ".join(str(x) for x in [
+        row.get("VoucherTypeName",""),
+        row.get("Narration",""),
+        row.get("PurchaseLEDGER",""),
+        row.get("OtherLedger1",""),
+        row.get("OtherLedger2",""),
+        row.get("OtherLedger3","")
+    ]).lower()
+
+    if re.search(r"\b(neft|rtgs|imps|wire|bank\s*transfer)\b", blob): return "Bank Transfer"
+    if re.search(r"\bupi|gpay|phonepe|paytm|wallet|online\b", blob):   return "Digital Payment"
+    if re.search(r"\b(card|visa|mastercard|amex|pos)\b", blob):        return "Card Payment"
+    if re.search(r"\bcheque|check|dd|demand\s*draft\b", blob):         return "Cheque"
+    if re.search(r"\bcash|petty\s*cash\b", blob):                      return "Cash"
+    return ""
+
+def _derive_creator(row, creators_map: dict) -> str:
+    for k in [row.get("VoucherNo"), row.get("PurchaseInvNo"), row.get("InvID")]:
+        k = str(k) if k is not None else ""
+        if k and k in creators_map:
+            return str(creators_map[k]).strip().title()
+
+    # parse from narration
+    narr = str(row.get("Narration", ""))
+    m = re.search(r"(?:Inv(?:oice)?\s*Created\s*By|Created\s*By|Prepared\s*By|Maker|User)[:\- ]+([A-Za-z .]+)", narr, flags=re.I)
+    if m:
+        return m.group(1).strip().title()
+    return ""
+
+def _derive_scid(row) -> str:
+    for c in ("SCID", "Scid", "scid"):
+        v = row.get(c)
+        if isinstance(v, str) and v.strip():
+            return v.strip()
+    narr = str(row.get("Narration", ""))
+    m = re.search(r"\bSCID[:\- ]*([A-Za-z0-9\-_/]+)", narr, flags=re.I)
+    if m:
+        return m.group(1).strip()
+    return ""
+
+def build_final_validation_report(raw_df, run_dir: str, validation_date: datetime) -> "pd.DataFrame":
+    """
+    Returns a dataframe with EXACT columns as requested, filled from RMS + derived values.
+    Assumes raw_df is the parsed RMS export (tab-separated), columns like those seen in logs.
+    """
+    import pandas as pd
+
+    df = raw_df.copy()
+    # Standardize a few probable column name typos from RMS export
+    rename_map = {
+        "Voucherdate":"Invoice_Date",
+        "PurchaseInvNo":"Invoice_Number",
+        "PurchaseInvDate":"Invoice_Date_Raw",
+        "PartyName":"Vendor_Name",
+        "GSTNO":"GST_Number",
+        "Total":"Amount",
+        "Currency":"Invoice_Currency",
+        "InvID":"RMS_Invoice_ID",
+        "OtherLedgerAmt1":"OtherLedgerAmt1",   # if your export uses stars, these will be ignored
+        "OtherLedgerAmt2":"OtherLedgerAmt2",
+        "OtherLedgerAmt3":"OtherLedgerAmt3",
+        "CGSTInputAmt":"CGST_Amount",
+        "SGSTInputAmt":"SGST_Amount",
+        "IGST/VATInputAmt":"IGST_Amount",  # RMS sometimes mixes IGST/VAT label
+        "VAT":"VAT_Amount",
+        "TDS":"TDS_Status",
+        "State":"State"  # keep for location fallback
+    }
+    # apply safe renames when columns exist
+    rename_map = {k:v for k,v in rename_map.items() if k in df.columns}
+    df = df.rename(columns=rename_map)
+
+    # creators map (optional)
+    creators_map = _try_load_creator_map(run_dir)
+
+    # Derived fields
+    df["Invoice_Creator_Name"] = df.apply(lambda r: _derive_creator(r, creators_map), axis=1)
+    df["Location"]             = df.apply(_derive_location, axis=1)
+    df["Method_of_Payment"]    = df.apply(_derive_payment_method, axis=1)
+    df["SCID"]                 = df.apply(_derive_scid, axis=1)
+
+    # Dates / entry date / due date
+    # Prefer explicit Invoice_Date_Raw if present, else Invoice_Date
+    def _pick_date(row, *candidates):
+        for c in candidates:
+            v = row.get(c)
+            if pd.notna(v) and str(v).strip():
+                return str(v)
+        return ""
+    df["Invoice_Date"]       = df.apply(lambda r: _pick_date(r, "Invoice_Date_Raw","Invoice_Date"), axis=1)
+    df["Invoice_Entry_Date"] = df.apply(lambda r: _pick_date(r, "OrderDate","VoucherDate","Invoice_Date"), axis=1)
+    df["Due_Date"]           = ""  # not in export; leave blank unless you add extraction
+    df["Due_Date_Notification"] = ""
+
+    # Account Head from narration / ledger (reusing your helper if present)
+    def _account_head(row):
+        base = str(row.get("Narration","") or row.get("PurchaseLEDGER",""))
+        try:
+            return map_account_head(base)
+        except Exception:
+            return "Miscellaneous"
+    df["Account_Head"] = df.apply(_account_head, axis=1)
+
+    # Validation related columns – map from your computed results if you have them, else defaults
+    if "Validation_Status" not in df.columns:
+        df["Validation_Status"] = ""   # your pipeline later can merge the actual status
+    if "Issues_Found" not in df.columns:
+        df["Issues_Found"] = ""
+    if "Issue_Details" not in df.columns:
+        df["Issue_Details"] = ""
+
+    # Monetary/tax columns – ensure they exist
+    for col in ["Amount","CGST_Amount","SGST_Amount","IGST_Amount","VAT_Amount"]:
+        if col not in df.columns:
+            df[col] = 0
+
+    # Total tax calculated
+    df["Total_Tax_Calculated"] = (
+        df.get("CGST_Amount", 0).fillna(0).astype(float) +
+        df.get("SGST_Amount", 0).fillna(0).astype(float) +
+        df.get("IGST_Amount", 0).fillna(0).astype(float) +
+        df.get("VAT_Amount", 0).fillna(0).astype(float)
+    )
+
+    # Tax type heuristic
+    def _tax_type(row):
+        if (row.get("IGST_Amount",0) or 0) > 0 or (row.get("CGST_Amount",0) or 0) > 0 or (row.get("SGST_Amount",0) or 0) > 0:
+            return "GST"
+        if (row.get("VAT_Amount",0) or 0) > 0:
+            return "VAT"
+        return ""
+    df["Tax_Type"] = df.apply(_tax_type, axis=1)
+
+    # Row_Index & Validation_Date
+    df["Row_Index"]      = df.index
+    df["Validation_Date"] = validation_date.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Duplicate keys (your list has both “Invoice currency” and “Invoice_Currency” and two “Location”s)
+    # We will provide them once each; “Invoice currency” (space) will mirror Invoice_Currency.
+    df["Invoice currency"] = df.get("Invoice_Currency", "")
+
+    # Columns required (in exact order; any missing are created empty)
+    required_cols = [
+        "Invoice_ID",
+        "Invoice_Number",
+        "Invoice_Date",
+        "Invoice_Entry_Date",
+        "Vendor_Name",
+        "Amount",
+        "Invoice_Creator_Name",
+        "Location",
+        "Invoice currency",
+        "Method_of_Payment",
+        "Account_Head",
+        "Validation_Status",
+        "Issues_Found",
+        "Issue_Details",
+        "GST_Number",
+        "Row_Index",
+        "Validation_Date",
+        "Invoice_Currency",
+        "Tax_Type",
+        "Due_Date",
+        "Due_Date_Notification",
+        "Total_Tax_Calculated",
+        "CGST_Amount",
+        "SGST_Amount",
+        "IGST_Amount",
+        "VAT_Amount",
+        "TDS_Status",
+        "RMS_Invoice_ID",
+        "SCID",
+    ]
+    # Source → target mapping
+    defaults_map = {
+        "Invoice_ID": df.get("RMS_Invoice_ID", df.get("InvID", "")),
+        "Invoice_Number": df.get("Invoice_Number", df.get("VoucherNo","")),
+        "GST_Number": df.get("GST_Number",""),
+        "TDS_Status": df.get("TDS_Status",""),
+        "RMS_Invoice_ID": df.get("RMS_Invoice_ID", df.get("InvID","")),
+    }
+
+    for k, series in defaults_map.items():
+        if k not in df.columns:
+            df[k] = series
+
+    for col in required_cols:
+        if col not in df.columns:
+            df[col] = ""
+
+    # Final ordered frame
+    final_df = df[required_cols].copy()
+    return final_df
 
 def enhance_validation_results(detailed_df, email_summary):
     """
