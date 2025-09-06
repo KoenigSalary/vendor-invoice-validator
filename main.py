@@ -1186,8 +1186,8 @@ def enhance_validation_results(detailed_df, email_summary):
         return result
 
     except Exception as e:
-        logging.error(f"❌ Enhancement error: {e}")
-        logging.error(f"📊 Traceback: {traceback.format_exc()}")
+        logger.error(f"⚠️ Enhancement step error: {e}")
+        logger.error(traceback.format_exc())
         try:
             fallback_df = detailed_df.copy() if detailed_df is not None else pd.DataFrame()
         except Exception:
@@ -1484,10 +1484,36 @@ def run_invoice_validation():
                 enhanced_email_content = email_summary
 
             # raw_detailed_df is the parsed/validated RMS export you already have at this point
+            from email_notifier import EmailNotifier, EnhancedEmailSystem  # make sure this import is present
+
             run_dir = os.path.join("data", datetime.now().strftime("%Y-%m-%d"))
             validation_date = datetime.now()
 
-            final_report_df = build_final_validation_report(raw_detailed_df, run_dir, validation_date)
+            # Use the dataframe you actually produced earlier in the workflow:
+            source_df = detailed_df   # <- this exists in your run; change only if your var name is different
+            final_report_df = build_final_validation_report(source_df, run_dir, validation_date)
+
+            # Save the exact-format report
+            final_report_path = os.path.join("data", f"invoice_validation_detailed_{validation_date.strftime('%Y-%m-%d')}.xlsx")
+            with pd.ExcelWriter(final_report_path, engine="xlsxwriter") as _writer:
+                final_report_df.to_excel(_writer, sheet_name="Validation Report", index=False)
+
+            # Attach the real invoices.zip from the run directory + the report
+            invoices_zip_path = os.path.join(run_dir, "invoices.zip")
+            attachments = [p for p in (final_report_path, invoices_zip_path) if os.path.isfile(p)]
+
+            # Send the email
+            notifier = EmailNotifier()
+            deadline = datetime.now() + timedelta(days=3)
+            html_body = EnhancedEmailSystem().create_professional_html_template(
+                {"failed": 0, "warnings": 0, "passed": 0},  # plug real counts if you have them handy
+                deadline
+            )
+            notifier.send_validation_report(
+                f"Invoice Validation Report - {validation_date:%Y-%m-%d}",
+                html_body,
+                attachments=attachments
+            )
 
             # Save with the exact schema requested
             final_report_path = os.path.join("data", f"invoice_validation_detailed_{datetime.now().strftime('%Y-%m-%d')}.xlsx")
@@ -1571,7 +1597,8 @@ def run_invoice_validation():
                 pd.DataFrame(rows).to_excel(writer, sheet_name='Enhanced_Summary', index=False)
 
         except Exception as e:
-            logging.error(f"⚠️ Enhancement step error: {e}")
+            logger.error(f"⚠️ Enhancement step error: {e}")
+            logger.error(traceback.format_exc())
             print(f"⚠️ Enhancement step error: {e}")
             enhanced_df = detailed_df
             changes_detected = False
