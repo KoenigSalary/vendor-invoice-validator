@@ -1,69 +1,36 @@
-name: Invoice Validation Workflow
+name: Invoice Validation
 
 on:
+  push:
+    branches:
+      - main
   schedule:
-    - cron: '0 6 */4 * *'
-  workflow_dispatch:
+    - cron: '0 6 * * *'  # Run at 6 AM daily
 
 jobs:
-  validate-invoices:
+  invoice-validation:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pandas numpy requests schedule openpyxl xlsxwriter beautifulsoup4 lxml selenium webdriver-manager streamlit plotly python-dateutil pytz
-        
-    - name: Install Chrome for Selenium
-      run: |
-        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-        sudo apt-get update
-        sudo apt-get install -y google-chrome-stable
-        
-    - name: Run invoice validation
-      run: |
-        python main.py
-      env:
-        RMS_USERNAME: ${{ secrets.RMS_USERNAME }}
-        RMS_PASSWORD: ${{ secrets.RMS_PASSWORD }}
-        RMS_BASE_URL: https://rms.koenig-solutions.com
-        SMTP_SERVER: ${{ secrets.SMTP_HOST }}
-        SMTP_PORT: ${{ secrets.SMTP_PORT }}
-        EMAIL_USERNAME: ${{ secrets.SMTP_USER }}
-        EMAIL_PASSWORD: ${{ secrets.SMTP_PASS }}
-        SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
-        SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
-        AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
-        EMAIL_DEBUG: ${{ secrets.EMAIL_DEBUG }}
-        
-    - name: Upload validation results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: validation-results
-        path: |
-          *.xlsx
-          *.csv
-          *.log
-          validation_reports/
-        retention-days: 30
-        
-    - name: Upload logs
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: system-logs
-        path: |
-          *.log
-          data/*.db
-        retention-days: 7
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'  # Adjust the Python version if necessary
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Set environment variables
+        run: |
+          echo "RMS_BASE_URL=https://rms.koenig-solutions.com" >> $GITHUB_ENV
+          echo "DB_PATH=invoice_validation.db" >> $GITHUB_ENV
+          echo "EXCEL_PATH=invoice_validation_report.xlsx" >> $GITHUB_ENV
+          # Add any other required variables here
+
+      - name: Run Invoice Validation
+        run: python3 main.py run  # Assuming 'run' is your command in main.py
