@@ -477,6 +477,9 @@ class EmailNotifier:
     def send_validation_email(self, subject: str, html_body: str, attachments=None, recipients: Optional[List[str]] = None) -> bool:
         return self.send(subject, html_body, attachments, recipients)
 
+    def send_validation_report(self, subject: str, html_body: str, attachments=None, recipients: Optional[List[str]] = None) -> bool:
+        return self.send(subject, html_body, attachments, recipients)
+
 # --- END: Compatibility wrapper ---
 
 
