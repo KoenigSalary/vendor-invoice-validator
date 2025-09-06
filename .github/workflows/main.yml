@@ -1,68 +1,84 @@
-name: Invoice Validation
+name: Invoice Validation Workflow
 
-# Trigger the workflow on push to main and on a scheduled basis
 on:
-  push:
-    branches:
-      - main
   schedule:
-    - cron: '0 6 * * *'  # Run at 6 AM UTC daily
+    - cron: '0 6 */4 * *'
+  workflow_dispatch:
 
 jobs:
-  invoice-validation:
+  validate-invoices:
     runs-on: ubuntu-latest
-
+    
     steps:
-      # Step 1: Checkout the repository
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-
-      # Step 2: Set up Python environment
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'  # Ensure the required Python version is set up
-
-      # Step 3: Install dependencies from requirements.txt
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      # Step 4: Set environment variables from GitHub Secrets
-      - name: Set environment variables
-        run: |
-          echo "RMS_BASE_URL=https://rms.koenig-solutions.com" >> $GITHUB_ENV
-          echo "DB_PATH=invoice_validation.db" >> $GITHUB_ENV
-          echo "EXCEL_PATH=invoice_validation_report.xlsx" >> $GITHUB_ENV
-          echo "RMS_USERNAME=${{ secrets.RMS_USERNAME }}" >> $GITHUB_ENV
-          echo "RMS_PASSWORD=${{ secrets.RMS_PASSWORD }}" >> $GITHUB_ENV
-          echo "SMTP_USER=${{ secrets.SMTP_USER }}" >> $GITHUB_ENV
-          echo "SMTP_PASS=${{ secrets.SMTP_PASS }}" >> $GITHUB_ENV
-          echo "SMTP_HOST=${{ secrets.SMTP_HOST }}" >> $GITHUB_ENV
-          echo "SMTP_PORT=${{ secrets.SMTP_PORT }}" >> $GITHUB_ENV
-          echo "SMTP_USE_TLS=${{ secrets.SMTP_USE_TLS }}" >> $GITHUB_ENV
-          echo "SMTP_FROM_NAME=${{ secrets.SMTP_FROM_NAME }}" >> $GITHUB_ENV
-          echo "AP_TEAM_EMAIL_LIST=${{ secrets.AP_TEAM_EMAIL_LIST }}" >> $GITHUB_ENV
-          echo "EMAIL_DEBUG=${{ secrets.EMAIL_DEBUG }}" >> $GITHUB_ENV
-
-      # Step 5: Install WebDriver Manager for Selenium
-      - name: Install WebDriver Manager
-        run: |
-          python -m pip install webdriver-manager
-
-      # Step 6: Run the Invoice Validation System
-      - name: Run Invoice Validation
-        run: python3 main.py run  # This assumes the 'run' command triggers the validation in main.py
-
-      # Step 7: (Optional) Archive results if required
-      - name: Archive Results (Optional)
-        run: |
-          mkdir -p archive
-          mv invoice_validation_report.xlsx archive/
-          mv logs/ archive/  # Move logs to archive for historical purposes
-
-      # Step 8: (Optional) Clean up old data from the repository
-      - name: Cleanup old data
-        run: |
-          python3 main.py cleanup  # Assuming there's a cleanup command in main.py
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget gnupg unzip
+        
+    - name: Install Chrome browser
+      run: |
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+        
+    - name: Install ChromeDriver
+      run: |
+        CHROME_VERSION=$(google-chrome --version | cut -d ' ' -f3 | cut -d '.' -f1)
+        CHROMEDRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION)
+        wget -N http://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip
+        unzip chromedriver_linux64.zip
+        sudo mv chromedriver /usr/local/bin/
+        sudo chmod +x /usr/local/bin/chromedriver
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas numpy requests schedule openpyxl xlsxwriter beautifulsoup4 lxml python-dateutil pytz
+        pip install selenium webdriver-manager
+        pip install streamlit plotly
+        pip install xlrd>=2.0.1
+        
+    - name: Verify installations
+      run: |
+        google-chrome --version
+        chromedriver --version
+        python -c "import selenium; print('Selenium version:', selenium.__version__)"
+        
+    - name: Run invoice validation
+      run: |
+        python3 main.py run
+      env:
+        RMS_BASE_URL: https://rms.koenig-solutions.com
+        DB_PATH: invoice_validation.db
+        EXCEL_PATH: invoice_validation_report.xlsx
+        RMS_USERNAME: ${{ secrets.RMS_USERNAME }}
+        RMS_PASSWORD: ${{ secrets.RMS_PASSWORD }}
+        SMTP_USER: ${{ secrets.SMTP_USER }}
+        SMTP_PASS: ${{ secrets.SMTP_PASS }}
+        SMTP_HOST: ${{ secrets.SMTP_HOST }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
+        SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
+        AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
+        EMAIL_DEBUG: ${{ secrets.EMAIL_DEBUG }}
+        
+    - name: Upload validation results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: validation-results
+        path: |
+          *.xlsx
+          *.csv
+          *.log
+          data/
+        retention-days: 30
