@@ -202,49 +202,80 @@ class EnhancedEmailSystem:
                 self.logger.warning(f"Ignoring invalid recipient: {r}")
         return clean
 
-    def send_email_with_attachments(self,
-                                    recipients: Optional[List[str]],
-                                    subject: str,
-                                    html_body: str,
-                                    zip_file: Optional[Union[str, Path]]) -> bool:
-        """Send HTML email with optional ZIP attachment."""
-        try:
-            valid_recipients = self._clean_recipients(recipients)
-            if not valid_recipients:
-                self.logger.error("No valid recipients specified")
-                return False
+    def send_email_with_attachments(self, recipients, subject, html_body, zip_file):
+    """Send professional HTML email with ZIP attachment - Enhanced error handling"""
+    try:
+        # Normalize recipients → flat list[str]
+        flat_recipients = []
+        if isinstance(recipients, (list, tuple, set)):
+            items = list(recipients)
+        elif recipients is None:
+            items = []
+        else:
+            items = [recipients]
 
-            if not self.username or not self.password:
-                self.logger.error("SMTP credentials not configured (username/password missing)")
-                return False
+        for r in items:
+            # each r may be a list, a single email, or a comma/semicolon string
+            if isinstance(r, (list, tuple, set)):
+                for x in r:
+                    flat_recipients.extend(self._validate_email_list(str(x)))
+            else:
+                flat_recipients.extend(self._validate_email_list(str(r)))
 
-            msg = MIMEMultipart("mixed")
-            msg["From"] = self.username
-            msg["To"] = ", ".join(valid_recipients)
-            msg["Subject"] = subject
+        # De-dupe while preserving order
+        seen = set()
+        valid_recipients = []
+        for e in flat_recipients:
+            if e not in seen:
+                seen.add(e)
+                valid_recipients.append(e)
 
-            # HTML body
-            msg.attach(MIMEText(html_body or "", "html", "utf-8"))
+        if not valid_recipients:
+            self.logger.error("No valid recipients found")
+            return False
 
-            # Optional attachment
-            if zip_file:
-                zip_path = str(zip_file)
-                if os.path.exists(zip_path):
-                    size = os.path.getsize(zip_path)
-                    if size > 25 * 1024 * 1024:  # 25MB
-                        self.logger.warning(f"ZIP too large ({size} bytes); skipping attachment")
-                    else:
-                        with open(zip_path, "rb") as f:
-                            part = MIMEBase("application", "zip")
-                            part.set_payload(f.read())
-                            encoders.encode_base64(part)
-                            part.add_header("Content-Disposition", f'attachment; filename="{os.path.basename(zip_path)}"')
-                            msg.attach(part)
-                        self.logger.info(f"ZIP attachment added: {os.path.basename(zip_path)} ({size} bytes)")
+        if not self.username or not self.password:
+            self.logger.error("SMTP credentials not configured")
+            return False
+
+        # Ensure HTML body is a string
+        if not isinstance(html_body, str):
+            try:
+                if isinstance(html_body, (list, tuple)):
+                    html_body = "\n".join(str(x) for x in html_body)
                 else:
-                    self.logger.warning(f"ZIP path does not exist: {zip_path}")
+                    html_body = str(html_body)
+            except Exception:
+                html_body = "<p>(No content)</p>"
 
-            # Send
+        msg = MIMEMultipart('mixed')
+        msg['From'] = self.username
+        msg['To'] = ', '.join(valid_recipients)
+        msg['Subject'] = str(subject) if subject is not None else "Invoice Validation Report"
+
+        # Attach HTML body
+        html_part = MIMEText(html_body, 'html', 'utf-8')
+        msg.attach(html_part)
+
+        # Attach ZIP (optional)
+        if zip_file and os.path.exists(str(zip_file)):
+            try:
+                file_size = os.path.getsize(str(zip_file))
+                if file_size > 25 * 1024 * 1024:
+                    self.logger.warning(f"ZIP file too large ({file_size} bytes), skipping attachment")
+                else:
+                    with open(str(zip_file), 'rb') as attachment:
+                        part = MIMEBase('application', 'zip')
+                        part.set_payload(attachment.read())
+                        encoders.encode_base64(part)
+                        part.add_header('Content-Disposition', f'attachment; filename="{os.path.basename(str(zip_file))}"')
+                        msg.attach(part)
+                        self.logger.info(f"ZIP attachment added: {os.path.basename(str(zip_file))} ({file_size} bytes)")
+            except Exception as e:
+                self.logger.error(f"Failed to attach ZIP file: {e}")
+
+        # Send
+        try:
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
                 server.starttls()
                 server.login(self.username, self.password)
@@ -257,17 +288,20 @@ class EnhancedEmailSystem:
             self.logger.error("SMTP authentication failed - check credentials")
             return False
         except smtplib.SMTPRecipientsRefused:
-            self.logger.error("All recipients were refused by the SMTP server")
+            self.logger.error("All recipients were refused by server")
             return False
         except smtplib.SMTPException as e:
             self.logger.error(f"SMTP error occurred: {e}")
             return False
-        except Exception as e:
-            self.logger.error(f"Error sending email: {e}")
-            return False
-        finally:
-            # Cleanup provided temp zip if caller created one and wants cleanup externally instead,
-            # leave as-is. (No deletion here; caller can manage lifecycle.)
+
+    except Exception as e:
+        self.logger.error(f"Error sending email: {e}")
+        return False
+    finally:
+        # Cleanup temporary ZIP file if caller passed a temp path (wrapper cleans its own)
+        if zip_file and os.path.exists(str(zip_file)):
+            # Only remove temp zips created by wrapper; we cannot tell here reliably,
+            # so leave cleanup to the wrapper. No-op.
             pass
 
     # ---------- config validation ----------
@@ -413,7 +447,6 @@ class EmailNotifier:
 
     def send_validation_report(self, subject: str, html_body: str, attachments=None, recipients: Optional[List[str]] = None) -> bool:
         return self.send(subject, html_body, attachments, recipients)
-
 
 # ---------------- Optional local test ----------------
 
