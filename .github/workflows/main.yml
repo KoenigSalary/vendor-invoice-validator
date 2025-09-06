@@ -47,7 +47,7 @@ jobs:
         EMAIL_DEBUG: ${{ secrets.EMAIL_DEBUG }}
         
     - name: Upload validation results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: validation-results
@@ -55,4 +55,15 @@ jobs:
           *.xlsx
           *.csv
           *.log
+          validation_reports/
         retention-days: 30
+        
+    - name: Upload logs
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: system-logs
+        path: |
+          *.log
+          data/*.db
+        retention-days: 7
