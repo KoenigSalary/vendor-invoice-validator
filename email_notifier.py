@@ -3,9 +3,10 @@
 import os
 import re
 import glob
+import json
 import logging
 import smtplib
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
 import zipfile
@@ -107,35 +108,26 @@ class EnhancedEmailSystem:
         return emails
 
     def _today_dir_guess(self) -> Optional[Path]:
-        # Looks like data/YYYY-MM-DD is used. Fall back to newest folder under data/.
         data_root = Path("data")
         if not data_root.exists():
             return None
-        # Prefer today's IST date folder if present
         today = datetime.now().strftime("%Y-%m-%d")
         td = data_root / today
         if td.exists():
             return td
-        # Else newest by mtime
         dated = [p for p in data_root.iterdir() if p.is_dir()]
         return max(dated, key=lambda p: p.stat().st_mtime) if dated else None
 
     def _read_latest_rms_table(self) -> Optional[pd.DataFrame]:
-        """
-        Try to load the tab-separated RMS export (invoice_download.xls) as DataFrame of strings.
-        """
+        """Load the tab-separated RMS export (invoice_download.xls) as DataFrame of strings."""
         ddir = self._today_dir_guess()
-        if not ddir:
-            return None
-        # Prefer invoice_download.xls under today dir
-        tsv_path = ddir / "invoice_download.xls"
-        if tsv_path.exists():
-            try:
-                df = pd.read_csv(tsv_path, sep="\t", dtype=str, engine="python")
-                return df
-            except Exception as e:
-                self.logger.warning(f"Could not read TSV from {tsv_path}: {e}")
-        # Fallback: try any such file under data/*/
+        if ddir:
+            tsv_path = ddir / "invoice_download.xls"
+            if tsv_path.exists():
+                try:
+                    return pd.read_csv(tsv_path, sep="\t", dtype=str, engine="python")
+                except Exception as e:
+                    self.logger.warning(f"Could not read TSV from {tsv_path}: {e}")
         candidates = glob.glob("data/*/invoice_download.xls")
         if candidates:
             latest = max(candidates, key=os.path.getctime)
@@ -146,9 +138,7 @@ class EnhancedEmailSystem:
         return None
 
     def _read_latest_detailed_validation(self) -> Optional[pd.DataFrame]:
-        """
-        Try to load the detailed validation output to pull Validation_Status / Issue_Details.
-        """
+        """Try to load the detailed validation output to pull Validation_Status / Issue_Details."""
         paths = glob.glob("data/invoice_validation_detailed_*.xlsx") or []
         if not paths:
             return None
@@ -160,10 +150,7 @@ class EnhancedEmailSystem:
             return None
 
     def _safe_get(self, row: Dict[str, str], names: List[str]) -> Optional[str]:
-        """
-        Case-insensitive lookup from a row-dict (keys are original df columns).
-        Returns first non-empty value among candidates.
-        """
+        """Case-insensitive lookup from a row-dict; returns first non-empty value among candidates."""
         lower_map = {k.lower(): k for k in row.keys()}
         for name in names:
             key = lower_map.get(name.lower())
@@ -180,13 +167,120 @@ class EnhancedEmailSystem:
         except Exception:
             return 0.0
 
+    # ---------- Creator enrichment ----------
+
+    def _select_column(self, df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
+        lmap = {c.lower(): c for c in df.columns}
+        for cand in candidates:
+            if cand.lower() in lmap:
+                return lmap[cand.lower()]
+        # fuzzy contains
+        for c in df.columns:
+            lc = c.lower()
+            if any(tok.lower() in lc for tok in candidates):
+                return c
+        return None
+
+    def _load_creator_lookup_from_df(self, df: pd.DataFrame) -> Dict[str, str]:
+        """Try to detect invoice number column and creator column in an arbitrary dataframe."""
+        inv_col = self._select_column(
+            df,
+            [
+                "PurchaseInvNo","Invoice Number","Invoice_Number","InvoiceNumber",
+                "VoucherNo","InvID","RMS_Invoice_ID"
+            ],
+        )
+        creator_col = self._select_column(
+            df,
+            [
+                "Inv Created By","Invoice_Creator_Name","Creator","CreatedBy",
+                "Created By","Inv_Created_By","Invoice Created By"
+            ],
+        )
+        lookup: Dict[str, str] = {}
+        if inv_col and creator_col:
+            for _, r in df[[inv_col, creator_col]].dropna().iterrows():
+                inv = str(r[inv_col]).strip()
+                cr = str(r[creator_col]).strip()
+                if inv and cr:
+                    lookup[inv] = self._clean_creator(cr)
+        return lookup
+
+    def _clean_creator(self, name: str) -> str:
+        s = re.sub(r"\s*\(.*\)$", "", str(name)).strip()
+        if not s or s.lower() in {"n/a","na","null","none","unknown","system"}:
+            return "System Generated"
+        return s.title()
+
+    def _build_creator_lookup(self, df_rms: pd.DataFrame) -> Dict[str, str]:
+        """Aggregate creator mapping from multiple sources (RMS TSV, validation_result, creator files)."""
+        lookup: Dict[str, str] = {}
+
+        # 1) RMS TSV itself
+        try:
+            lookup.update(self._load_creator_lookup_from_df(df_rms))
+        except Exception as e:
+            self.logger.debug(f"Creator from RMS TSV failed: {e}")
+
+        # 2) validation_result.xlsx under the run dir
+        try:
+            ddir = self._today_dir_guess()
+            if ddir:
+                valres = ddir / "validation_result.xlsx"
+                if valres.exists():
+                    df = pd.read_excel(valres)
+                    lookup.update(self._load_creator_lookup_from_df(df))
+        except Exception as e:
+            self.logger.debug(f"Creator from validation_result.xlsx failed: {e}")
+
+        # 3) Any obvious creator mapping files in run dir (csv/xlsx/json)
+        try:
+            ddir = self._today_dir_guess()
+            if ddir:
+                patterns = ["*creator*.csv","*created*by*.csv","*creator*.xlsx","*created*by*.xlsx","*creator*.json","*created*by*.json"]
+                paths: List[Path] = []
+                for pat in patterns:
+                    paths += list(ddir.glob(pat))
+                for p in paths:
+                    try:
+                        if p.suffix.lower() == ".csv":
+                            df = pd.read_csv(p, dtype=str)
+                            lookup.update(self._load_creator_lookup_from_df(df))
+                        elif p.suffix.lower() in {".xlsx",".xls"}:
+                            df = pd.read_excel(p, dtype=str)
+                            lookup.update(self._load_creator_lookup_from_df(df))
+                        elif p.suffix.lower() == ".json":
+                            try:
+                                obj = json.loads(p.read_text(encoding="utf-8"))
+                                if isinstance(obj, dict):
+                                    # assume {"INV-...": "Name", ...}
+                                    for k, v in obj.items():
+                                        if k and v:
+                                            lookup[str(k).strip()] = self._clean_creator(v)
+                                elif isinstance(obj, list):
+                                    # list of records
+                                    df = pd.DataFrame(obj)
+                                    lookup.update(self._load_creator_lookup_from_df(df))
+                            except Exception as je:
+                                self.logger.debug(f"Creator JSON parse failed ({p}): {je}")
+                    except Exception as ie:
+                        self.logger.debug(f"Creator map load failed ({p}): {ie}")
+        except Exception as e:
+            self.logger.debug(f"Creator glob failed: {e}")
+
+        if lookup:
+            self.logger.info(f"Creator lookup built with {len(lookup)} entries")
+        else:
+            self.logger.warning("No creator info sources found; Invoice_Creator_Name may be Unknown")
+        return lookup
+
     # ---------- Report builder (requested format) ----------
 
     def build_formatted_validation_report(self) -> Optional[str]:
         """
         Build Excel at data/validation_report_formatted_YYYY-MM-DD.xlsx
         with the requested column order, using best-effort field mapping from RMS export
-        plus (if available) detailed validation outputs.
+        plus detailed validation outputs and enriched creator mapping.
         """
         df_rms = self._read_latest_rms_table()
         if df_rms is None or df_rms.empty:
@@ -197,12 +291,10 @@ class EnhancedEmailSystem:
         detail = self._read_latest_detailed_validation()
         validation_lookup = {}
         if detail is not None and not detail.empty:
-            # Find likely columns
             cols_lower = {c.lower(): c for c in detail.columns}
             inv_col = cols_lower.get("invoice number") or cols_lower.get("invoice_number") or cols_lower.get("purchaseinvno") or None
             status_col = cols_lower.get("validation status") or cols_lower.get("validation_status") or cols_lower.get("validation result") or cols_lower.get("validation_result")
             issues_col = cols_lower.get("issues_found") or cols_lower.get("error details") or cols_lower.get("error_details")
-            # Build lookup: invoice_number -> (status, issues, details)
             if inv_col is not None:
                 for _, r in detail.iterrows():
                     key = str(r.get(inv_col, "")).strip()
@@ -213,7 +305,10 @@ class EnhancedEmailSystem:
                             "Issue_Details": str(r.get(issues_col, "")).strip() if issues_col else "",
                         }
 
-        # Requested columns (kept exactly; fixed the broken newline in Total_Tax_Calculated)
+        # Build creator lookup from multiple sources (RMS/validation_result/creator maps)
+        creator_lookup = self._build_creator_lookup(df_rms)
+
+        # Requested columns (duplicate "Location" kept; fixed Total_Tax_Calculated name)
         columns = [
             "Invoice_ID",
             "Invoice_Number",
@@ -233,7 +328,7 @@ class EnhancedEmailSystem:
             "Row_Index",
             "Validation_Date",
             "Invoice_Currency",
-            "Location",  # (duplicate name requested)
+            "Location",  # duplicate
             "Tax_Type",
             "Due_Date",
             "Due_Date_Notification",
@@ -247,32 +342,38 @@ class EnhancedEmailSystem:
             "SCID",
         ]
 
-        # Prepare output rows (construct list of values per row, in exact order)
         out_rows: List[List[Optional[str]]] = []
         df_rms = df_rms.fillna("")
         for idx, r in df_rms.iterrows():
             row = r.to_dict()
 
-            invoice_no = self._safe_get(row, ["PurchaseInvNo", "Invoice Number", "Invoice_No", "InvoiceNumber", "VoucherNo"]) or ""
-            vendor = self._safe_get(row, ["PartyName", "Vendor Name", "Vendor_Name"]) or ""
-            inv_date = self._safe_get(row, ["PurchaseInvDate", "Invoice Date", "Voucherdate"]) or ""
-            entry_date = self._safe_get(row, ["Voucherdate", "Invoice_Entry_Date"]) or inv_date
-            amount = self._safe_get(row, ["Total", "Amount", "PaytyAmt", "TaxableValue"]) or ""
-            creator = self._safe_get(row, ["Inv Created By", "Creator", "Invoice_Creator_Name"]) or "Unknown"
-            location = self._safe_get(row, ["State", "Location"]) or ""
-            currency = self._safe_get(row, ["Currency", "Invoice currency", "Invoice_Currency"]) or ""
-            method = self._safe_get(row, ["Method_of_Payment", "Payment Method"]) or ""
-            account_head = self._safe_get(row, ["PurchaseLEDGER", "Account_Head", "Narration"]) or ""
-            gst = self._safe_get(row, ["GSTNO", "GST_Number", "GSTIN"]) or ""
-            rms_id = self._safe_get(row, ["InvID", "RMS_Invoice_ID"]) or ""
+            invoice_no = self._safe_get(row, ["PurchaseInvNo","Invoice Number","Invoice_No","InvoiceNumber","VoucherNo"]) or ""
+            vendor = self._safe_get(row, ["PartyName","Vendor Name","Vendor_Name"]) or ""
+            inv_date = self._safe_get(row, ["PurchaseInvDate","Invoice Date","Voucherdate"]) or ""
+            entry_date = self._safe_get(row, ["Voucherdate","Invoice_Entry_Date"]) or inv_date
+            amount = self._safe_get(row, ["Total","Amount","PaytyAmt","TaxableValue"]) or ""
+            # Try many creator headers; if still blank, use lookup
+            creator = (
+                self._safe_get(row, [
+                    "Inv Created By","Invoice_Creator_Name","Creator","CreatedBy","Created By","Inv_Created_By","Invoice Created By"
+                ]) or creator_lookup.get(invoice_no, "Unknown")
+            )
+            creator = self._clean_creator(creator)
+
+            location = self._safe_get(row, ["State","Location"]) or ""
+            currency = self._safe_get(row, ["Currency","Invoice currency","Invoice_Currency"]) or ""
+            method = self._safe_get(row, ["Method_of_Payment","Payment Method"]) or ""
+            account_head = self._safe_get(row, ["PurchaseLEDGER","Account_Head","Narration"]) or ""
+            gst = self._safe_get(row, ["GSTNO","GST_Number","GSTIN"]) or ""
+            rms_id = self._safe_get(row, ["InvID","RMS_Invoice_ID"]) or ""
             scid = self._safe_get(row, ["SCID"]) or ""
-            due_date = self._safe_get(row, ["Due_Date", "Due Date"]) or ""
+            due_date = self._safe_get(row, ["Due_Date","Due Date"]) or ""
             due_note = self._safe_get(row, ["Due_Date_Notification"]) or ""
 
-            cgst = self._num(self._safe_get(row, ["CGSTInputAmt", "CGST_Amount"]) or 0)
-            sgst = self._num(self._safe_get(row, ["SGSTInputAmt", "SGST_Amount"]) or 0)
-            igst = self._num(self._safe_get(row, ["IGST/VATInputAmt", "IGST_Amount", "IGSTInputAmt"]) or 0)
-            vat = self._num(self._safe_get(row, ["VAT", "VAT_Amount"]) or 0)
+            cgst = self._num(self._safe_get(row, ["CGSTInputAmt","CGST_Amount"]) or 0)
+            sgst = self._num(self._safe_get(row, ["SGSTInputAmt","SGST_Amount"]) or 0)
+            igst = self._num(self._safe_get(row, ["IGST/VATInputAmt","IGST_Amount","IGSTInputAmt"]) or 0)
+            vat = self._num(self._safe_get(row, ["VAT","VAT_Amount"]) or 0)
             total_tax = cgst + sgst + igst + vat
 
             if igst > 0:
@@ -284,10 +385,9 @@ class EnhancedEmailSystem:
             else:
                 tax_type = ""
 
-            tds_raw = self._safe_get(row, ["TDS", "TDS_Status"])
+            tds_raw = self._safe_get(row, ["TDS","TDS_Status"])
             tds_status = "Deducted" if self._num(tds_raw) > 0 else (str(tds_raw) if tds_raw not in (None, "", "0", "0.0") else "Not Deducted")
 
-            # Validation details (from detailed sheet if present)
             v_status = ""
             issues_found = ""
             issue_details = ""
@@ -297,7 +397,6 @@ class EnhancedEmailSystem:
                 issues_found = got.get("Issues_Found", "") or ""
                 issue_details = got.get("Issue_Details", "") or ""
 
-            # Build the ordered row (be mindful of duplicate column names)
             values = [
                 rms_id,                     # Invoice_ID
                 invoice_no,                 # Invoice_Number
@@ -334,7 +433,6 @@ class EnhancedEmailSystem:
 
         out_df = pd.DataFrame(out_rows, columns=columns)
 
-        # Save
         out_path = Path("data") / f"validation_report_formatted_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
         out_path.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -349,7 +447,6 @@ class EnhancedEmailSystem:
     # ---------- ZIP assembly (reports + real invoices) ----------
 
     def _add_file_if_fits(self, zipf: zipfile.ZipFile, path: str, arcname: str, running_size: int) -> int:
-        """Add file to zip if it doesn't push total over max_zip_bytes; return new size (or unchanged if skipped)."""
         try:
             sz = os.path.getsize(path)
         except OSError:
@@ -361,10 +458,8 @@ class EnhancedEmailSystem:
         return running_size + sz
 
     def _add_invoices_from_inner_zip(self, outer: zipfile.ZipFile, inner_zip_path: str, running_size: int) -> int:
-        """Open invoices.zip and copy its contents (pdf/jpg/png) into the outer ZIP until size cap is reached."""
         try:
             with zipfile.ZipFile(inner_zip_path, "r") as inner:
-                # Iterate deterministically
                 for info in sorted(inner.infolist(), key=lambda i: i.filename):
                     if info.is_dir():
                         continue
@@ -384,13 +479,7 @@ class EnhancedEmailSystem:
         return running_size
 
     def create_invoice_zip(self) -> Optional[str]:
-        """
-        Create ZIP that includes:
-          - The formatted validation report (this function builds it if missing)
-          - Other relevant run reports under data/
-          - REAL invoice files from the downloaded invoices.zip (as many as fit)
-        """
-        # Ensure new formatted report exists
+        # Ensure new formatted report exists (and enriched with creator)
         self.build_formatted_validation_report()
 
         zip_filename: Optional[str] = None
@@ -398,7 +487,6 @@ class EnhancedEmailSystem:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             zip_filename = f"invoice_validation_{timestamp}.zip"
 
-            # Collect candidate artifact reports
             candidates: List[str] = []
             candidates += glob.glob("invoice_validation_report_*.xlsx")          # legacy report
             candidates += glob.glob("data/validation_report_formatted_*.xlsx")   # new requested format
@@ -407,13 +495,11 @@ class EnhancedEmailSystem:
             candidates += glob.glob("data/delta_report_*.xlsx")
             candidates += glob.glob("data/email_summary_*.html")
 
-            # Find the most recent invoices.zip produced by the scraper
             invoice_zips = glob.glob("data/*/invoices.zip") + glob.glob("invoices.zip")
             newest_invoices_zip = max(invoice_zips, key=os.path.getctime) if invoice_zips else None
 
             running_size = 0
             with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                # Add reports under reports/
                 for path in sorted(set(candidates)):
                     if not os.path.isfile(path):
                         continue
@@ -424,13 +510,11 @@ class EnhancedEmailSystem:
                     if running_size != before:
                         self.logger.info(f"Added report: {path} -> {arc}")
 
-                # Add REAL invoices: unpack invoices.zip contents into invoices/
                 if newest_invoices_zip and os.path.isfile(newest_invoices_zip):
                     running_size = self._add_invoices_from_inner_zip(zipf, newest_invoices_zip, running_size)
                 else:
                     self.logger.warning("No invoices.zip found to include real invoices.")
 
-            # Verify zip
             if os.path.exists(zip_filename) and os.path.getsize(zip_filename) > 0:
                 self.logger.info(f"ZIP created successfully: {zip_filename} ({os.path.getsize(zip_filename)} bytes)")
                 return zip_filename
@@ -440,7 +524,6 @@ class EnhancedEmailSystem:
 
         except Exception as e:
             self.logger.error(f"Error creating ZIP: {e}")
-            # Cleanup failed
             if zip_filename and os.path.exists(zip_filename):
                 try:
                     os.remove(zip_filename)
@@ -451,9 +534,7 @@ class EnhancedEmailSystem:
     # ---------- Email sender ----------
 
     def send_email_with_attachments(self, recipients, subject, html_body, zip_file) -> bool:
-        """Send HTML email with the assembled ZIP (or without if not available)."""
         try:
-            # Normalize recipients → flat list[str]
             flat: List[str] = []
             if isinstance(recipients, (list, tuple, set)):
                 items = list(recipients)
@@ -469,7 +550,6 @@ class EnhancedEmailSystem:
                 else:
                     flat.extend(self._validate_email_list(str(r)))
 
-            # De-dupe preserving order
             seen = set()
             valid_recipients: List[str] = []
             for e in flat:
@@ -485,7 +565,6 @@ class EnhancedEmailSystem:
                 self.logger.error("SMTP credentials not configured")
                 return False
 
-            # Ensure HTML body is a string
             if not isinstance(html_body, str):
                 try:
                     if isinstance(html_body, (list, tuple)):
@@ -503,11 +582,9 @@ class EnhancedEmailSystem:
             msg["To"] = ", ".join(valid_recipients)
             msg["Subject"] = str(subject) if subject is not None else "Invoice Validation Report"
 
-            # Attach HTML
             html_part = MIMEText(html_body, "html", "utf-8")
             msg.attach(html_part)
 
-            # Attach ZIP (optional)
             if zip_file and os.path.exists(str(zip_file)):
                 try:
                     file_size = os.path.getsize(str(zip_file))
@@ -524,7 +601,6 @@ class EnhancedEmailSystem:
                 except Exception as e:
                     self.logger.error(f"Failed to attach ZIP file: {e}")
 
-            # Send
             try:
                 with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
                     server.starttls()
@@ -590,7 +666,6 @@ class EmailNotifier:
         self._from_name = from_name or os.getenv("SMTP_FROM_NAME", "")
 
         if recipients:
-            # Override/validate provided recipients
             validated: List[str] = []
             src = recipients if isinstance(recipients, list) else [recipients]
             for r in src:
@@ -599,17 +674,9 @@ class EmailNotifier:
                 self._engine.default_recipients = validated
 
     def _zip_attachments_if_needed(self, attachments) -> Optional[str]:
-        """
-        Accepts:
-          - None
-          - path to a .zip (str/Path)
-          - list of file paths (bundled into a temporary .zip)
-        Any other type is ignored gracefully.
-        """
         if attachments is None:
             return None
 
-        # Single string/path
         if isinstance(attachments, (str, os.PathLike)):
             s = str(attachments)
             if s.lower().endswith(".zip") and os.path.isfile(s):
@@ -632,7 +699,6 @@ class EmailNotifier:
             logging.warning("EmailNotifier: attachments is a string but not a file path; ignoring.")
             return None
 
-        # List of paths
         if isinstance(attachments, list):
             paths = [str(p) for p in attachments if isinstance(p, (str, os.PathLike))]
             if not paths:
@@ -659,7 +725,6 @@ class EmailNotifier:
 
     def send(self, subject: str, html_body, attachments=None, recipients: Optional[List[str]] = None, from_email: Optional[str] = None) -> bool:
         if recipients:
-            # Normalize/validate here so engine gets good addresses
             validated: List[str] = []
             src = recipients if isinstance(recipients, list) else [recipients]
             for r in src:
@@ -667,14 +732,10 @@ class EmailNotifier:
             if validated:
                 self._engine.default_recipients = validated
 
-        # Try to use provided attachments
         zip_file = self._zip_attachments_if_needed(attachments)
-
-        # If none/invalid, build our reports+invoices ZIP
         if not zip_file:
             zip_file = self._engine.create_invoice_zip()
 
-        # If zip exists but exceeds cap, rebuild a smaller one (reports + as many invoices as fit)
         try:
             if zip_file and os.path.getsize(zip_file) > self._engine.max_zip_bytes:
                 logging.warning("EmailNotifier: Provided ZIP exceeds size cap; rebuilding under size limit.")
