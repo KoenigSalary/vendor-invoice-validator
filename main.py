@@ -589,36 +589,37 @@ class RMSDataExtractor:
         })
     
     def authenticate(self):
-        username = os.getenv('RMS_USERNAME')
-        password = os.getenv('RMS_PASSWORD')
+        try:
+            username = os.getenv('RMS_USERNAME')
+            password = os.getenv('RMS_PASSWORD')
     
-        if not username or not password:
-            logging.error("RMS credentials not provided")
-            return False
+            if not username or not password:
+                logging.error("RMS credentials not provided")
+                return False
             
-    logging.info(f"Authenticating with RMS as user: {username}")
-            
+            logging.info(f"Authenticating with RMS as user: {username}")
+        
             # Login endpoint
             login_url = f"{self.base_url}/login"
-            
+        
             login_data = {
                 'username': username,
                 'password': password
             }
-            
+        
             response = self.session.post(login_url, data=login_data)
             response.raise_for_status()
-            
+        
             # Check if login was successful
             if 'dashboard' in response.url.lower() or response.status_code == 200:
-                logger.info("Successfully authenticated with RMS")
+                logging.info("Successfully authenticated with RMS")
                 return True
             else:
-                logger.error("RMS authentication failed")
+                logging.error("RMS authentication failed")
                 return False
-                
+            
         except Exception as e:
-            logger.error(f"RMS authentication error: {e}")
+            logging.error(f"RMS authentication error: {e}")
             return False
     
     def extract_invoice_data(self, date_from: datetime = None, date_to: datetime = None) -> List[Dict]:
