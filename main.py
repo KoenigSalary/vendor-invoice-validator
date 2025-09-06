@@ -4,6 +4,7 @@ from updater import update_invoice_status
 from reporter import save_snapshot_report
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+from email_notifier import EnhancedEmailSystem as EmailNotifier
 from invoice_tracker import (
     create_tables,
     save_invoice_snapshot,
