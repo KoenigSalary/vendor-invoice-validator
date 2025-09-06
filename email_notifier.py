@@ -1,392 +1,301 @@
-import smtplib
+# email_notifier.py
 import os
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
-from datetime import datetime, timedelta
-import zipfile
+import re
+import smtplib
 import glob
 import logging
-import re
+import zipfile
+from typing import List, Optional, Union
 from pathlib import Path
-from typing import List, Optional
+from datetime import datetime, timedelta
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email import encoders
 
 __all__ = ["EnhancedEmailSystem", "EmailNotifier"]
 
-class EnhancedEmailSystem:
-    """Enhanced email system with professional HTML templates and robust error handling"""
 
-    def __init__(self, smtp_server=None, smtp_port=None, username=None, password=None):
-        # SMTP Configuration
-        self.smtp_server = smtp_server or os.getenv('SMTP_SERVER', 'smtp.office365.com')
-        self.smtp_port = int(smtp_port or os.getenv('SMTP_PORT', '587'))
-        self.username = username or os.getenv('EMAIL_USERNAME')
-        self.password = password or os.getenv('EMAIL_PASSWORD')
-        
-        # Recipients Configuration with validation
-        recipients_str = (
-            os.getenv('AP_TEAM_EMAIL_LIST') or
-            os.getenv('EMAIL_RECIPIENTS') or
-            os.getenv('TEAM_EMAIL_LIST') or
-            ''
+class EnhancedEmailSystem:
+    """
+    Enhanced email system with professional HTML templates and robust error handling.
+    Reads SMTP creds from SMTP_* or EMAIL_* env vars.
+    """
+
+    def __init__(self, smtp_server: Optional[str] = None, smtp_port: Optional[int] = None,
+                 username: Optional[str] = None, password: Optional[str] = None):
+
+        # SMTP configuration (prefer SMTP_*; fallback to EMAIL_*)
+        self.smtp_server = (
+            smtp_server
+            or os.getenv("SMTP_HOST")
+            or os.getenv("SMTP_SERVER", "smtp.office365.com")
         )
-        
-        if recipients_str:
-            self.default_recipients = self._validate_email_list(recipients_str)
-        else:
-            self.default_recipients = []
-            
-        # Setup logging
+        self.smtp_port = int(smtp_port or os.getenv("SMTP_PORT", "587"))
+        self.username = username or os.getenv("SMTP_USER") or os.getenv("EMAIL_USERNAME")
+        self.password = password or os.getenv("SMTP_PASS") or os.getenv("EMAIL_PASSWORD")
+
+        # Recipients configuration
+        recipients_str = (
+            os.getenv("AP_TEAM_EMAIL_LIST")
+            or os.getenv("EMAIL_RECIPIENTS")
+            or os.getenv("TEAM_EMAIL_LIST")
+            or ""
+        )
+        self.default_recipients = self._validate_email_list(recipients_str) if recipients_str else []
+
+        # Logging
         self.logger = logging.getLogger(__name__)
-        
-    def _validate_email_list(self, recipients_str):
-        """Validate and clean email recipient list"""
-        email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-        emails = []
-        
-        for email in recipients_str.replace(';', ',').split(','):
-            email = email.strip()
-            if email and email_pattern.match(email):
-                emails.append(email)
-            elif email:
-                self.logger.warning(f"Invalid email format ignored: {email}")
-                
+
+    # ---------- validation helpers ----------
+
+    _EMAIL_RE = re.compile(r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$")
+
+    def _is_valid_email(self, email: str) -> bool:
+        return bool(email and self._EMAIL_RE.match(email.strip()))
+
+    def _validate_email_list(self, recipients_str: str) -> List[str]:
+        """Parse and validate a comma/semicolon-separated list of emails."""
+        emails: List[str] = []
+        for raw in recipients_str.replace(";", ",").split(","):
+            e = raw.strip()
+            if not e:
+                continue
+            if self._is_valid_email(e):
+                emails.append(e)
+            else:
+                self.logger.warning(f"Invalid email format ignored: {e}")
         return emails
 
-    def create_professional_html_template(self, validation_data, deadline_date):
-        """Create professional HTML email template with enhanced formatting"""
-        
-        critical_count = validation_data.get('failed', 0)
-        warning_count = validation_data.get('warnings', 0)
-        passed_count = validation_data.get('passed', 0)
+    # ---------- content builders ----------
+
+    def create_professional_html_template(self, validation_data: dict, deadline_date: datetime) -> str:
+        """Create professional HTML email template with enhanced formatting."""
+
+        critical_count = int(validation_data.get("failed", 0))
+        warning_count = int(validation_data.get("warnings", 0))
+        passed_count = int(validation_data.get("passed", 0))
         total_count = critical_count + warning_count + passed_count
-        
-        # Calculate pass rate
-        pass_rate = (passed_count / total_count * 100) if total_count > 0 else 0
-        
-        # Sample amounts with proper currency formatting
-        critical_amount = '₹1,50,000'
-        warning_amount = '₹1,40,000'
-        
+
+        pass_rate = (passed_count / total_count * 100) if total_count > 0 else 0.0
+
+        # Sample amounts (replace with actual totals if desired)
+        critical_amount = "₹1,50,000"
+        warning_amount = "₹1,40,000"
+
+        # Keep the layout simple to avoid rendering issues
         html_template = f"""
-        
-        
-        
-            
-            
-            
-        
-        
-            
-            
+<!DOCTYPE html>
+<html>
+  <body style="font-family: Arial, sans-serif; color:#111;">
+    <h2>🏢 KOENIG INVOICE VALIDATION REPORT</h2>
+    <p>Automated Processing Summary - {datetime.now().strftime('%B %d, %Y')}</p>
 
-                
-                
-                
+    <h3>📊 EXECUTIVE SUMMARY</h3>
+    <p><b>Processing Rate:</b> {pass_rate:.1f}% ({passed_count}/{total_count} invoices processed successfully)</p>
 
-                    
-🏢 KOENIG INVOICE VALIDATION REPORT
+    <table border="1" cellspacing="0" cellpadding="6">
+      <tr><th>Status</th><th>Count</th><th>Financial Impact</th></tr>
+      <tr><td>🚨 CRITICAL ISSUES</td><td>{critical_count}</td><td>{critical_amount}</td></tr>
+      <tr><td>⚠️ WARNING ITEMS</td><td>{warning_count}</td><td>{warning_amount}</td></tr>
+      <tr><td>✅ SUCCESSFULLY PROCESSED</td><td>{passed_count}</td><td>Ready for Payment</td></tr>
+    </table>
 
-                    
-Automated Processing Summary - {datetime.now().strftime('%B %d, %Y')}
+    <h3>🚨 IMMEDIATE ACTION REQUIRED</h3>
+    <p><b>Response Deadline:</b> {deadline_date.strftime('%B %d, %Y at %I:%M %p IST')}</p>
+    <p>Non-response will trigger automatic escalation to Finance Head</p>
 
+    <h3>🎯 REQUIRED ACTIONS</h3>
+    <ul>
+      <li>Review Failed Invoices: Check attached Excel report for detailed validation errors</li>
+      <li>Provide Corrections: Submit corrected invoice data or explanations for exceptions</li>
+      <li>Vendor Updates: Update vendor master data if validation issues are due to outdated information</li>
+      <li>Approval Status: Confirm approval status for pending invoices</li>
+      <li>Documentation: Provide supporting documents for flagged transactions</li>
+    </ul>
 
-                
+    <h3>📎 ATTACHMENTS INCLUDED</h3>
+    <ul>
+      <li>Excel Validation Report</li>
+      <li>Invoice Files ZIP</li>
+      <li>Processing Summary</li>
+    </ul>
 
-                
-                
-                
+    <h3>📞 FOR QUESTIONS OR SUPPORT</h3>
+    <p>Finance Team: Accounts@koenig-solutions.com<br/>
+       System Support: tax@koenig-solutions.com</p>
 
-                    
-                    
-                    
-
-                        
-📊 EXECUTIVE SUMMARY
-
-                        
-                        
-
-                            
-
-                                Processing Rate: {pass_rate:.1f}% ({passed_count}/{total_count} invoices processed successfully)
-                            
-
-
-                        
-
-                        
-                        
-Status	Count	Financial Impact
-🚨 CRITICAL ISSUES	{critical_count}	{critical_amount}
-⚠️ WARNING ITEMS	{warning_count}	{warning_amount}
-✅ SUCCESSFULLY PROCESSED	{passed_count}	Ready for Payment
-
-                    
-
-                    
-                    
-                    
-
-                        
-🚨 IMMEDIATE ACTION REQUIRED
-
-                        
-Response Deadline: {deadline_date.strftime('%B %d, %Y at %I:%M %p IST')}
-
-
-                        
-Non-response will trigger automatic escalation to Finance Head
-
-
-                    
-
-                    
-                    
-                    
-
-                        
-🎯 REQUIRED ACTIONS
-
-                        
-
-                            
-Review Failed Invoices: Check attached Excel report for detailed validation errors
-
-                            
-Provide Corrections: Submit corrected invoice data or explanations for exceptions
-
-                            
-Vendor Updates: Update vendor master data if validation issues are due to outdated information
-
-                            
-Approval Status: Confirm approval status for pending invoices
-
-                            
-Documentation: Provide supporting documents for flagged transactions
-
-                        
-
-                    
-
-                    
-                    
-                    
-
-                        
-📎 ATTACHMENTS INCLUDED
-
-                        
-
-                            
-Excel Validation Report: Detailed analysis with validation results for all invoices
-
-                            
-Invoice Files ZIP: Original invoice documents for your reference
-
-                            
-Processing Summary: Statistical overview and recommendations
-
-                        
-
-                    
-
-                    
-                    
-                    
-
-                        
-📞 FOR QUESTIONS OR SUPPORT
-
-                        
-Finance Team:	Accounts@koenig-solutions.com
-System Support:	tax@koenig-solutions.com
-
-                    
-
-                    
-                
-
-                
-                
-                
-
-                    
-Koenig Solutions Pvt. Ltd. | Generated by Invoice Management System
-
-
-                    
-This is an automated report containing confidential information
-
-
-                
-
-                
-            
-
-        
-        
-        """
-        
+    <hr/>
+    <p>Koenig Solutions Pvt. Ltd. | Generated by Invoice Management System<br/>
+       This is an automated report containing confidential information</p>
+  </body>
+</html>
+"""
         return html_template
 
-    def create_invoice_zip(self, invoice_files=None, validation_period=None):
-        """Create ZIP file with invoice copies and Excel report - Enhanced with better error handling"""
-        zip_filename = None
+    # ---------- zipping ----------
+
+    def create_invoice_zip(self, invoice_files: Optional[List[Union[str, Path]]] = None,
+                           validation_period: Optional[str] = None) -> Optional[str]:
+        """Create ZIP file with invoice copies and the latest Excel report."""
+        zip_filename: Optional[str] = None
         try:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             period = validation_period or "current"
-            zip_filename = f'invoice_validation_{timestamp}.zip'
-            
-            with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                # Add Excel validation report
-                excel_files = glob.glob('invoice_validation_report_*.xlsx')
+            zip_filename = f"invoice_validation_{period}_{timestamp}.zip"
+
+            with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
+                # Add Excel validation report (latest)
+                excel_files = glob.glob("invoice_validation_report_*.xlsx")
                 if excel_files:
                     latest_excel = max(excel_files, key=os.path.getctime)
                     if os.path.exists(latest_excel):
-                        zipf.write(latest_excel, 'validation_report.xlsx')
+                        zipf.write(latest_excel, "validation_report.xlsx")
                         self.logger.info(f"Added Excel report to ZIP: {latest_excel}")
                     else:
                         self.logger.warning(f"Excel file not found: {latest_excel}")
-                
-                # Add invoice files with better error handling
+
+                # Add invoice files if provided / present in invoice_files dir
                 invoice_count = 0
-                invoice_dir = Path('invoice_files')
-                
-                if invoice_dir.exists():
-                    for file_path in invoice_dir.rglob('*'):
-                        if file_path.is_file() and file_path.suffix.lower() in ['.pdf', '.png', '.jpg', '.jpeg']:
-                            try:
-                                arcname = f'invoice_files/{file_path.name}'
-                                zipf.write(str(file_path), arcname)
-                                invoice_count += 1
-                            except Exception as e:
-                                self.logger.warning(f"Failed to add file {file_path}: {e}")
-                
-                # Verify ZIP file was created successfully
+                if invoice_files:
+                    paths = [Path(p) for p in invoice_files]
+                else:
+                    # Fallback: any files under invoice_files/
+                    base_dir = Path("invoice_files")
+                    paths = list(base_dir.rglob("*")) if base_dir.exists() else []
+
+                for p in paths:
+                    if p.is_file() and p.suffix.lower() in (".pdf", ".png", ".jpg", ".jpeg"):
+                        try:
+                            zipf.write(str(p), f"invoice_files/{p.name}")
+                            invoice_count += 1
+                        except Exception as e:
+                            self.logger.warning(f"Failed to add file {p}: {e}")
+
+                # Verify ZIP was created
                 if os.path.exists(zip_filename) and os.path.getsize(zip_filename) > 0:
                     self.logger.info(f"ZIP created successfully: {zip_filename} ({invoice_count} invoice files)")
                     return zip_filename
-                else:
-                    self.logger.error("ZIP file creation failed or file is empty")
-                    return None
-                
+
+                self.logger.error("ZIP file creation failed or file is empty")
+                return None
+
         except Exception as e:
             self.logger.error(f"Error creating ZIP: {e}")
-            # Cleanup failed ZIP file
             if zip_filename and os.path.exists(zip_filename):
                 try:
                     os.remove(zip_filename)
-                except:
+                except Exception:
                     pass
             return None
 
-    def send_email_with_attachments(self, recipients, subject, html_body, zip_file):
-        """Send professional HTML email with ZIP attachment - Enhanced error handling"""
-        if not recipients:
-            self.logger.error("No recipients specified")
-            return False
-            
-        if not self.username or not self.password:
-            self.logger.error("SMTP credentials not configured")
-            return False
-            
+    # ---------- sending ----------
+
+    def _clean_recipients(self, recipients: Optional[List[str]]) -> List[str]:
+        # Prefer explicit recipients, else defaults
+        raw = recipients or self.default_recipients
+        clean: List[str] = []
+        for r in raw:
+            if self._is_valid_email(r):
+                clean.append(r)
+            else:
+                self.logger.warning(f"Ignoring invalid recipient: {r}")
+        return clean
+
+    def send_email_with_attachments(self,
+                                    recipients: Optional[List[str]],
+                                    subject: str,
+                                    html_body: str,
+                                    zip_file: Optional[Union[str, Path]]) -> bool:
+        """Send HTML email with optional ZIP attachment."""
         try:
-            # Validate recipients
-            valid_recipients = [r for r in recipients if self._validate_email_list(r)]
+            valid_recipients = self._clean_recipients(recipients)
             if not valid_recipients:
-                self.logger.error("No valid recipients found")
+                self.logger.error("No valid recipients specified")
                 return False
-            
-            msg = MIMEMultipart('mixed')
-            msg['From'] = self.username
-            msg['To'] = ', '.join(valid_recipients)
-            msg['Subject'] = subject
-            
-            # Attach HTML body with proper encoding
-            html_part = MIMEText(html_body, 'html', 'utf-8')
-            msg.attach(html_part)
-            
-            # Attach ZIP file with validation
-            if zip_file and os.path.exists(zip_file):
-                file_size = os.path.getsize(zip_file)
-                # Check file size limit (25MB for most email providers)
-                if file_size > 25 * 1024 * 1024:
-                    self.logger.warning(f"ZIP file too large ({file_size} bytes), skipping attachment")
-                else:
-                    try:
-                        with open(zip_file, 'rb') as attachment:
-                            part = MIMEBase('application', 'zip')
-                            part.set_payload(attachment.read())
+
+            if not self.username or not self.password:
+                self.logger.error("SMTP credentials not configured (username/password missing)")
+                return False
+
+            msg = MIMEMultipart("mixed")
+            msg["From"] = self.username
+            msg["To"] = ", ".join(valid_recipients)
+            msg["Subject"] = subject
+
+            # HTML body
+            msg.attach(MIMEText(html_body or "", "html", "utf-8"))
+
+            # Optional attachment
+            if zip_file:
+                zip_path = str(zip_file)
+                if os.path.exists(zip_path):
+                    size = os.path.getsize(zip_path)
+                    if size > 25 * 1024 * 1024:  # 25MB
+                        self.logger.warning(f"ZIP too large ({size} bytes); skipping attachment")
+                    else:
+                        with open(zip_path, "rb") as f:
+                            part = MIMEBase("application", "zip")
+                            part.set_payload(f.read())
                             encoders.encode_base64(part)
-                            part.add_header(
-                                'Content-Disposition',
-                                f'attachment; filename="{os.path.basename(zip_file)}"'
-                            )
+                            part.add_header("Content-Disposition", f'attachment; filename="{os.path.basename(zip_path)}"')
                             msg.attach(part)
-                            self.logger.info(f"ZIP attachment added: {os.path.basename(zip_file)} ({file_size} bytes)")
-                    except Exception as e:
-                        self.logger.error(f"Failed to attach ZIP file: {e}")
-            
-            # Send email via SMTP with enhanced error handling
-            try:
-                with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                    server.starttls()
-                    server.login(self.username, self.password)
-                    server.send_message(msg)
-                
-                self.logger.info(f"Email sent successfully to: {', '.join(valid_recipients)}")
-                return True
-                
-            except smtplib.SMTPAuthenticationError:
-                self.logger.error("SMTP authentication failed - check credentials")
-                return False
-            except smtplib.SMTPRecipientsRefused:
-                self.logger.error("All recipients were refused by server")
-                return False
-            except smtplib.SMTPException as e:
-                self.logger.error(f"SMTP error occurred: {e}")
-                return False
-            
+                        self.logger.info(f"ZIP attachment added: {os.path.basename(zip_path)} ({size} bytes)")
+                else:
+                    self.logger.warning(f"ZIP path does not exist: {zip_path}")
+
+            # Send
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.username, self.password)
+                server.send_message(msg)
+
+            self.logger.info(f"Email sent successfully to: {', '.join(valid_recipients)}")
+            return True
+
+        except smtplib.SMTPAuthenticationError:
+            self.logger.error("SMTP authentication failed - check credentials")
+            return False
+        except smtplib.SMTPRecipientsRefused:
+            self.logger.error("All recipients were refused by the SMTP server")
+            return False
+        except smtplib.SMTPException as e:
+            self.logger.error(f"SMTP error occurred: {e}")
+            return False
         except Exception as e:
             self.logger.error(f"Error sending email: {e}")
             return False
         finally:
-            # Cleanup temporary ZIP file
-            if zip_file and os.path.exists(zip_file):
-                try:
-                    os.remove(zip_file)
-                    self.logger.info(f"Temporary ZIP file cleaned up: {zip_file}")
-                except Exception as e:
-                    self.logger.warning(f"Failed to cleanup ZIP file: {e}")
+            # Cleanup provided temp zip if caller created one and wants cleanup externally instead,
+            # leave as-is. (No deletion here; caller can manage lifecycle.)
+            pass
 
-    def validate_email_config(self):
-        """Validate email configuration before sending"""
-        issues = []
-        
+    # ---------- config validation ----------
+
+    def validate_email_config(self) -> List[str]:
+        issues: List[str] = []
         if not self.username:
-            issues.append("Missing EMAIL_USERNAME environment variable")
+            issues.append("Missing SMTP_USER or EMAIL_USERNAME")
         if not self.password:
-            issues.append("Missing EMAIL_PASSWORD environment variable")
-        if not self.default_recipients:
-            issues.append("No valid email recipients configured")
+            issues.append("Missing SMTP_PASS or EMAIL_PASSWORD")
+        if not self._clean_recipients(self.default_recipients):
+            issues.append("No valid email recipients configured (AP_TEAM_EMAIL_LIST/EMAIL_RECIPIENTS)")
         if not self.smtp_server:
-            issues.append("Missing SMTP server configuration")
-            
+            issues.append("Missing SMTP_HOST/SMTP_SERVER")
         return issues
 
-# --- BEGIN: Compatibility wrapper for callers expecting `EmailNotifier` ---
+
+# ---------------- Compatibility wrapper ----------------
 
 class EmailNotifier:
     """
-    Compatibility wrapper around EnhancedEmailSystem so code can:
-        from email_notifier import EmailNotifier
-    and then call:
-        - send(subject, html_body, attachments=None, recipients=None)
-        - send_report(...)
-        - send_validation_email(...)
-    It maps SMTP_* env vars (GitHub Secrets) to the engine’s expected fields.
+    Compatibility wrapper around EnhancedEmailSystem.
+
+    Methods provided:
+      - send(subject, html_body, attachments=None, recipients=None, from_email=None)
+      - send_report(...)
+      - send_validation_email(...)
+      - send_validation_report(...)
     """
 
     def __init__(self, smtp_host: Optional[str] = None, smtp_port: Optional[int] = None,
@@ -394,11 +303,10 @@ class EmailNotifier:
                  use_tls: Optional[bool] = None, from_name: Optional[str] = None,
                  recipients: Optional[List[str]] = None):
 
-        # Prefer SMTP_*; fallback to EMAIL_* for compatibility
         host = smtp_host or os.getenv("SMTP_HOST") or os.getenv("SMTP_SERVER", "smtp.office365.com")
         port = int(smtp_port or os.getenv("SMTP_PORT", "587"))
         user = smtp_user or os.getenv("SMTP_USER") or os.getenv("EMAIL_USERNAME")
-        pwd  = smtp_pass or os.getenv("SMTP_PASS")  or os.getenv("EMAIL_PASSWORD")
+        pwd = smtp_pass or os.getenv("SMTP_PASS") or os.getenv("EMAIL_PASSWORD")
 
         self._engine = EnhancedEmailSystem(
             smtp_server=host,
@@ -406,51 +314,70 @@ class EmailNotifier:
             username=user,
             password=pwd,
         )
-
         self._from_name = from_name or os.getenv("SMTP_FROM_NAME", "")
 
-        # Override recipients if provided explicitly
         if recipients:
-            # Validate and override default recipients
-            validated: List[str] = []
-            for r in (recipients if isinstance(recipients, list) else [recipients]):
-                if self._engine._validate_email_list(r):
-                    validated.append(r)
-            if validated:
-                self._engine.default_recipients = validated
+            # Override default recipients if provided explicitly
+            clean = [r for r in (recipients if isinstance(recipients, list) else [recipients]) if self._engine._is_valid_email(r)]
+            if clean:
+                self._engine.default_recipients = clean
 
-    def _zip_attachments_if_needed(self, attachments) -> Optional[str]:
-    """
-    Accepts:
-      - None
-      - path to a .zip (str/Path)
-      - list[paths]
-    Any other type is ignored gracefully.
-    Returns a zip path or None.
-    """
-    import os
-    import zipfile
-    from datetime import datetime
-    import logging
+    def _zip_attachments_if_needed(self, attachments: Optional[Union[str, Path, List[Union[str, Path]]]]) -> Optional[str]:
+        """
+        Accepts:
+          - None
+          - path to a .zip (str/Path)
+          - path to a single file (will be zipped)
+          - list of file paths (zipped)
+        Returns a zip path or None.
+        """
+        if attachments is None:
+            return None
 
-    if attachments is None:
-        return None
+        def _to_str(p: Union[str, Path]) -> str:
+            return str(p)
 
-    # Single path-like provided
-    if isinstance(attachments, (str, os.PathLike)):
-        s = str(attachments)
-        if s.lower().endswith(".zip") and os.path.isfile(s):
-            return s
-        # Wrap single non-zip file into a zip
-        if os.path.isfile(s):
+        # Single path-like
+        if isinstance(attachments, (str, Path)):
+            s = _to_str(attachments)
+            if os.path.isfile(s):
+                if s.lower().endswith(".zip"):
+                    return s
+                # bundle single file
+                ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                zip_path = f"email_attachments_{ts}.zip"
+                try:
+                    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                        zf.write(s, arcname=os.path.basename(s))
+                    return zip_path
+                except Exception as e:
+                    logging.error(f"EmailNotifier: Failed to bundle single attachment: {e}")
+                    try:
+                        if os.path.exists(zip_path):
+                            os.remove(zip_path)
+                    except Exception:
+                        pass
+                    return None
+            # Not a file path -> ignore
+            logging.warning("EmailNotifier: attachment path not found; ignoring.")
+            return None
+
+        # List of paths
+        if isinstance(attachments, list):
+            paths = [p for p in attachments if isinstance(p, (str, Path))]
+            paths = [p for p in paths if os.path.isfile(_to_str(p))]
+            if not paths:
+                return None
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             zip_path = f"email_attachments_{ts}.zip"
             try:
                 with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-                    zf.write(s, arcname=os.path.basename(s))
-                return zip_path
+                    for p in paths:
+                        sp = _to_str(p)
+                        zf.write(sp, arcname=os.path.basename(sp))
+                return zip_path if os.path.getsize(zip_path) > 0 else None
             except Exception as e:
-                logging.error(f"EmailNotifier: Failed to bundle single attachment: {e}")
+                logging.error(f"EmailNotifier: Failed to bundle attachments list: {e}")
                 try:
                     if os.path.exists(zip_path):
                         os.remove(zip_path)
@@ -458,43 +385,16 @@ class EmailNotifier:
                     pass
                 return None
 
-        # Not a file path -> ignore
-        logging.warning("EmailNotifier: attachments is a string but not a file path; ignoring.")
+        # Anything else (e.g., int) -> ignore
+        logging.warning(f"EmailNotifier: attachments of unsupported type {type(attachments).__name__}; ignoring.")
         return None
 
-    # List of paths
-    if isinstance(attachments, list):
-        paths = [p for p in attachments if isinstance(p, (str, os.PathLike))]
-        if not paths:
-            return None
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        zip_path = f"email_attachments_{ts}.zip"
-        try:
-            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-                for p in paths:
-                    sp = str(p)
-                    if os.path.isfile(sp):
-                        zf.write(sp, arcname=os.path.basename(sp))
-            return zip_path if os.path.getsize(zip_path) > 0 else None
-        except Exception as e:
-            logging.error(f"EmailNotifier: Failed to bundle attachments list: {e}")
-            try:
-                if os.path.exists(zip_path):
-                    os.remove(zip_path)
-            except Exception:
-                pass
-            return None
-
-    # Anything else (e.g., int) -> ignore gracefully
-    import logging
-    logging.warning(f"EmailNotifier: attachments of unsupported type {type(attachments).__name__}; ignoring.")
-    return None
-    
-    def send(self, subject: str, html_body: str, attachments=None, recipients: Optional[List[str]] = None,
+    def send(self, subject: str, html_body: str,
+             attachments: Optional[Union[str, Path, List[Union[str, Path]]]] = None,
+             recipients: Optional[List[str]] = None,
              from_email: Optional[str] = None) -> bool:
-        # Optionally swap recipients for this send
         if recipients:
-            self._engine.default_recipients = recipients if isinstance(recipients, list) else [recipients]
+            self._engine.default_recipients = [r for r in (recipients if isinstance(recipients, list) else [recipients]) if self._engine._is_valid_email(r)]
 
         zip_file = self._zip_attachments_if_needed(attachments)
         return self._engine.send_email_with_attachments(
@@ -514,82 +414,45 @@ class EmailNotifier:
     def send_validation_report(self, subject: str, html_body: str, attachments=None, recipients: Optional[List[str]] = None) -> bool:
         return self.send(subject, html_body, attachments, recipients)
 
-# --- END: Compatibility wrapper ---
 
-def main():
-    """Test the enhanced email system with comprehensive validation"""
+# ---------------- Optional local test ----------------
+
+def _main_test() -> str:
     print("🧪 Testing enhanced email system...")
-    
-    # Initialize email system
+
     email_system = EnhancedEmailSystem()
-    
-    # Validate configuration
-    config_issues = email_system.validate_email_config()
-    if config_issues:
+    issues = email_system.validate_email_config()
+    if issues:
         print("⚠️ Configuration issues found:")
-        for issue in config_issues:
-            print(f"   - {issue}")
+        for i in issues:
+            print(f"  - {i}")
         return "Configuration incomplete"
-    
+
     print(f"✅ Email system initialized with {len(email_system.default_recipients)} recipients")
-    
-    # Find Excel report
-    excel_files = glob.glob('invoice_validation_report_*.xlsx')
+
+    excel_files = glob.glob("invoice_validation_report_*.xlsx")
     if not excel_files:
-        print("⚠️ No Excel reports found")
-        return "No Excel reports found"
-    
-    latest_excel = max(excel_files, key=os.path.getctime)
-    print(f"📊 Found Excel report: {os.path.basename(latest_excel)}")
-    
-    # Create ZIP with invoices
-    print("📦 Creating ZIP file with attachments...")
-    zip_file = email_system.create_invoice_zip()
-    if not zip_file:
-        print("❌ Failed to create ZIP file")
-        return "Failed to create ZIP"
-    
-    # Sample validation data
-    validation_data = {
-        'failed': 352,
-        'warnings': 0,
-        'passed': 395
-    }
-    
-    # Create professional HTML email
+        print("⚠️ No Excel reports found (test will send without attachment)")
+        zip_path = None
+    else:
+        zip_path = email_system.create_invoice_zip(validation_period="test")
+
+    validation_data = {"failed": 10, "warnings": 2, "passed": 88}
     deadline_date = datetime.now() + timedelta(days=3)
     html_body = email_system.create_professional_html_template(validation_data, deadline_date)
-    
-    # Send email
-    subject = f"🚨 URGENT: Invoice Validation - Action Required by {deadline_date.strftime('%b %d, %Y')}"
-    
+    subject = f"Invoice Validation - Action Required by {deadline_date.strftime('%b %d, %Y')}"
+
     print("📧 Sending email...")
-    success = email_system.send_email_with_attachments(
-        email_system.default_recipients,
-        subject,
-        html_body,
-        zip_file
-    )
-    
-    if success:
-        print("✅ Email sent successfully!")
-        return "Success"
-    else:
-        print("❌ Email sending failed")
-        return "Failed"
+    ok = email_system.send_email_with_attachments(None, subject, html_body, zip_path)
+    print("✅ Email sent!" if ok else "❌ Email send failed")
+    return "Success" if ok else "Failed"
 
 
 if __name__ == "__main__":
-    # Setup enhanced logging
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler('email_system.log'),
-            logging.StreamHandler()
-        ]
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[logging.FileHandler("email_system.log"), logging.StreamHandler()],
     )
-    
-    result = main()
-    print(f"📈 Email system result: {result}")
-    print(f"🎯 Test result: {'✅ Passed' if result == 'Success' else '❌ Failed'}")
+    res = _main_test()
+    print(f"📈 Email system result: {res}")
