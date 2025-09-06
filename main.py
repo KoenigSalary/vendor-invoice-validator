@@ -588,15 +588,15 @@ class RMSDataExtractor:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
     
-    def authenticate(self, username: str = None, password: str = None) -> bool:
-        """Authenticate with RMS system"""
-        try:
-            username = username or os.getenv('RMS_USERNAME')
-            password = password or os.getenv('RMS_PASSWORD')
+    def authenticate(self):
+        username = os.getenv('RMS_USERNAME')
+        password = os.getenv('RMS_PASSWORD')
+    
+        if not username or not password:
+            logging.error("RMS credentials not provided")
+            return False
             
-            if not username or not password:
-                logger.error("RMS credentials not provided")
-                return False
+    logging.info(f"Authenticating with RMS as user: {username}")
             
             # Login endpoint
             login_url = f"{self.base_url}/login"
