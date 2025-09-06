@@ -1,4 +1,4 @@
-name: Invoice Validation Workflow
+Copyname: Invoice Validation Workflow
 
 on:
   schedule:
@@ -11,7 +11,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -20,13 +20,62 @@ jobs:
         
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt
+        python -m pip install --upgrade pip
+        pip install pandas numpy requests schedule openpyxl xlsxwriter beautifulsoup4 lxml selenium webdriver-manager streamlit plotly python-dateutil pytz
+        
+    - name: Install Chrome for Selenium
+      run: |
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+        
+    - name: Debug Environment Variables
+      run: |
+        echo "Checking environment variables..."
+        echo "SMTP_SERVER exists: ${{ secrets.SMTP_HOST != '' }}"
+        echo "RMS_USERNAME exists: ${{ secrets.RMS_USERNAME != '' }}"
+        echo "RMS_PASSWORD exists: ${{ secrets.RMS_PASSWORD != '' }}"
         
     - name: Run invoice validation
       run: |
         python main.py
       env:
-        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-        EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
-        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        # RMS System Credentials
+        RMS_USERNAME: ${{ secrets.RMS_USERNAME }}
+        RMS_PASSWORD: ${{ secrets.RMS_PASSWORD }}
+        RMS_BASE_URL: "https://rms.koenig-solutions.com"
+        
+        # SMTP Email Configuration
+        SMTP_SERVER: ${{ secrets.SMTP_HOST }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        SMTP_USER: ${{ secrets.SMTP_USER }}
+        SMTP_PASS: ${{ secrets.SMTP_PASS }}
+        SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
+        SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
+        
+        # Email Recipients and Settings
+        EMAIL_USERNAME: ${{ secrets.SMTP_USER }}
+        EMAIL_PASSWORD: ${{ secrets.SMTP_PASS }}
         AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
+        TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
+        EMAIL_RECIPIENTS: ${{ secrets.AP_TEAM_EMAIL_LIST }}
+        EMAIL_DEBUG: ${{ secrets.EMAIL_DEBUG }}
+        
+        # System Configuration
+        DEBUG_MODE: ${{ secrets.EMAIL_DEBUG }}
+        VALIDATION_INTERVAL_DAYS: "4"
+        ARCHIVE_DAYS: "90"
+        
+    - name: Upload validation results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: validation-results
+        path: |
+          *.xlsx
+          *.csv
+          *.log
+          validation_reports/
+          data/
+        retention-days: 30
