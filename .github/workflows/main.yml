@@ -16,42 +16,32 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.8'
+        python-version: '3.9'
         
-    - name: Install system dependencies
+    - name: Install Chrome
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget gnupg unzip
-        
-    - name: Install Chrome browser
-      run: |
+        sudo apt-get install -y wget gnupg
         wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
         sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
         sudo apt-get update
         sudo apt-get install -y google-chrome-stable
         
-    - name: Install ChromeDriver
-      run: |
-        CHROME_VERSION=$(google-chrome --version | cut -d ' ' -f3 | cut -d '.' -f1)
-        CHROMEDRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION)
-        wget -N http://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip
-        unzip chromedriver_linux64.zip
-        sudo mv chromedriver /usr/local/bin/
-        sudo chmod +x /usr/local/bin/chromedriver
-        
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pandas numpy requests schedule openpyxl xlsxwriter beautifulsoup4 lxml python-dateutil pytz
-        pip install selenium webdriver-manager
-        pip install streamlit plotly
+        pip install pandas==2.0.3 numpy==1.24.3 requests==2.31.0 schedule==1.2.0
+        pip install openpyxl==3.1.2 xlsxwriter==3.1.7 python-dateutil==2.8.2 pytz==2023.3
+        pip install beautifulsoup4==4.12.2 lxml==4.9.3 
+        pip install selenium==4.15.0 webdriver-manager==4.0.1
+        pip install streamlit==1.28.1 plotly==5.17.0
         pip install xlrd>=2.0.1
         
-    - name: Verify installations
+    - name: Verify Chrome installation
       run: |
         google-chrome --version
-        chromedriver --version
-        python -c "import selenium; print('Selenium version:', selenium.__version__)"
+        python -c "import selenium; print('Selenium:', selenium.__version__)"
+        python -c "from webdriver_manager.chrome import ChromeDriverManager; print('WebDriver Manager: OK')"
         
     - name: Run invoice validation
       run: |
