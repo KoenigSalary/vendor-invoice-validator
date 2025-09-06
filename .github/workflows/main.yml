@@ -1,73 +1,32 @@
-    - name: 📊 Commit Validation Reports for Streamlit Dashboard
+name: Invoice Validation Workflow
+
+on:
+  schedule:
+    - cron: '0 6 */4 * *'  # Every 4 days at 6 AM UTC
+  workflow_dispatch:       # Allow manual trigger
+
+jobs:
+  validate-invoices:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
       run: |
-        echo "📋 Preparing validation reports for Streamlit access..."
-
-        # Create standardized data directory
-        mkdir -p streamlit_data
-
-        # Copy validation files with standardized names
-        if [ -f "data/enhanced_invoice_validation_detailed_$(date +%Y-%m-%d).xlsx" ]; then
-          cp "data/enhanced_invoice_validation_detailed_$(date +%Y-%m-%d).xlsx" streamlit_data/latest_enhanced_validation.xlsx
-          echo "✅ Enhanced validation report copied"
-        fi
-
-        if [ -f "data/invoice_validation_detailed_$(date +%Y-%m-%d).xlsx" ]; then
-          cp "data/invoice_validation_detailed_$(date +%Y-%m-%d).xlsx" streamlit_data/latest_validation.xlsx
-          echo "✅ Standard validation report copied"
-        fi
-
-        if [ -f "data/$(date +%Y-%m-%d)/validation_result.xlsx" ]; then
-          cp "data/$(date +%Y-%m-%d)/validation_result.xlsx" streamlit_data/latest_validation_result.xlsx
-          echo "✅ Validation result copied"
-        fi
-
-        if [ -f "data/email_summary_$(date +%Y-%m-%d).html" ]; then
-          cp "data/email_summary_$(date +%Y-%m-%d).html" streamlit_data/latest_summary.html
-          echo "✅ Email summary copied"
-        fi
-
-        # Create metadata file for dashboard
-        echo "{" > streamlit_data/validation_metadata.json
-        echo "  "last_updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"," >> streamlit_data/validation_metadata.json
-        echo "  "validation_date": "$(date +%Y-%m-%d)"," >> streamlit_data/validation_metadata.json
-        echo "  "files_available": [" >> streamlit_data/validation_metadata.json
-
-        file_count=0
-        for file in streamlit_data/*.xlsx streamlit_data/*.html; do
-          if [ -f "$file" ]; then
-            if [ $file_count -gt 0 ]; then
-              echo "," >> streamlit_data/validation_metadata.json
-            fi
-            filename=$(basename "$file")
-            filesize=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
-            echo "    {"name": "$filename", "size": $filesize}" >> streamlit_data/validation_metadata.json
-            file_count=$((file_count + 1))
-          fi
-        done
-
-        echo "" >> streamlit_data/validation_metadata.json
-        echo "  ]," >> streamlit_data/validation_metadata.json
-        echo "  "total_files": $file_count" >> streamlit_data/validation_metadata.json
-        echo "}" >> streamlit_data/validation_metadata.json
-
-        echo "📊 Prepared $file_count files for Streamlit dashboard"
-
-    - name: 🚀 Commit Reports to Repository
+        pip install -r requirements.txt
+        
+    - name: Run invoice validation
       run: |
-        # Configure git
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-
-        # Add files
-        git add streamlit_data/
-
-        # Check if there are changes to commit
-        if git diff --staged --quiet; then
-          echo "📊 No changes to commit"
-        else
-          git commit -m "🚀 Auto-update validation reports for dashboard $(date +%Y-%m-%d)"
-          git push
-          echo "✅ Validation reports committed successfully"
-        fi
-
-        echo "🎉 Dashboard data update completed!"
+        python main.py
+      env:
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
