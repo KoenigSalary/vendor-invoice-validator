@@ -859,6 +859,7 @@ def enhance_validation_results(detailed_df, email_summary):
     """
     Enhance validation results with additional insights and formatting
     """
+    import logging
     try:
         logging.info("🔧 Enhancing validation results...")
         
