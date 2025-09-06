@@ -1483,6 +1483,36 @@ def run_invoice_validation():
                 changes_detected = False
                 enhanced_email_content = email_summary
 
+            # raw_detailed_df is the parsed/validated RMS export you already have at this point
+            run_dir = os.path.join("data", datetime.now().strftime("%Y-%m-%d"))
+            validation_date = datetime.now()
+
+            final_report_df = build_final_validation_report(raw_detailed_df, run_dir, validation_date)
+
+            # Save with the exact schema requested
+            final_report_path = os.path.join("data", f"invoice_validation_detailed_{datetime.now().strftime('%Y-%m-%d')}.xlsx")
+            with pd.ExcelWriter(final_report_path, engine="xlsxwriter") as _writer:
+                final_report_df.to_excel(_writer, sheet_name="Validation Report", index=False)
+
+            # Attach **real** invoices ZIP + the report
+            invoices_zip_path = os.path.join(run_dir, "invoices.zip")  # your scraper is already saving this
+            attachments = []
+            if os.path.isfile(final_report_path):
+                attachments.append(final_report_path)
+            if os.path.isfile(invoices_zip_path):
+                attachments.append(invoices_zip_path)
+
+            # Email
+            from email_notifier import EmailNotifier
+            notifier = EmailNotifier()
+            subject = f"Invoice Validation Report - {datetime.now().strftime('%Y-%m-%d')}"
+            deadline = datetime.now() + timedelta(days=3)
+            html_body = EnhancedEmailSystem().create_professional_html_template(
+                {"failed": 0, "warnings": 0, "passed": 0},  # you can plug your stats here
+                deadline
+            )
+            notifier.send_validation_report(subject, html_body, attachments=attachments)
+
             # ---------- Save enhanced Excel report ----------
             enhanced_report_path = f"data/enhanced_invoice_validation_detailed_{today_str}.xlsx"
             with pd.ExcelWriter(enhanced_report_path, engine='openpyxl') as writer:
