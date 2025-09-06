@@ -14,7 +14,6 @@ from typing import List, Optional
 
 __all__ = ["EnhancedEmailSystem", "EmailNotifier"]
 
-
 class EnhancedEmailSystem:
     """Enhanced email system with professional HTML templates and robust error handling"""
 
@@ -377,7 +376,6 @@ This is an automated report containing confidential information
             
         return issues
 
-
 # --- BEGIN: Compatibility wrapper for callers expecting `EmailNotifier` ---
 
 class EmailNotifier:
@@ -422,33 +420,64 @@ class EmailNotifier:
                 self._engine.default_recipients = validated
 
     def _zip_attachments_if_needed(self, attachments) -> Optional[str]:
-        """
-        Accepts:
-          - None
-          - path to a .zip
-          - list of file paths (bundles into a temporary zip)
-        Returns a zip path or None.
-        """
-        if not attachments:
+    """
+    Accepts:
+      - None
+      - path to a .zip (str/Path)
+      - list[paths]
+    Any other type is ignored gracefully.
+    Returns a zip path or None.
+    """
+    import os
+    import zipfile
+    from datetime import datetime
+    import logging
+
+    if attachments is None:
+        return None
+
+    # Single path-like provided
+    if isinstance(attachments, (str, os.PathLike)):
+        s = str(attachments)
+        if s.lower().endswith(".zip") and os.path.isfile(s):
+            return s
+        # Wrap single non-zip file into a zip
+        if os.path.isfile(s):
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            zip_path = f"email_attachments_{ts}.zip"
+            try:
+                with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                    zf.write(s, arcname=os.path.basename(s))
+                return zip_path
+            except Exception as e:
+                logging.error(f"EmailNotifier: Failed to bundle single attachment: {e}")
+                try:
+                    if os.path.exists(zip_path):
+                        os.remove(zip_path)
+                except Exception:
+                    pass
+                return None
+
+        # Not a file path -> ignore
+        logging.warning("EmailNotifier: attachments is a string but not a file path; ignoring.")
+        return None
+
+    # List of paths
+    if isinstance(attachments, list):
+        paths = [p for p in attachments if isinstance(p, (str, os.PathLike))]
+        if not paths:
             return None
-
-        # single zip path passthrough
-        if (isinstance(attachments, list) and len(attachments) == 1 and
-            str(attachments[0]).lower().endswith(".zip") and os.path.isfile(attachments[0])):
-            return attachments[0]
-
-        # Bundle arbitrary files into a temporary ZIP
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         zip_path = f"email_attachments_{ts}.zip"
         try:
             with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-                files = attachments if isinstance(attachments, list) else [attachments]
-                for p in files:
-                    if p and os.path.isfile(p):
-                        zf.write(p, arcname=os.path.basename(p))
-            return zip_path
+                for p in paths:
+                    sp = str(p)
+                    if os.path.isfile(sp):
+                        zf.write(sp, arcname=os.path.basename(sp))
+            return zip_path if os.path.getsize(zip_path) > 0 else None
         except Exception as e:
-            logging.error(f"EmailNotifier: Failed to bundle attachments: {e}")
+            logging.error(f"EmailNotifier: Failed to bundle attachments list: {e}")
             try:
                 if os.path.exists(zip_path):
                     os.remove(zip_path)
@@ -456,6 +485,11 @@ class EmailNotifier:
                 pass
             return None
 
+    # Anything else (e.g., int) -> ignore gracefully
+    import logging
+    logging.warning(f"EmailNotifier: attachments of unsupported type {type(attachments).__name__}; ignoring.")
+    return None
+    
     def send(self, subject: str, html_body: str, attachments=None, recipients: Optional[List[str]] = None,
              from_email: Optional[str] = None) -> bool:
         # Optionally swap recipients for this send
@@ -477,11 +511,10 @@ class EmailNotifier:
     def send_validation_email(self, subject: str, html_body: str, attachments=None, recipients: Optional[List[str]] = None) -> bool:
         return self.send(subject, html_body, attachments, recipients)
 
-    def send_validation_report(self, subject: str, html_body: str, attachments=None, recipients: Optional[List[str]] = None) -> bool:
+    def send_validation_report(self, subject, html_body, attachments=None, recipients=None) -> bool:
         return self.send(subject, html_body, attachments, recipients)
 
 # --- END: Compatibility wrapper ---
-
 
 def main():
     """Test the enhanced email system with comprehensive validation"""
