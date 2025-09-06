@@ -854,7 +854,92 @@ def filter_invoices_by_date(df, start_str, end_str):
     except Exception as e:
         print(f"⚠️ Date filtering failed: {str(e)}, returning all data")
         return df
+
+def enhance_validation_results(detailed_df, email_summary):
+    """
+    Enhance validation results with additional insights and formatting
+    """
+    try:
+        logging.info("🔧 Enhancing validation results...")
+        
+        # Get basic statistics
+        total_invoices = len(detailed_df) if detailed_df is not None else 0
+        
+        # Create enhanced summary
+        enhanced_summary = {
+            'total_invoices': total_invoices,
+            'validation_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'email_summary': email_summary,
+            'enhancement_applied': True,
+            'system_status': 'operational'
+        }
+        
+        if detailed_df is not None and len(detailed_df) > 0:
+            # Calculate validation statistics
+            validation_col = None
+            for col in detailed_df.columns:
+                if 'validation' in col.lower() or 'result' in col.lower() or 'status' in col.lower():
+                    validation_col = col
+                    break
             
+            if validation_col:
+                pass_count = len(detailed_df[detailed_df[validation_col].str.contains('PASS|pass', case=False, na=False)])
+                fail_count = len(detailed_df[detailed_df[validation_col].str.contains('FAIL|fail', case=False, na=False)])
+                warning_count = len(detailed_df[detailed_df[validation_col].str.contains('WARN|warning', case=False, na=False)])
+            else:
+                pass_count = 0
+                fail_count = total_invoices  # Assume all failed if no validation column
+                warning_count = 0
+            
+            # Calculate financial impact if amount column exists
+            total_amount = 0
+            amount_col = None
+            for col in detailed_df.columns:
+                if 'total' in col.lower() or 'amount' in col.lower():
+                    amount_col = col
+                    break
+            
+            if amount_col:
+                try:
+                    detailed_df[amount_col] = pd.to_numeric(detailed_df[amount_col], errors='coerce')
+                    total_amount = detailed_df[amount_col].fillna(0).sum()
+                except:
+                    total_amount = 0
+            
+            enhanced_summary.update({
+                'pass_count': pass_count,
+                'fail_count': fail_count,
+                'warning_count': warning_count,
+                'pass_rate': (pass_count / total_invoices * 100) if total_invoices > 0 else 0,
+                'total_amount': total_amount,
+                'validation_column': validation_col,
+                'amount_column': amount_col
+            })
+            
+            # Add enhancement flag to dataframe
+            if 'enhancement_status' not in detailed_df.columns:
+                detailed_df['enhancement_status'] = 'enhanced'
+                detailed_df['enhancement_timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        logging.info(f"✅ Enhancement completed: {total_invoices} invoices processed")
+        logging.info(f"📊 Pass rate: {enhanced_summary.get('pass_rate', 0):.1f}%")
+        
+        return enhanced_summary
+        
+    except Exception as e:
+        logging.error(f"❌ Enhancement error: {e}")
+        logging.error(f"📊 Traceback: {traceback.format_exc()}")
+        
+        # Return basic summary on error
+        return {
+            'total_invoices': len(detailed_df) if detailed_df is not None else 0,
+            'validation_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'email_summary': email_summary if email_summary else {},
+            'enhancement_applied': False,
+            'error': str(e),
+            'system_status': 'degraded'
+        }
+      
 def run_invoice_validation():
     """Main function to run detailed cumulative validation with invoice-level reports and email summaries"""
     try:
