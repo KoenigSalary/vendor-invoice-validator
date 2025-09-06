@@ -661,29 +661,26 @@ class RMSDataExtractor:
             logger.error(f"Failed to extract invoice data from RMS: {e}")
             return []
     
-    def extract_vendor_data(self) -> Dict[str, Dict]:
-        """Extract vendor master data"""
-        try:
-            vendor_url = f"{self.base_url}/api/vendors"
-            
-            response = self.session.get(vendor_url)
-            response.raise_for_status()
-            
-            data = response.json()
-            
-            # Convert to lookup dictionary
-            vendor_lookup = {}
-            if isinstance(data, list):
-                for vendor in data:
-                    if 'vendor_code' in vendor:
-                        vendor_lookup[vendor['vendor_code']] = vendor
-            
-            logger.info(f"Extracted {len(vendor_lookup)} vendors from RMS")
-            return vendor_lookup
-            
-        except Exception as e:
-            logger.error(f"Failed to extract vendor data: {e}")
-            return {}
+    def extract_vendor_data(self):
+    try:
+        # Try different possible URLs
+        possible_urls = [
+            f"{self.base_url}/api/vendors",
+            f"{self.base_url}/vendors",
+            f"{self.base_url}/vendors/list",
+            f"{self.base_url}/reports/vendors",
+            f"{self.base_url}/admin/vendors"
+        ]
+        
+        for url in possible_urls:
+            logging.info(f"Trying URL: {url}")
+            response = self.session.get(url)
+            if response.status_code == 200:
+                logging.info(f"SUCCESS: Found working URL: {url}")
+                # Process the data
+                break
+            else:
+                logging.info(f"Failed: {url} returned {response.status_code}")
 
 class InvoiceValidator:
     """Core invoice validation logic"""
