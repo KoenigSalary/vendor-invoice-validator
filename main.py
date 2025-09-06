@@ -662,25 +662,27 @@ class RMSDataExtractor:
             return []
     
     def extract_vendor_data(self):
-    try:
-        # Try different possible URLs
-        possible_urls = [
-            f"{self.base_url}/api/vendors",
-            f"{self.base_url}/vendors",
-            f"{self.base_url}/vendors/list",
-            f"{self.base_url}/reports/vendors",
-            f"{self.base_url}/admin/vendors"
-        ]
+        try:
+            # Try different possible URLs
+            possible_urls = [
+                f"{self.base_url}/api/vendors",
+                f"{self.base_url}/vendors",
+                f"{self.base_url}/vendors/list",
+                f"{self.base_url}/reports/vendors",
+                f"{self.base_url}/admin/vendors"
+            ]
         
-        for url in possible_urls:
-            logging.info(f"Trying URL: {url}")
-            response = self.session.get(url)
-            if response.status_code == 200:
-                logging.info(f"SUCCESS: Found working URL: {url}")
-                # Process the data
-                break
-            else:
-                logging.info(f"Failed: {url} returned {response.status_code}")
+            for url in possible_urls:
+                logging.info(f"Trying URL: {url}")
+                response = self.session.get(url)
+                if response.status_code == 200:
+                    logging.info(f"SUCCESS: Found working URL: {url}")
+                    # Process the data
+                    break
+                else:
+                    logging.info(f"Failed: {url} returned {response.status_code}")
+        except Exception as e:
+            logging.error(f"Error extracting vendor data: {e}")
 
 class InvoiceValidator:
     """Core invoice validation logic"""
