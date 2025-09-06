@@ -14,6 +14,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+from email.utils import formataddr
 
 __all__ = ["EnhancedEmailSystem", "EmailNotifier"]
 
@@ -36,6 +37,9 @@ class EnhancedEmailSystem:
             or ""
         )
         self.default_recipients = self._validate_email_list(recipients_str) if recipients_str else []
+
+        # Attachment size cap (MB) to keep emails deliverable
+        self.max_zip_bytes = int(os.getenv("EMAIL_MAX_ZIP_MB", "24")) * 1024 * 1024
 
         # Logger
         self.logger = logging.getLogger(__name__)
@@ -98,8 +102,8 @@ class EnhancedEmailSystem:
     <h3>📎 ATTACHMENTS INCLUDED</h3>
     <ul>
       <li>Excel Validation Report</li>
-      <li>Invoice Files ZIP</li>
       <li>Processing Summary</li>
+      <li>(Large invoice ZIP shared separately if too big)</li>
     </ul>
 
     <h3>📞 FOR QUESTIONS OR SUPPORT</h3>
@@ -117,8 +121,23 @@ class EnhancedEmailSystem:
 
         return html_template
 
+    def _add_file_if_fits(self, zipf: zipfile.ZipFile, path: str, arcname: str, running_size: int) -> int:
+        """Add file to zip if it doesn't push total over max_zip_bytes; return new size (or unchanged if skipped)."""
+        try:
+            sz = os.path.getsize(path)
+        except OSError:
+            return running_size
+        if running_size + sz > self.max_zip_bytes:
+            self.logger.warning(f"Skipping large artifact (would exceed limit): {path} ({sz} bytes)")
+            return running_size
+        zipf.write(path, arcname=arcname)
+        return running_size + sz
+
     def create_invoice_zip(self, invoice_files=None, validation_period: Optional[str] = None) -> Optional[str]:
-        """Create ZIP file bundling latest reports under data/ and invoices.zip if present"""
+        """
+        Create ZIP file bundling latest reports under data/.
+        Large artifacts (e.g., invoices.zip) are skipped if they would exceed EMAIL_MAX_ZIP_MB (default 24 MB).
+        """
         zip_filename: Optional[str] = None
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -140,50 +159,43 @@ class EnhancedEmailSystem:
             # 4) Email summary HTML
             candidates += glob.glob("data/email_summary_*.html")
 
-            # 5) The big invoices zip (prefer newest under data/*/)
-            invoice_zips = []
-            invoice_zips += glob.glob("data/*/invoices.zip")
-            invoice_zips += glob.glob("invoices.zip")
+            # 5) The big invoices zip (prefer newest) — will be skipped if it blows the size cap
+            invoice_zips = glob.glob("data/*/invoices.zip") + glob.glob("invoices.zip")
             if invoice_zips:
                 newest_invoice_zip = max(invoice_zips, key=os.path.getctime)
                 candidates.append(newest_invoice_zip)
 
             invoice_dir = Path("invoice_files")
 
+            running_size = 0
             with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                added = 0
+                # Add artifact reports under reports/
                 for path in sorted(set(candidates)):
-                    try:
-                        if not os.path.isfile(path):
-                            continue
-                        base = os.path.basename(path)
-                        arc = f"reports/{base}"
-                        zipf.write(path, arc)
-                        added += 1
+                    if not os.path.isfile(path):
+                        continue
+                    base = os.path.basename(path)
+                    arc = f"reports/{base}"
+                    before = running_size
+                    running_size = self._add_file_if_fits(zipf, path, arc, running_size)
+                    if running_size != before:
                         self.logger.info(f"Added artifact to ZIP: {path} -> {arc}")
-                    except Exception as e:
-                        self.logger.warning(f"Failed to add artifact {path}: {e}")
 
-                # Add individual invoice files if present
-                invoice_count = 0
+                # Add individual invoice files (PDF/JPG/PNG) if present and size allows
                 if invoice_dir.exists():
                     for fp in invoice_dir.rglob("*"):
                         if fp.is_file() and fp.suffix.lower() in [".pdf", ".png", ".jpg", ".jpeg"]:
-                            try:
-                                zipf.write(str(fp), f"invoice_files/{fp.name}")
-                                invoice_count += 1
-                            except Exception as e:
-                                self.logger.warning(f"Failed to add file {fp}: {e}")
+                            before = running_size
+                            running_size = self._add_file_if_fits(zipf, str(fp), f"invoice_files/{fp.name}", running_size)
+                            if running_size == before:
+                                break  # reached size cap
 
-                # Verify
-                if os.path.exists(zip_filename) and os.path.getsize(zip_filename) > 0:
-                    self.logger.info(
-                        f"ZIP created successfully: {zip_filename} ({added} report artifacts, {invoice_count} invoice files)"
-                    )
-                    return zip_filename
+            # Verify
+            if os.path.exists(zip_filename) and os.path.getsize(zip_filename) > 0:
+                self.logger.info(f"ZIP created successfully: {zip_filename} ({os.path.getsize(zip_filename)} bytes)")
+                return zip_filename
 
-                self.logger.error("ZIP file creation failed or file is empty")
-                return None
+            self.logger.error("ZIP file creation failed or file is empty")
+            return None
 
         except Exception as e:
             self.logger.error(f"Error creating ZIP: {e}")
@@ -240,8 +252,12 @@ class EnhancedEmailSystem:
                 except Exception:
                     html_body = "<p>(No content)</p>"
 
+            # Pretty From: "Name <email@host>"
+            from_name = os.getenv("SMTP_FROM_NAME", "").strip()
+            pretty_from = formataddr((from_name, self.username)) if from_name else self.username
+
             msg = MIMEMultipart("mixed")
-            msg["From"] = self.username
+            msg["From"] = pretty_from
             msg["To"] = ", ".join(valid_recipients)
             msg["Subject"] = str(subject) if subject is not None else "Invoice Validation Report"
 
@@ -253,7 +269,7 @@ class EnhancedEmailSystem:
             if zip_file and os.path.exists(str(zip_file)):
                 try:
                     file_size = os.path.getsize(str(zip_file))
-                    if file_size > 25 * 1024 * 1024:
+                    if file_size > self.max_zip_bytes:
                         self.logger.warning(f"ZIP file too large ({file_size} bytes), skipping attachment")
                     else:
                         with open(str(zip_file), "rb") as attachment:
@@ -287,9 +303,6 @@ class EnhancedEmailSystem:
         except Exception as e:
             self.logger.error(f"Error sending email: {e}")
             return False
-        finally:
-            # No-op: let the caller decide whether to delete temporary zips
-            pass
 
     def validate_email_config(self) -> List[str]:
         """Validate email configuration before sending"""
@@ -413,16 +426,32 @@ class EmailNotifier:
             if validated:
                 self._engine.default_recipients = validated
 
-        # Auto-build a zip if caller didn't pass attachments
-        if attachments is None:
+        # Try to zip whatever was passed
+        zip_file = self._zip_attachments_if_needed(attachments)
+
+        # If invalid (e.g. int) or couldn't zip, auto-build reports ZIP
+        if not zip_file:
             try:
                 auto_zip = self._engine.create_invoice_zip()
                 if auto_zip:
-                    attachments = auto_zip
+                    zip_file = auto_zip
             except Exception as _e:
                 logging.warning(f"EmailNotifier: auto ZIP build skipped: {_e}")
 
-        zip_file = self._zip_attachments_if_needed(attachments)
+        # If zip exists but exceeds cap, rebuild a smaller reports-only zip
+        try:
+            if zip_file and os.path.getsize(zip_file) > self._engine.max_zip_bytes:
+                logging.warning("EmailNotifier: Provided ZIP exceeds size cap; rebuilding reports-only ZIP.")
+                auto_zip = self._engine.create_invoice_zip()
+                if auto_zip and os.path.getsize(auto_zip) <= self._engine.max_zip_bytes:
+                    zip_file = auto_zip
+                else:
+                    logging.warning("EmailNotifier: Could not build a small enough ZIP; sending without attachment.")
+                    zip_file = None
+        except Exception as _e:
+            logging.warning(f"EmailNotifier: size check failed ({_e}); proceeding without attachment.")
+            zip_file = None
+
         return self._engine.send_email_with_attachments(
             self._engine.default_recipients,
             subject,
