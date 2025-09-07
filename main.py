@@ -1202,6 +1202,204 @@ def enhance_validation_results(detailed_df, email_summary):
             'enhancement_applied': False,
             'system_status': 'degraded'
         }
+
+def build_final_validation_report(df, run_dir: str, validation_dt):
+    """
+    Build the exact-column, full-length report for email attachment.
+    Now prefers RMS field names:
+      - Inv Created By  → Invoice_Creator_Name
+      - MOP             → Method_of_Payment
+      - A/C Head        → Account_Head
+      - Inv Currency    → Invoice currency / Invoice_Currency
+      - Inv Entry Date, Inv Mod Date, DueDate, Remarks → added to output
+    Falls back to earlier sources when not present.
+    """
+    import pandas as pd
+    src = df.copy()
+
+    # map helper
+    cols = {c.lower(): c for c in src.columns}
+    col = lambda name: cols.get(name.lower())
+
+    # Common base columns already seen in RMS export
+    c_voucher_no       = col("VoucherNo")
+    c_purchase_inv_no  = col("PurchaseInvNo")
+    c_purchase_inv_dt  = col("PurchaseInvDate")
+    c_voucher_dt       = col("Voucherdate")
+    c_party            = col("PartyName")
+    c_total            = col("Total")
+    c_state            = col("State")
+    c_currency_legacy  = col("Currency")
+    c_narration        = col("Narration")
+    c_ledger           = col("PurchaseLEDGER")
+    c_gst              = col("GSTNO")
+    c_invid            = col("InvID")
+    c_vat              = col("VAT")
+    c_igst_amt         = col("IGST/VATInputAmt")
+    c_cgst_amt         = col("CGSTInputAmt")
+    c_sgst_amt         = col("SGSTInputAmt")
+
+    # New preferred RMS names you gave
+    c_inv_created_by   = col("Inv Created By")
+    c_mop              = col("MOP")
+    c_ac_head          = col("A/C Head")
+    c_inv_currency     = col("Inv Currency")
+    c_inv_entry_date   = col("Inv Entry Date")
+    c_inv_mod_date     = col("Inv Mod Date")
+    c_due_date         = col("DueDate") or col("Due Date")
+    c_remarks          = col("Remarks")
+
+    # Build keys
+    invoice_number = src[c_purchase_inv_no] if c_purchase_inv_no else (src[c_voucher_no] if c_voucher_no else "")
+    invoice_date   = src[c_purchase_inv_dt] if c_purchase_inv_dt else (src[c_voucher_dt] if c_voucher_dt else "")
+    entry_date     = src[c_inv_entry_date] if c_inv_entry_date else (src[c_voucher_dt] if c_voucher_dt else invoice_date)
+    mod_date       = src[c_inv_mod_date] if c_inv_mod_date else ""
+    due_date       = src[c_due_date] if c_due_date else ""
+    remarks        = src[c_remarks] if c_remarks else (src[c_narration] if c_narration else "")
+
+    # Creator: prefer "Inv Created By"; fallback to previous heuristics
+    if c_inv_created_by:
+        creator_series = src[c_inv_created_by].astype(str).replace({"": "System Generated", "N/A": "System Generated"})
+    else:
+        # fallback chain: try any existing creator-like column → narration regex → default
+        creator_col_candidates = [col("CreatedBy"), col("Creator"), col("Invoice_Creator_Name")]
+        creator_series = None
+        for cand in creator_col_candidates:
+            if cand:
+                creator_series = src[cand].astype(str)
+                break
+        if creator_series is None:
+            import re
+            patt = re.compile(r"(created\s*by|creator|inv\s*created\s*by)\s*[:\-]\s*([A-Za-z][\w .'-]+)", re.I)
+            def from_narr(x):
+                m = patt.search(str(x) if x is not None else "")
+                return m.group(2).strip() if m else ""
+            creator_series = src[c_narration].map(from_narr) if c_narration else pd.Series([""]*len(src))
+        creator_series = creator_series.fillna("")
+        creator_series = creator_series.apply(lambda s: "System Generated" if str(s).strip().lower() in ("", "unknown", "system", "n/a") else s)
+
+    # Location
+    location_series = src[c_state] if c_state else pd.Series([""]*len(src))
+
+    # Method of Payment: prefer MOP
+    if c_mop:
+        method_series = src[c_mop].astype(str).fillna("")
+    else:
+        def _payment_method(row):
+            raw = " ".join([
+                str(row.get(c_narration)) if c_narration else "",
+                str(row.get(c_ledger)) if c_ledger else ""
+            ])
+            return map_payment_method(raw)
+        method_series = src.apply(_payment_method, axis=1)
+
+    # Account head: prefer A/C Head
+    if c_ac_head:
+        account_series = src[c_ac_head].astype(str).fillna("")
+    else:
+        def _account_head(row):
+            raw = str(row.get(c_ledger)) if c_ledger else str(row.get(c_narration)) if c_narration else ""
+            return raw if raw else map_account_head(raw)
+        account_series = src.apply(_account_head, axis=1)
+
+    # Currency: prefer Inv Currency, fallback to legacy Currency
+    currency_series = src[c_inv_currency] if c_inv_currency else (src[c_currency_legacy] if c_currency_legacy else "")
+
+    # Validation status column if present
+    validation_col = None
+    for c in src.columns:
+        cl = c.lower()
+        if "validation" in cl or "status" in cl or "result" in cl:
+            validation_col = c
+            break
+    validation_status = src[validation_col] if validation_col else pd.Series([""]*len(src))
+
+    # Issues (best-effort)
+    issues_candidates = [col("Issue_Details"), col("Error Details"), col("Issues")]
+    issue_details = src[issues_candidates[0]].fillna("") if issues_candidates[0] else pd.Series([""]*len(src))
+    issues_found = issue_details.apply(lambda s: 1 if str(s).strip() else 0)
+
+    # Taxes
+    cgst = pd.to_numeric(src[c_cgst_amt], errors="coerce").fillna(0) if c_cgst_amt else 0
+    sgst = pd.to_numeric(src[c_sgst_amt], errors="coerce").fillna(0) if c_sgst_amt else 0
+    igst = pd.to_numeric(src[c_igst_amt], errors="coerce").fillna(0) if c_igst_amt else 0
+    vat  = pd.to_numeric(src[c_vat],  errors="coerce").fillna(0) if c_vat else 0
+    total_tax = (cgst if isinstance(cgst, pd.Series) else 0) + \
+                (sgst if isinstance(sgst, pd.Series) else 0) + \
+                (igst if isinstance(igst, pd.Series) else 0) + \
+                (vat  if isinstance(vat,  pd.Series) else 0)
+
+    # Tax type inference
+    def _infer_tax_type_local(row):
+        try: igt = float(row.get(c_igst_amt, 0) or 0)
+        except: igt = 0
+        try: cgt = float(row.get(c_cgst_amt, 0) or 0)
+        except: cgt = 0
+        try: sgt = float(row.get(c_sgst_amt, 0) or 0)
+        except: sgt = 0
+        try: v = float(row.get(c_vat, 0) or 0)
+        except: v = 0
+        if igt > 0: return "IGST"
+        if (cgt > 0) or (sgt > 0): return "GST"
+        if v > 0: return "VAT"
+        return ""
+    tax_type = src.apply(_infer_tax_type_local, axis=1)
+
+    # SCID
+    scid_col = col("SCID")
+    if scid_col:
+        scid_series = src[scid_col].astype(str)
+    elif c_invid:
+        scid_series = src[c_invid].astype(str)
+    else:
+        import re
+        patt = re.compile(r"\bSCID[:\s\-]*([A-Za-z0-9\-]+)", re.I)
+        def _scid(row):
+            text = str(row.get(c_narration)) if c_narration else ""
+            m = patt.search(text)
+            return m.group(1) if m else ""
+        scid_series = src.apply(_scid, axis=1)
+
+    amount_series = src[c_total] if c_total else pd.Series([0]*len(src))
+
+    # Compose final dataframe (keeps your original columns + the 4 new ones)
+    final = pd.DataFrame({
+        "Invoice_ID":           src[c_invid] if c_invid else (src[c_voucher_no] if c_voucher_no else ""),
+        "Invoice_Number":       invoice_number,
+        "Invoice_Date":         invoice_date,
+        "Invoice_Entry_Date":   entry_date,                 # original field in your spec
+        "Inv Entry Date":       entry_date,                 # explicit RMS field you asked to add
+        "Inv Mod Date":         mod_date,                   # NEW
+        "Vendor_Name":          src[c_party] if c_party else "",
+        "Amount":               amount_series,
+        "Invoice_Creator_Name": creator_series,
+        "Location":             location_series,
+        "Invoice currency":     currency_series,            # original label
+        "Method_of_Payment":    method_series,
+        "Account_Head":         account_series,
+        "Validation_Status":    validation_status,
+        "Issues_Found":         issues_found,
+        "Issue_Details":        issue_details,
+        "GST_Number":           src[c_gst] if c_gst else "",
+        "Row_Index":            (src.index + 1),
+        "Validation_Date":      validation_dt.strftime("%Y-%m-%d %H:%M:%S"),
+        "Invoice_Currency":     currency_series,            # duplicate output (as per your earlier format)
+        "Tax_Type":             tax_type,
+        "Due_Date":             due_date,                   # original label
+        "DueDate":              due_date,                   # explicit RMS field you asked to add
+        "Remarks":              remarks,                    # NEW (prefers Remarks, falls back to Narration)
+        "Due_Date_Notification": "",
+        "Total_Tax_Calculated": total_tax,
+        "CGST_Amount":          cgst if isinstance(cgst, pd.Series) else 0,
+        "SGST_Amount":          sgst if isinstance(sgst, pd.Series) else 0,
+        "IGST_Amount":          igst if isinstance(igst, pd.Series) else 0,
+        "VAT_Amount":           vat  if isinstance(vat,  pd.Series) else 0,
+        "TDS_Status":           "Coming Soon",
+        "RMS_Invoice_ID":       src[c_invid] if c_invid else "",
+        "SCID":                 scid_series,
+    })
+
+    return final
       
 def run_invoice_validation():
     """Main function to run detailed cumulative validation with invoice-level reports and email summaries"""
