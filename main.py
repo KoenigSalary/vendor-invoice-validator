@@ -886,7 +886,7 @@ def _try_load_creator_map(run_dir: str) -> dict:
                 if key_col and val_col:
                     creators.update(dict(zip(cdf[key_col].astype(str), cdf[val_col].astype(str))))
         except Exception as e:
-            logger.warning(f"Creator map load failed for {p}: {e}")
+            logging.warning(f"Creator map load failed for {p}: {e}")
     return creators
 
 def _derive_location(row) -> str:
@@ -906,6 +906,32 @@ def _derive_location(row) -> str:
     if m:
         return m.group(1).strip().title()
     return ""
+
+def map_payment_method(payment_info):
+    """
+    Standardize payment method information
+    """
+    if not payment_info or pd.isna(payment_info):
+        return "Cash"
+    
+    payment_str = str(payment_info).lower().strip()
+    
+    # Define payment method mappings
+    payment_mappings = {
+        'card': ['card', 'credit', 'debit', 'visa', 'mastercard'],
+        'bank_transfer': ['bank', 'transfer', 'wire', 'neft', 'rtgs', 'imps'],
+        'cheque': ['cheque', 'check', 'dd', 'demand draft'],
+        'online': ['online', 'digital', 'upi', 'paytm', 'gpay', 'phonepe'],
+        'cash': ['cash', 'hand', 'direct']
+    }
+    
+    # Check for matches
+    for method, keywords in payment_mappings.items():
+        if any(keyword in payment_str for keyword in keywords):
+            return method.replace('_', ' ').title()
+    
+    # Default return
+    return "Cash"
 
 def _derive_payment_method(row) -> str:
     blob = " ".join(str(x) for x in [
@@ -1206,8 +1232,8 @@ def enhance_validation_results(detailed_df, email_summary):
         return result
 
     except Exception as e:
-        logger.error(f"⚠️ Enhancement step error: {e}")
-        logger.error(traceback.format_exc())
+        logging.error(f"⚠️ Enhancement step error: {e}")
+        logging.error(traceback.format_exc())
         try:
             fallback_df = detailed_df.copy() if detailed_df is not None else pd.DataFrame()
         except Exception:
@@ -1815,8 +1841,8 @@ def run_invoice_validation():
                 pd.DataFrame(rows).to_excel(writer, sheet_name='Enhanced_Summary', index=False)
 
         except Exception as e:
-            logger.error(f"⚠️ Enhancement step error: {e}")
-            logger.error(traceback.format_exc())
+            logging.error(f"⚠️ Enhancement step error: {e}")
+            logging.error(traceback.format_exc())
             print(f"⚠️ Enhancement step error: {e}")
             enhanced_df = detailed_df
             changes_detected = False
