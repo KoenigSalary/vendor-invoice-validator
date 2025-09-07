@@ -948,7 +948,7 @@ def _derive_scid(row) -> str:
         return m.group(1).strip()
     return ""
 
-def build_final_validation_report(raw_df, run_dir: str, validation_date: datetime) -> "pd.DataFrame":
+def build_final_validation_report(source_df, run_dir, validation_date):
     """
     Returns a dataframe with EXACT columns as requested, filled from RMS + derived values.
     Assumes raw_df is the parsed RMS export (tab-separated), columns like those seen in logs.
@@ -976,6 +976,26 @@ def build_final_validation_report(raw_df, run_dir: str, validation_date: datetim
         "TDS":"TDS_Status",
         "State":"State"  # keep for location fallback
     }
+
+    source_df['Invoice_Creator_Name'] = source_df['Inv Created By'].fillna('Unknown')  # Update with correct column from RMS
+    source_df['Method_of_Payment'] = source_df['MOP'].fillna('Unknown')  # Update with correct column from RMS
+    source_df['Location'] = source_df['State'].fillna('Unknown')  # Ensure mapping for Location from RMS
+    source_df['Account_Head'] = source_df['A/C Head'].fillna('Unknown')  # Same for Account Head
+    source_df['Invoice_Currency'] = source_df['Inv Currency'].fillna('INR')  # Invoice currency
+    source_df['SCID'] = source_df['SCID'].fillna('N/A')  # Add SCID field if available
+
+    # For TDS status, set "Coming soon" for missing TDS values
+    source_df['TDS_Status'] = source_df['TDS'].apply(lambda x: 'Coming soon' if pd.isna(x) else x)
+
+    # Add necessary columns for final report
+    report_df = source_df[['Invoice_ID', 'Invoice_Number', 'Invoice_Date', 'Invoice_Entry_Date', 'Vendor_Name', 'Amount',
+                           'Invoice_Creator_Name', 'Location', 'Invoice_Currency', 'Method_of_Payment', 'Account_Head',
+                           'Validation_Status', 'Issues_Found', 'Issue_Details', 'GST_Number', 'Row_Index', 'Validation_Date',
+                           'Tax_Type', 'Due_Date', 'Due_Date_Notification', 'Total_Tax_Calculated', 'CGST_Amount',
+                           'SGST_Amount', 'IGST_Amount', 'VAT_Amount', 'TDS_Status', 'RMS_Invoice_ID', 'SCID']]
+    
+    return report_df
+
     # apply safe renames when columns exist
     rename_map = {k:v for k,v in rename_map.items() if k in df.columns}
     df = df.rename(columns=rename_map)
