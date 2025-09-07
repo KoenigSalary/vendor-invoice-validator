@@ -15,10 +15,21 @@ from invoice_tracker import (
     get_validation_date_ranges
 )
 import pandas as pd
+import traceback
 import os
+import re
+import logging
 import shutil
 from pathlib import Path
 import re, json, glob
+
+# --- logger bootstrap: paste directly below imports ---
+logger = logging.getLogger("invoice_validator")
+if not logger.handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
 
 # Load environment variables
 load_dotenv()
@@ -407,7 +418,6 @@ def validate_invoices_with_details(df):
         
     except Exception as e:
         print(f"❌ Detailed validation failed: {str(e)}")
-        import traceback
         traceback.print_exc()
         return pd.DataFrame(), [], pd.DataFrame()
 
@@ -974,53 +984,91 @@ def _derive_scid(row) -> str:
         return m.group(1).strip()
     return ""
 
-def build_final_validation_report(source_df, run_dir, validation_date):
+def build_final_validation_report(source_df: pd.DataFrame, run_dir: str, validation_date: datetime) -> pd.DataFrame:
     """
-    Returns a dataframe with EXACT columns as requested, filled from RMS + derived values.
-    Assumes raw_df is the parsed RMS export (tab-separated), columns like those seen in logs.
+    Build the final Excel in the requested schema, using RMS column names:
+      - "MOP", "A/C Head", "Inv Currency", "Inv Created By", "DueDate", etc.
+      Falls back gracefully if a column doesn't exist.
     """
-    import pandas as pd
+    df = source_df.copy()
 
-    df = raw_df.copy()
-    # Standardize a few probable column name typos from RMS export
-    rename_map = {
-        "Voucherdate":"Invoice_Date",
-        "PurchaseInvNo":"Invoice_Number",
-        "PurchaseInvDate":"Invoice_Date_Raw",
-        "PartyName":"Vendor_Name",
-        "GSTNO":"GST_Number",
-        "Total":"Amount",
-        "Currency":"Invoice_Currency",
-        "InvID":"RMS_Invoice_ID",
-        "OtherLedgerAmt1":"OtherLedgerAmt1",   # if your export uses stars, these will be ignored
-        "OtherLedgerAmt2":"OtherLedgerAmt2",
-        "OtherLedgerAmt3":"OtherLedgerAmt3",
-        "CGSTInputAmt":"CGST_Amount",
-        "SGSTInputAmt":"SGST_Amount",
-        "IGST/VATInputAmt":"IGST_Amount",  # RMS sometimes mixes IGST/VAT label
-        "VAT":"VAT_Amount",
-        "TDS":"TDS_Status",
-        "State":"State"  # keep for location fallback
-    }
+    # quick column finder: case/space/punct insensitive
+    def _find(*candidates):
+        if not candidates:
+            return None
+        # 1) direct lower lookup
+        lower_map = {c.lower(): c for c in df.columns}
+        for cand in candidates:
+            if cand.lower() in lower_map:
+                return lower_map[cand.lower()]
+        # 2) normalized (strip non-alnum)
+        norm = {re.sub(r'[^a-z0-9]+', '', c.lower()): c for c in df.columns}
+        for cand in candidates:
+            key = re.sub(r'[^a-z0-9]+', '', cand.lower())
+            if key in norm:
+                return norm[key]
+        return None
 
-    source_df['Invoice_Creator_Name'] = source_df['Inv Created By'].fillna('Unknown')  # Update with correct column from RMS
-    source_df['Method_of_Payment'] = source_df['MOP'].fillna('Unknown')  # Update with correct column from RMS
-    source_df['Location'] = source_df['State'].fillna('Unknown')  # Ensure mapping for Location from RMS
-    source_df['Account_Head'] = source_df['A/C Head'].fillna('Unknown')  # Same for Account Head
-    source_df['Invoice_Currency'] = source_df['Inv Currency'].fillna('INR')  # Invoice currency
-    source_df['SCID'] = source_df['SCID'].fillna('N/A')  # Add SCID field if available
+    # RMS column resolutions
+    col_inv_id       = _find("Invoice_ID", "InvID", "RMS_Invoice_ID")
+    col_inv_no       = _find("Invoice_Number", "PurchaseInvNo", "Inv No", "Invoice No", "VoucherNo")
+    col_inv_date     = _find("Invoice_Date", "PurchaseInvDate", "Inv Date", "Voucherdate")
+    col_entry_date   = _find("Invoice_Entry_Date", "Inv Entry Date")
+    col_mod_date     = _find("Invoice_Mod_Date", "Inv Mod Date")
+    col_vendor       = _find("Vendor_Name", "PartyName")
+    col_amount       = _find("Amount", "Total")
+    col_location     = _find("Location", "State")
+    col_mop          = _find("Method_of_Payment", "MOP")
+    col_ac_head      = _find("Account_Head", "A/C Head")
+    col_currency     = _find("Invoice_Currency", "Inv Currency", "Currency")
+    col_creator      = _find("Invoice_Creator_Name", "Inv Created By", "Created By")
+    col_gst          = _find("GST_Number", "GSTNO")
+    col_duedate      = _find("Due_Date", "DueDate")
+    col_tax_type     = _find("Tax_Type", "VAT")
+    col_remarks      = _find("Remarks", "Narration")
+    col_scid         = _find("SCID")
 
-    # For TDS status, set "Coming soon" for missing TDS values
-    source_df['TDS_Status'] = source_df['TDS'].apply(lambda x: 'Coming soon' if pd.isna(x) else x)
+    # Build output
+    out = pd.DataFrame({
+        "Invoice_ID":              df[col_inv_id] if col_inv_id else df.index.astype(str),
+        "Invoice_Number":          df[col_inv_no] if col_inv_no else "",
+        "Invoice_Date":            df[col_inv_date] if col_inv_date else "",
+        "Invoice_Entry_Date":      df[col_entry_date] if col_entry_date else "",
+        "Invoice_Mod_Date":        df[col_mod_date] if col_mod_date else "",
+        "Vendor_Name":             df[col_vendor] if col_vendor else "",
+        "Amount":                  pd.to_numeric(df[col_amount], errors="coerce").fillna(0) if col_amount else 0,
+        "Invoice_Creator_Name":    df[col_creator].fillna("System Generated") if col_creator else "System Generated",
+        "Location":                df[col_location].fillna("") if col_location else "",
+        "Invoice_Currency":        df[col_currency].fillna("INR") if col_currency else "INR",
+        "Method_of_Payment":       df[col_mop].apply(map_payment_method) if col_mop else "Unknown",
+        "Account_Head":            df[col_ac_head].fillna("") if col_ac_head else "",
+        "Validation_Status":       "",      # your validator can fill later
+        "Issues_Found":            "",      # your validator can fill later
+        "Issue_Details":           "",      # your validator can fill later
+        "GST_Number":              df[col_gst].fillna("") if col_gst else "",
+        "Row_Index":               df.index,
+        "Validation_Date":         validation_date.strftime("%Y-%m-%d"),
+        "Tax_Type":                df[col_tax_type].fillna("") if col_tax_type else "",
+        "Due_Date":                df[col_duedate].fillna("") if col_duedate else "",
+        "Due_Date_Notification":   "",      # populate if you have SLA logic
+        "Total_Tax_Calculated":    0,       # compute if needed
+        "CGST_Amount":             pd.to_numeric(df.get("CGSTInputAmt", 0), errors="coerce").fillna(0),
+        "SGST_Amount":             pd.to_numeric(df.get("SGSTInputAmt", 0), errors="coerce").fillna(0),
+        "IGST_Amount":             pd.to_numeric(df.get("IGST/VATInputAmt", 0), errors="coerce").fillna(0),
+        "VAT_Amount":              pd.to_numeric(df.get("VAT", 0), errors="coerce").fillna(0),
+        "TDS_Status":              "Coming soon",   # per your requirement
+        "RMS_Invoice_ID":          df[col_inv_id] if col_inv_id else "",
+        "SCID":                    df[col_scid] if col_scid else "",
+        "Remarks":                 df[col_remarks] if col_remarks else "",
+    })
 
-    # Add necessary columns for final report
-    report_df = source_df[['Invoice_ID', 'Invoice_Number', 'Invoice_Date', 'Invoice_Entry_Date', 'Vendor_Name', 'Amount',
-                           'Invoice_Creator_Name', 'Location', 'Invoice_Currency', 'Method_of_Payment', 'Account_Head',
-                           'Validation_Status', 'Issues_Found', 'Issue_Details', 'GST_Number', 'Row_Index', 'Validation_Date',
-                           'Tax_Type', 'Due_Date', 'Due_Date_Notification', 'Total_Tax_Calculated', 'CGST_Amount',
-                           'SGST_Amount', 'IGST_Amount', 'VAT_Amount', 'TDS_Status', 'RMS_Invoice_ID', 'SCID']]
-    
-    return report_df
+    # Save the final file to the run directory so the email can attach it
+    run_dir = Path(run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    out_path = run_dir / "validation_result.xlsx"
+    out.to_excel(out_path, index=False)
+    logger.info(f"Final validation report saved: {out_path}")
+    return out
 
     # apply safe renames when columns exist
     rename_map = {k:v for k,v in rename_map.items() if k in df.columns}
@@ -1153,10 +1201,6 @@ def enhance_validation_results(detailed_df, email_summary):
     Enhance validation results and return a consistent response dict.
     Ensures keys: success, enhanced_df, email_summary, message.
     """
-    import logging
-    import pandas as pd
-    from datetime import datetime
-    import traceback
 
     try:
         logging.info("🔧 Enhancing validation results...")
@@ -1748,11 +1792,14 @@ def run_invoice_validation():
 
             # Send the email
             notifier = EmailNotifier()
-            deadline = datetime.now() + timedelta(days=3)
-            html_body = EnhancedEmailSystem().create_professional_html_template(
-                {"failed": 0, "warnings": 0, "passed": 0},  # plug real counts if you have them handy
-                deadline
-            )
+            dsubject = f"Invoice Validation Report — {validation_date.strftime('%Y-%m-%d')}"
+            html_body = open(Path(run_dir) / f"email_summary_{validation_date.strftime('%Y-%m-%d')}.html", "r", encoding="utf-8").read() \
+                if (Path(run_dir) / f"email_summary_{validation_date.strftime('%Y-%m-%d')}.html").exists() else "<p>See attachments.</p>"
+
+            # ONE call only
+            ok = notifier.send_validation_report(subject, html_body, attachments=attachments)
+            logger.info(f"Email sent: {ok}")
+
             notifier.send_validation_report(
                 f"Invoice Validation Report - {validation_date:%Y-%m-%d}",
                 html_body,
@@ -1773,7 +1820,6 @@ def run_invoice_validation():
                 attachments.append(invoices_zip_path)
 
             # Email
-            from email_notifier import EmailNotifier
             notifier = EmailNotifier()
             subject = f"Invoice Validation Report - {datetime.now().strftime('%Y-%m-%d')}"
             deadline = datetime.now() + timedelta(days=3)
@@ -1850,7 +1896,6 @@ def run_invoice_validation():
                 
         # Step 17: Send email notifications - AP TEAM ONLY
         try:
-            from email_notifier import EmailNotifier
             
             notifier = EmailNotifier()
                 
@@ -1898,7 +1943,6 @@ def run_invoice_validation():
             
         except Exception as e:
             print(f"⚠️ Email sending failed: {str(e)}")
-            import traceback
             traceback.print_exc()
                     
         print("✅ Detailed cumulative validation workflow completed successfully!")
@@ -1925,7 +1969,6 @@ def run_invoice_validation():
                 
     except Exception as e:
         print(f"❌ Unexpected error in detailed cumulative validation workflow: {str(e)}")
-        import traceback
         traceback.print_exc()
         return False
             
