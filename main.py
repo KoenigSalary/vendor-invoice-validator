@@ -818,8 +818,25 @@ def run_invoice_validation() -> bool:
         print(f"✅ Download path: {run_dir}")
 
         # Step 5
-        print(f"🔍 Step 5: Validate files in {run_dir} …")
-        checks = validate_downloaded_files(run_dir)
+        # Fix 1: Validate downloaded files
+        run_dir = os.path.dirname(download_path)  # Get directory from file path
+        # OR manually construct: 
+        # run_dir = f"/home/runner/work/vendor-invoice-validator/vendor-invoice-validator/data/{validation_date}"
+
+        logging.info(f"🔍 Step 5: Verifying files in directory: {run_dir}")
+
+        # Call validation function and handle tuple return
+        validation_success, file_details = validate_downloaded_files(run_dir)
+
+        # Fix 2: Handle the tuple return correctly
+        validation_result, file_info = validate_downloaded_files(run_dir)
+
+        if not validation_success:
+            logging.error(f"❌ File validation failed: {file_details}")
+            logging.error("❌ Aborting: Required files missing")
+            return False
+
+        logging.info(f"✅ All required files found: {file_details}")
 
         # Step 6
         invoice_path = os.path.join(run_dir, "invoice_download.xls")
@@ -975,11 +992,9 @@ def run_invoice_validation() -> bool:
         return True
 
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
-        logger.error("Unexpected failure in run_invoice_validation", exc_info=True)
-        print(traceback.format_exc())
+        logging.error(f"❌ Unexpected error: {e}")
+        logging.error(f"Traceback: {traceback.format_exc()}")
         return False
-
 
 if __name__ == "__main__":
     ok = run_invoice_validation()
