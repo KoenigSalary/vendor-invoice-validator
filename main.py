@@ -365,19 +365,31 @@ def _try_load_creator_map(run_dir: str) -> dict:
                 if key_col and val_col:
                     creators.update(dict(zip(cdf[key_col].astype(str), cdf[val_col].astype(str))))
         except Exception as e:
-            logger.warning(f"Creator map load failed for {p}: {e}")
+            logging.warning(f"Creator map load failed for {p}: {e}")
     return creators
 
 def map_payment_method(payment_info) -> str:
+    """Standardize payment method information"""
     if payment_info is None or (isinstance(payment_info, float) and pd.isna(payment_info)):
-        return ""
-    s = str(payment_info).lower()
-    if re.search(r"\b(neft|rtgs|imps|wire|bank\s*transfer)\b", s): return "Bank Transfer"
-    if re.search(r"\bupi|gpay|phonepe|paytm|wallet|online\b", s):   return "Digital Payment"
-    if re.search(r"\b(card|visa|mastercard|amex|pos)\b", s):        return "Card Payment"
-    if re.search(r"\bcheque|check|dd|demand\s*draft\b", s):         return "Cheque"
-    if re.search(r"\bcash|petty\s*cash\b", s):                      return "Cash"
-    return ""
+        return "Cash"
+    
+    payment_str = str(payment_info).lower().strip()
+    
+    # Define payment method mappings
+    payment_mappings = {
+        'Card Payment': ['card', 'credit', 'debit', 'visa', 'mastercard'],
+        'Bank Transfer': ['bank', 'transfer', 'wire', 'neft', 'rtgs', 'imps'],
+        'Cheque': ['cheque', 'check', 'dd', 'demand draft'],
+        'Digital Payment': ['online', 'digital', 'upi', 'paytm', 'gpay', 'phonepe'],
+        'Cash': ['cash', 'hand', 'direct']
+    }
+    
+    # Check for matches
+    for method, keywords in payment_mappings.items():
+        if any(keyword in payment_str for keyword in keywords):
+            return method
+    
+    return "Cash"
 
 def _derive_payment_method(row) -> str:
     pieces = []
@@ -463,7 +475,7 @@ def validate_invoices_with_details(df: pd.DataFrame) -> Tuple[pd.DataFrame, list
     try:
         summary_issues, problematic = validate_invoices(df)  # your existing rules
     except Exception as e:
-        logger.warning(f"Base validation failed (continuing with detailed only): {e}")
+        logging.warning(f"Base validation failed (continuing with detailed only): {e}")
         summary_issues, problematic = [], pd.DataFrame()
 
     creator_col = find_creator_column(df)
@@ -819,7 +831,7 @@ def run_invoice_validation() -> bool:
 
         # Step 5
         # Fix 1: Validate downloaded files
-        run_dir = os.path.dirname(run_dir)  
+        run_dir = run_dir  
         # OR manually construct: 
         # run_dir = f"/home/runner/work/vendor-invoice-validator/vendor-invoice-validator/data/{validation_date}"
 
@@ -840,7 +852,10 @@ def run_invoice_validation() -> bool:
 
         # Step 6
         invoice_path = os.path.join(run_dir, "invoice_download.xls")
-        if checks.get("invoice_download.xls") == "missing":
+        validation_success, file_details = validate_downloaded_files(run_dir)
+            if not validation_success:
+                logging.error(f"❌ File validation failed: {file_details}")
+                return False
             print("❌ Aborting: invoice_download.xls missing")
             return False
 
