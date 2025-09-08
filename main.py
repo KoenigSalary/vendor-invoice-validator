@@ -18,11 +18,10 @@ import pandas as pd
 from dotenv import load_dotenv
 
 # --- External module imports from your repo (expected to exist) ---
-# These are referenced by the original project structure.
-from rms_scraper import rms_download                   # returns run folder path with invoice_download.xls and invoices.zip
-from validator_utils import validate_invoices          # returns (summary_issues, problematic_df)
-from updater import update_invoice_status              # (kept for parity, not invoked directly below)
-from reporter import save_snapshot_report              # (kept for parity, not invoked directly below)
+from rms_scraper import rms_download
+from validator_utils import validate_invoices
+from updater import update_invoice_status
+from reporter import save_snapshot_report
 from invoice_tracker import (
     create_tables,
     save_invoice_snapshot,
@@ -79,13 +78,11 @@ def should_run_today() -> bool:
         print(f"⚠️ Schedule check error: {e}; defaulting to run")
         return True
 
-
 def get_current_batch_dates() -> Tuple[str, str]:
     """Get the current 4-day batch: (start, end) as 'YYYY-MM-DD' strings; end is yesterday."""
     end = datetime.today() - timedelta(days=1)
     start = end - timedelta(days=VALIDATION_BATCH_DAYS - 1)
     return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
-
 
 def get_cumulative_validation_range() -> Tuple[str, str]:
     """From first validation (but no older than 3 months) to current batch end."""
@@ -103,7 +100,6 @@ def get_cumulative_validation_range() -> Tuple[str, str]:
     except Exception as e:
         print(f"⚠️ Cumulative range calc error: {e}; using current batch")
         return get_current_batch_dates()
-
 
 def archive_data_older_than_three_months() -> int:
     """Move files/folders older than 3 months into data/archived_data/* and mark DB records."""
@@ -170,7 +166,6 @@ def archive_data_older_than_three_months() -> int:
     print(f"✅ Archiving completed. {archived} items archived to {archive_base}")
     return archived
 
-
 def download_cumulative_data(start_str: str, end_str: str) -> str:
     """Kick off RMS download for the cumulative window; returns the run directory path."""
     start_date = datetime.strptime(start_str, "%Y-%m-%d")
@@ -178,7 +173,6 @@ def download_cumulative_data(start_str: str, end_str: str) -> str:
     print(f"📥 Downloading cumulative validation data from {start_str} to {end_str}...")
     print(f"📊 Range covers: {(end_date - start_date).days + 1} days")
     return rms_download(start_date, end_date)
-
 
 def validate_downloaded_files(run_dir):
     """
@@ -228,8 +222,7 @@ def validate_downloaded_files(run_dir):
     except Exception as e:
         logging.error(f"❌ File validation error: {e}")
         return False, [f"Validation error: {str(e)}"]
-
-
+        
 def read_invoice_file(invoice_file: str) -> pd.DataFrame:
     """Robust reader: try Excel engines, then CSV sniffing (handles tabular XLS-TSV export)."""
     print(f"🔍 Attempting to read file: {invoice_file}")
@@ -284,28 +277,7 @@ def read_invoice_file(invoice_file: str) -> pd.DataFrame:
             continue
     print("⚠️ CSV reading failed with all separators")
 
-    # Try HTML (rare)
-    try:
-        print("🌐 Attempting to read as HTML...")
-        tables = pd.read_html(invoice_file, flavor="lxml")
-        if tables:
-            df = tables[0]
-            print(f"✅ HTML table read. Shape: {df.shape}")
-            print(f"📋 Columns: {list(df.columns)}")
-            return df
-    except Exception as e:
-        print(f"⚠️ HTML parsing failed: {e}")
-
-    # Last resort: show sample
-    try:
-        with open(invoice_file, "r", encoding="utf-8", errors="ignore") as f:
-            sample = f.read(500)
-        print(f"📄 File sample:\n{repr(sample)}")
-    except Exception as e:
-        print(f"⚠️ Could not read file content: {e}")
-
     raise Exception("Could not read invoice file in any supported format")
-
 
 def filter_invoices_by_date(df: pd.DataFrame, start_str: str, end_str: str) -> pd.DataFrame:
     """Filter by PurchaseInvDate in [start, end]."""
@@ -324,8 +296,7 @@ def filter_invoices_by_date(df: pd.DataFrame, start_str: str, end_str: str) -> p
         print(f"⚠️ Date filtering failed: {e}; returning all data")
         return df
 
-
-# ====== Mapping/Derivation helpers (inspected headers aware) ======
+# ====== Mapping/Derivation helpers ======
 
 GST_STATE_MAP = {
     "01":"Jammu & Kashmir","02":"Himachal Pradesh","03":"Punjab","04":"Chandigarh","05":"Uttarakhand",
@@ -337,29 +308,8 @@ GST_STATE_MAP = {
     "34":"Puducherry","35":"Andaman & Nicobar Islands","36":"Telangana","37":"Andhra Pradesh","38":"Ladakh"
 }
 
-
-def _try_load_creator_map(run_dir: str) -> dict:
-    creators = {}
-    for p in glob.glob(os.path.join(run_dir, "*creator*.*")):
-        try:
-            if p.lower().endswith(".json"):
-                with open(p, "r", encoding="utf-8") as f:
-                    creators.update(json.load(f))
-            else:
-                cdf = pd.read_csv(p)
-                key_col = next((c for c in cdf.columns if c.lower() in ("purchaseinvno","invid","voucherno","invoice_number")), None)
-                val_col = next((c for c in cdf.columns if "creator" in c.lower()), None)
-                if key_col and val_col:
-                    creators.update(dict(zip(cdf[key_col].astype(str), cdf[val_col].astype(str))))
-        except Exception as e:
-            logger.warning(f"Creator map load failed for {p}: {e}")
-    return creators
-
-
 def map_payment_method(payment_info) -> str:
-    """
-    Standardize payment method information
-    """
+    """Standardize payment method information"""
     if payment_info is None or (isinstance(payment_info, float) and pd.isna(payment_info)):
         return "Cash"
     
@@ -381,7 +331,6 @@ def map_payment_method(payment_info) -> str:
     
     return "Cash"
 
-
 def _derive_payment_method(row) -> str:
     pieces = []
     for c in ("MOP","VoucherTypeName","Narration","PurchaseLEDGER","OtherLedger1","OtherLedger2","OtherLedger3"):
@@ -389,7 +338,6 @@ def _derive_payment_method(row) -> str:
         if v is not None and str(v).strip():
             pieces.append(str(v))
     return map_payment_method(" ".join(pieces))
-
 
 def _derive_account_head(row) -> str:
     if "A/C Head" in row and str(row.get("A/C Head") or "").strip():
@@ -399,7 +347,6 @@ def _derive_account_head(row) -> str:
         if v and str(v).strip():
             return str(v).strip()
     return ""
-
 
 def _derive_location(row) -> str:
     for c in ("Location", "Branch", "State"):
@@ -416,6 +363,22 @@ def _derive_location(row) -> str:
         return m.group(1).strip().title()
     return ""
 
+def _try_load_creator_map(run_dir: str) -> dict:
+    creators = {}
+    for p in glob.glob(os.path.join(run_dir, "*creator*.*")):
+        try:
+            if p.lower().endswith(".json"):
+                with open(p, "r", encoding="utf-8") as f:
+                    creators.update(json.load(f))
+            else:
+                cdf = pd.read_csv(p)
+                key_col = next((c for c in cdf.columns if c.lower() in ("purchaseinvno","invid","voucherno","invoice_number")), None)
+                val_col = next((c for c in cdf.columns if "creator" in c.lower()), None)
+                if key_col and val_col:
+                    creators.update(dict(zip(cdf[key_col].astype(str), cdf[val_col].astype(str))))
+        except Exception as e:
+            logging.warning(f"Creator map load failed for {p}: {e}")
+    return creators
 
 def _derive_creator(row, creators_map: dict) -> str:
     for k in [row.get("VoucherNo"), row.get("PurchaseInvNo"), row.get("InvID")]:
@@ -427,19 +390,6 @@ def _derive_creator(row, creators_map: dict) -> str:
     if m:
         return m.group(1).strip().title()
     return "System Generated"
-
-
-def _derive_scid(row) -> str:
-    for c in ("SCID#", "SCID", "Scid", "scid"):
-        v = row.get(c)
-        if isinstance(v, str) and v.strip():
-            return v.strip()
-    narr = str(row.get("Narration", ""))
-    m = re.search(r"\bSCID[#:]?\s*([A-Za-z0-9\-_/]+)", narr, flags=re.I)
-    return m.group(1).strip() if m else ""
-
-
-# ====== Validation-detail builder (kept from your flow; uses creator column if present) ======
 
 def find_creator_column(df: pd.DataFrame) -> Optional[str]:
     if "Inv Created By" in df.columns:
@@ -463,14 +413,13 @@ def find_creator_column(df: pd.DataFrame) -> Optional[str]:
             return c
     return None
 
-
 def validate_invoices_with_details(df: pd.DataFrame) -> Tuple[pd.DataFrame, list, pd.DataFrame]:
     """Augment each invoice with a pass/warn/fail and include Invoice_Creator_Name."""
-    print("🔍 Running detailed invoice-level validation…")
+    print("🔍 Running detailed invoice-level validation...")
     try:
-        summary_issues, problematic = validate_invoices(df)  # your existing rules
+        summary_issues, problematic = validate_invoices(df)
     except Exception as e:
-        logger.warning(f"Base validation failed (continuing with detailed only): {e}")
+        logging.warning(f"Base validation failed (continuing with detailed only): {e}")
         summary_issues, problematic = [], pd.DataFrame()
 
     creator_col = find_creator_column(df)
@@ -528,17 +477,17 @@ def validate_invoices_with_details(df: pd.DataFrame) -> Tuple[pd.DataFrame, list
         })
 
     detailed_df = pd.DataFrame(detailed)
-    print(f"✅ Detailed validation completed: {len(detailed_df)} rows")
+    print(f"✅ Detailed validation completed on {len(detailed_df)} invoices")
     return detailed_df, summary_issues, problematic
-
 
 def generate_email_summary_statistics(detailed_df: pd.DataFrame,
                                       cumulative_start: str, cumulative_end: str,
                                       batch_start: str, batch_end: str,
                                       today_str: str) -> dict:
-    print("📧 Generating email summary statistics…")
+    print("📧 Generating email summary statistics...")
     if detailed_df.empty:
         return {"html_summary": "
+
 No invoice data.
 
 ", "text_summary": "No invoice data.", "statistics": {}}
@@ -573,223 +522,114 @@ No invoice data.
         "cumulative_end": cumulative_end,
         "total_coverage_days": (datetime.strptime(cumulative_end, "%Y-%m-%d") - datetime.strptime(cumulative_start, "%Y-%m-%d")).days + 1
     }
-    print(f"✅ Email summary generated. Pass rate {pass_rate:.1f}%")
+    print(f"✅ Email summary statistics generated:")
+    print(f"   📊 Health Status: {'Needs Attention' if pass_rate < 80 else 'Good'} ({pass_rate:.1f}%)")
+    print(f"   📈 Total Issues: {len([x for x in [failed, warned] if x > 0])} types identified")
+    print(f"   👤 Creator Stats: {len(creators)} total, {unknown} unknown")
     return {"html_summary": html, "text_summary": text, "statistics": stats}
 
-
 def generate_detailed_validation_report(detailed_df: pd.DataFrame, today_str: str) -> List[dict]:
-    print("📋 Generating detailed validation summary sheet…")
+    print("📋 Generating detailed validation report for Excel export...")
     if detailed_df.empty:
         return []
     total = len(detailed_df)
     passed  = (detailed_df["Validation_Status"] == "✅ PASS").sum()
     warned  = (detailed_df["Validation_Status"] == "⚠️ WARNING").sum()
     failed  = (detailed_df["Validation_Status"] == "❌ FAIL").sum()
+    print(f"✅ Detailed validation report prepared with 6 summary entries")
     return [
         {"Report_Type": "Overall_Summary", "Description": "Total Invoice Count", "Count": total, "Percentage": "100.0%", "Status": "INFO"},
         {"Report_Type": "Overall_Summary", "Description": "Passed Validation",   "Count": int(passed), "Percentage": f"{(passed/total*100):.1f}%", "Status": "PASS"},
         {"Report_Type": "Overall_Summary", "Description": "Warnings",            "Count": int(warned), "Percentage": f"{(warned/total*100):.1f}%", "Status": "WARNING"},
         {"Report_Type": "Overall_Summary", "Description": "Failed Validation",   "Count": int(failed), "Percentage": f"{(failed/total*100):.1f}%", "Status": "FAIL"},
+        {"Report_Type": "Data_Quality", "Description": "Data Completeness", "Count": int(passed + warned), "Percentage": f"{((passed+warned)/total*100):.1f}%", "Status": "INFO"},
+        {"Report_Type": "Process_Health", "Description": "System Health Score", "Count": int(pass_rate if total else 0), "Percentage": f"{(passed/total*100):.1f}%", "Status": "HEALTH"}
     ]
-
 
 def enhance_validation_results(detailed_df: pd.DataFrame, email_summary: dict) -> dict:
-    """Stable enhancement wrapper; safe defaults."""
+    """
+    Enhance validation results with additional insights and formatting
+    """
     try:
-        logging.info("🔧 Enhancing validation results…")
-        df = detailed_df.copy() if detailed_df is not None else pd.DataFrame()
-        total = len(df)
-        if total:
-            col = next((c for c in df.columns if any(k in c.lower() for k in ("validation","status","result"))), None)
-            passed  = df[col].astype(str).str.contains(r"\bpass\b", case=False, na=False).sum() if col else 0
-            failed  = df[col].astype(str).str.contains(r"\bfail\b", case=False, na=False).sum() if col else total
-            warned  = df[col].astype(str).str.contains(r"warn", case=False, na=False).sum() if col else 0
-            amount_col = next((c for c in df.columns if ("total" in c.lower()) or ("amount" in c.lower())), None)
-            total_amount = float(pd.to_numeric(df[amount_col], errors="coerce").fillna(0).sum()) if amount_col else 0.0
-            pass_rate = (passed/total*100) if total else 0.0
-        else:
-            passed = failed = warned = 0
-            total_amount = 0.0
-            pass_rate = 0.0
-
-        return {
-            "success": True,
-            "enhanced_df": df,
-            "email_summary": email_summary,
-            "message": "Enhancement completed",
-            "total_invoices": total,
-            "pass_count": int(passed),
-            "fail_count": int(failed),
-            "warning_count": int(warned),
-            "pass_rate": float(pass_rate),
-            "total_amount": float(total_amount),
-            "enhancement_applied": True,
-            "system_status": "operational",
+        logging.info("🔧 Enhancing validation results...")
+        
+        # Get basic statistics
+        total_invoices = len(detailed_df) if detailed_df is not None else 0
+        
+        # Create enhanced summary
+        enhanced_summary = {
+            'total_invoices': total_invoices,
+            'validation_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'email_summary': email_summary,
+            'enhancement_applied': True,
+            'system_status': 'operational'
         }
+        
+        if detailed_df is not None and len(detailed_df) > 0:
+            # Calculate validation statistics
+            validation_col = None
+            for col in detailed_df.columns:
+                if 'validation' in col.lower() or 'result' in col.lower() or 'status' in col.lower():
+                    validation_col = col
+                    break
+            
+            if validation_col:
+                pass_count = len(detailed_df[detailed_df[validation_col].str.contains('PASS|pass', case=False, na=False)])
+                fail_count = len(detailed_df[detailed_df[validation_col].str.contains('FAIL|fail', case=False, na=False)])
+                warning_count = len(detailed_df[detailed_df[validation_col].str.contains('WARN|warning', case=False, na=False)])
+            else:
+                pass_count = 0
+                fail_count = total_invoices  # Assume all failed if no validation column
+                warning_count = 0
+            
+            # Calculate financial impact if amount column exists
+            total_amount = 0
+            amount_col = None
+            for col in detailed_df.columns:
+                if 'total' in col.lower() or 'amount' in col.lower():
+                    amount_col = col
+                    break
+            
+            if amount_col:
+                try:
+                    detailed_df[amount_col] = pd.to_numeric(detailed_df[amount_col], errors='coerce')
+                    total_amount = detailed_df[amount_col].fillna(0).sum()
+                except:
+                    total_amount = 0
+            
+            enhanced_summary.update({
+                'pass_count': pass_count,
+                'fail_count': fail_count,
+                'warning_count': warning_count,
+                'pass_rate': (pass_count / total_invoices * 100) if total_invoices > 0 else 0,
+                'total_amount': total_amount,
+                'validation_column': validation_col,
+                'amount_column': amount_col
+            })
+            
+            # Add enhancement flag to dataframe
+            if 'enhancement_status' not in detailed_df.columns:
+                detailed_df['enhancement_status'] = 'enhanced'
+                detailed_df['enhancement_timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        logging.info(f"✅ Enhancement completed: {total_invoices} invoices processed")
+        logging.info(f"📊 Pass rate: {enhanced_summary.get('pass_rate', 0):.1f}%")
+        
+        return enhanced_summary
+        
     except Exception as e:
-        logging.error(f"⚠️ Enhancement error: {e}")
-        logging.error(traceback.format_exc())
+        logging.error(f"❌ Enhancement error: {e}")
+        logging.error(f"📊 Traceback: {traceback.format_exc()}")
+        
+        # Return basic summary on error
         return {
-            "success": False,
-            "enhanced_df": detailed_df if detailed_df is not None else pd.DataFrame(),
-            "email_summary": email_summary,
-            "message": f"Enhancement error: {e}",
-            "enhancement_applied": False,
-            "system_status": "degraded",
+            'total_invoices': len(detailed_df) if detailed_df is not None else 0,
+            'validation_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'email_summary': email_summary if email_summary else {},
+            'enhancement_applied': False,
+            'error': str(e),
+            'system_status': 'degraded'
         }
-
-
-def build_final_validation_report(df: pd.DataFrame, run_dir: str, validation_dt: datetime) -> pd.DataFrame:
-    """
-    EXACT final attachment with RMS inspected headers:
-      Inv Entry Date, Inv Mod Date, DueDate, Remarks, MOP, Location, SCID#, Inv Created By, A/C Head, Inv Currency
-    Produces the requested schema (incl. duplicates: 'Invoice currency' and 'Invoice_Currency', and Location).
-    """
-    src = df.copy()
-    cols = {c.lower(): c for c in src.columns}
-    def col(name: str) -> Optional[str]:
-        return cols.get(name.lower())
-
-    # Base
-    c_voucher_no       = col("VoucherNo")
-    c_purchase_inv_no  = col("PurchaseInvNo")
-    c_purchase_inv_dt  = col("PurchaseInvDate")
-    c_voucher_dt       = col("Voucherdate")
-    c_party            = col("PartyName")
-    c_total            = col("Total")
-    c_state            = col("State")
-    c_currency_legacy  = col("Currency")
-    c_narration        = col("Narration")
-    c_ledger           = col("PurchaseLEDGER")
-    c_gst              = col("GSTNO")
-    c_invid            = col("InvID")
-    c_vat              = col("VAT")
-    c_igst_amt         = col("IGST/VATInputAmt")
-    c_cgst_amt         = col("CGSTInputAmt")
-    c_sgst_amt         = col("SGSTInputAmt")
-
-    # Inspected fields
-    c_inv_created_by   = col("Inv Created By")
-    c_mop              = col("MOP")
-    c_ac_head          = col("A/C Head")
-    c_inv_currency     = col("Inv Currency")
-    c_inv_entry_date   = col("Inv Entry Date")
-    c_inv_mod_date     = col("Inv Mod Date")
-    c_due_date         = col("DueDate") or col("Due Date")
-    c_remarks          = col("Remarks")
-    c_location_pref    = col("Location")
-    c_scid_hash        = col("SCID#") or col("SCID")
-
-    # Compose
-    invoice_id     = src[c_invid] if c_invid else (src[c_voucher_no] if c_voucher_no else pd.Series([""]*len(src)))
-    invoice_number = src[c_purchase_inv_no] if c_purchase_inv_no else (src[c_voucher_no] if c_voucher_no else pd.Series([""]*len(src)))
-    invoice_date   = src[c_purchase_inv_dt] if c_purchase_inv_dt else (src[c_voucher_dt] if c_voucher_dt else pd.Series([""]*len(src)))
-    entry_date     = src[c_inv_entry_date] if c_inv_entry_date else (src[c_voucher_dt] if c_voucher_dt else invoice_date)
-    mod_date       = src[c_inv_mod_date] if c_inv_mod_date else pd.Series([""]*len(src))
-    due_date       = src[c_due_date] if c_due_date else pd.Series([""]*len(src))
-    remarks        = src[c_remarks] if c_remarks else (src[c_narration] if c_narration else pd.Series([""]*len(src)))
-
-    if c_inv_created_by:
-        creator_series = src[c_inv_created_by].astype(str).apply(lambda s: s.strip() or "System Generated")
-    else:
-        creator_series = src.apply(lambda r: _derive_creator(r, _try_load_creator_map(run_dir)), axis=1)
-
-    if c_location_pref:
-        location_series = src[c_location_pref].astype(str)
-    elif c_state:
-        location_series = src[c_state].astype(str)
-    else:
-        location_series = src.apply(_derive_location, axis=1)
-
-    method_series = src[c_mop].astype(str) if c_mop else src.apply(_derive_payment_method, axis=1)
-    account_series = src[c_ac_head].astype(str) if c_ac_head else src.apply(_derive_account_head, axis=1)
-
-    if c_inv_currency:
-        currency_series = src[c_inv_currency]
-    elif c_currency_legacy:
-        currency_series = src[c_currency_legacy]
-    else:
-        currency_series = pd.Series([""]*len(src))
-
-    validation_col = next((c for c in src.columns if any(k in c.lower() for k in ("validation","status","result"))), None)
-    validation_status = src[validation_col] if validation_col else pd.Series([""]*len(src))
-    issue_details_col = next((c for c in src.columns if "issue" in c.lower()), None)
-    issue_details = src[issue_details_col].fillna("") if issue_details_col else pd.Series([""]*len(src))
-    issues_found = issue_details.apply(lambda s: 0 if str(s).strip() in ("", "No issues found") else 1)
-
-    cgst = pd.to_numeric(src[c_cgst_amt], errors="coerce").fillna(0) if c_cgst_amt else pd.Series([0]*len(src))
-    sgst = pd.to_numeric(src[c_sgst_amt], errors="coerce").fillna(0) if c_sgst_amt else pd.Series([0]*len(src))
-    igst = pd.to_numeric(src[c_igst_amt], errors="coerce").fillna(0) if c_igst_amt else pd.Series([0]*len(src))
-    vat  = pd.to_numeric(src[c_vat],  errors="coerce").fillna(0) if c_vat else pd.Series([0]*len(src))
-    total_tax = cgst + sgst + igst + vat
-
-    def _tax_type_row(i: int) -> str:
-        if float(igst.iloc[i]) > 0: return "IGST"
-        if (float(cgst.iloc[i]) > 0) or (float(sgst.iloc[i]) > 0): return "GST"
-        if float(vat.iloc[i])  > 0: return "VAT"
-        return ""
-    tax_type = pd.Series([_tax_type_row(i) for i in range(len(src))])
-
-    if c_scid_hash:
-        scid_series = src[c_scid_hash].astype(str)
-    else:
-        scid_series = src.apply(_derive_scid, axis=1)
-
-    amount_series = src[c_total] if c_total else pd.Series([0]*len(src))
-
-    final = pd.DataFrame({
-        "Invoice_ID":             invoice_id,
-        "Invoice_Number":         invoice_number,
-        "Invoice_Date":           invoice_date,
-        "Invoice_Entry_Date":     entry_date,
-        "Inv Entry Date":         entry_date,   # inspected header (kept for traceability)
-        "Inv Mod Date":           mod_date,     # inspected header
-        "Vendor_Name":            src[c_party] if c_party else pd.Series([""]*len(src)),
-        "Amount":                 amount_series,
-        "Invoice_Creator_Name":   creator_series,
-        "Location":               location_series,
-        "Invoice currency":       currency_series,    # spec duplicate spelling
-        "Method_of_Payment":      method_series,
-        "Account_Head":           account_series,
-        "Validation_Status":      validation_status,
-        "Issues_Found":           issues_found,
-        "Issue_Details":          issue_details,
-        "GST_Number":             src[c_gst] if c_gst else pd.Series([""]*len(src)),
-        "Row_Index":              (src.index + 1),
-        "Validation_Date":        validation_dt.strftime("%Y-%m-%d %H:%M:%S"),
-        "Invoice_Currency":       currency_series,    # mirror of "Invoice currency"
-        "Tax_Type":               tax_type,
-        "Due_Date":               due_date,
-        "DueDate":                due_date,           # inspected header spelling
-        "Remarks":                remarks,
-        "Due_Date_Notification":  pd.Series([""]*len(src)),
-        "Total_Tax_Calculated":   total_tax,
-        "CGST_Amount":            cgst,
-        "SGST_Amount":            sgst,
-        "IGST_Amount":            igst,
-        "VAT_Amount":             vat,
-        "TDS_Status":             pd.Series(["Coming Soon"]*len(src)),
-        "RMS_Invoice_ID":         invoice_id,
-        "SCID":                   scid_series,
-    })
-
-    # final order (your spec) + the inspected extras at the end
-    ordered_cols = [
-        "Invoice_ID","Invoice_Number","Invoice_Date","Invoice_Entry_Date",
-        "Vendor_Name","Amount","Invoice_Creator_Name","Location",
-        "Invoice currency","Method_of_Payment","Account_Head","Validation_Status",
-        "Issues_Found","Issue_Details","GST_Number","Row_Index","Validation_Date",
-        "Invoice_Currency","Tax_Type","Due_Date","Due_Date_Notification",
-        "Total_Tax_Calculated","CGST_Amount","SGST_Amount","IGST_Amount",
-        "VAT_Amount","TDS_Status","RMS_Invoice_ID","SCID",
-        # inspected headers (kept as additional columns at the end)
-        "Inv Entry Date","Inv Mod Date","DueDate","Remarks",
-    ]
-    for c in ordered_cols:
-        if c not in final.columns:
-            final[c] = ""
-    return final[ordered_cols]
-
 
 # ============== MAIN RUNNER ==============
 
@@ -827,52 +667,55 @@ def run_invoice_validation() -> bool:
         run_dir = download_cumulative_data(cumulative_start, cumulative_end)
         print(f"✅ Download path: {run_dir}")
 
-        # Step 5: Validate downloaded files
-        logging.info(f"🔍 Step 5: Verifying files in directory: {run_dir}")
-        
+        # Step 5
+        print(f"🔍 Step 5: Validate files in {run_dir} …")
         validation_success, file_details = validate_downloaded_files(run_dir)
         
         if not validation_success:
             logging.error(f"❌ File validation failed: {file_details}")
             logging.error("❌ Aborting: Required files missing")
             return False
-
+        
         logging.info(f"✅ All required files found: {file_details}")
 
-        # Step 6
-        invoice_path = os.path.join(run_dir, "invoice_download.xls")
-
         # Step 7
-        print("📊 Step 7: Read RMS export…")
+        print("📊 Step 7: Reading cumulative invoice data...")
+        invoice_path = os.path.join(run_dir, "invoice_download.xls")
         src_df = read_invoice_file(invoice_path)
         if src_df is None or src_df.empty:
             print("❌ Empty dataframe after read")
             return False
-        print(f"✅ Loaded: {src_df.shape}")
+        print(f"✅ Successfully loaded cumulative data. Shape: {src_df.shape}")
+        print(f"📋 Columns: {list(src_df.columns)}")
 
         # Step 8
-        print("🔄 Step 8: Filter to cumulative range…")
+        print("🔄 Step 8: Filtering to cumulative validation range...")
         filtered_df = filter_invoices_by_date(src_df, cumulative_start, cumulative_end)
-        print(f"📦 Working rows: {len(filtered_df)}")
+        print(f"📅 Working with {len(filtered_df)} invoices in cumulative range")
 
         # Step 9
-        print("🔎 Step 9: Detailed validation on cumulative…")
+        print("🔄 Step 9: Running detailed validation on cumulative data...")
+        print("   🔄 This includes:")
+        print(f"      📦 Current batch: {batch_start} to {batch_end}")
+        print(f"      🔄 ALL previously validated data from: {cumulative_start}")
         detailed_df, summary_issues, problematic_df = validate_invoices_with_details(filtered_df)
 
         # Step 10
-        print("📧 Step 10: Build email summary…")
+        print("📧 Step 10: Generating email summary statistics...")
         email_summary = generate_email_summary_statistics(
             detailed_df, cumulative_start, cumulative_end, batch_start, batch_end, today_str
         )
 
         # Step 11
-        print("📋 Step 11: Build summary sheet data…")
+        print("📋 Step 11: Generating detailed validation report...")
         summary_sheet_rows = generate_detailed_validation_report(detailed_df, today_str)
 
-        # Step 12/13/14: Persist snapshot + run window
-        print("💾 Step 12: Save snapshot…")
+        # Step 12: Preparing invoice data for saving
+        print("💾 Step 12: Preparing invoice data for saving...")
+        current_records = detailed_df.to_dict("records") if not detailed_df.empty else []
+        print(f"📋 Prepared {len(current_records)} detailed invoice records for saving")
+        
         try:
-            current_records = detailed_df.to_dict("records") if not detailed_df.empty else []
             save_invoice_snapshot(
                 current_records,
                 run_date=today_str,
@@ -882,11 +725,11 @@ def run_invoice_validation() -> bool:
                 cumulative_start=cumulative_start,
                 cumulative_end=cumulative_end
             )
-            print("✅ Snapshot saved")
+            print(f"✅ Invoice snapshot saved for {today_str} (detailed_cumulative_4day) - {len(current_records)} invoices")
+            print("✅ Detailed validation snapshot saved")
         except Exception as e:
             print(f"⚠️ Snapshot save failed: {e}")
 
-        print("📝 Step 13: Record run window…")
         try:
             record_run_window(
                 batch_start, batch_end,
@@ -895,12 +738,12 @@ def run_invoice_validation() -> bool:
                 cumulative_end=cumulative_end,
                 total_days_validated=(datetime.strptime(cumulative_end, "%Y-%m-%d") - datetime.strptime(cumulative_start, "%Y-%m-%d")).days + 1
             )
-            print("✅ Run window recorded")
+            print(f"✅ Run window recorded: {batch_start} to {batch_end} (detailed_cumulative_4day)")
+            print("✅ Detailed cumulative run recorded")
         except Exception as e:
             print(f"⚠️ Run window record failed: {e}")
 
-        # Step 15: Save reports (creator-inclusive)
-        print("📑 Step 15: Save reports…")
+        # Save reports
         os.makedirs("data", exist_ok=True)
         detailed_report_path = f"data/invoice_validation_detailed_{today_str}.xlsx"
         with pd.ExcelWriter(detailed_report_path, engine="openpyxl") as writer:
@@ -916,7 +759,7 @@ def run_invoice_validation() -> bool:
                 pass_df.to_excel(writer, sheet_name="Passed_Invoices", index=False)
             if summary_sheet_rows:
                 pd.DataFrame(summary_sheet_rows).to_excel(writer, sheet_name="Summary_Stats", index=False)
-        print(f"✅ Saved: {detailed_report_path}")
+        print(f"✅ Detailed invoice-level report saved: {detailed_report_path}")
 
         os.makedirs(f"data/{today_str}", exist_ok=True)
         dashboard_path = f"data/{today_str}/validation_result.xlsx"
@@ -924,9 +767,99 @@ def run_invoice_validation() -> bool:
                      'Validation_Status','Issues_Found','Issue_Details','GST_Number']
         dashboard_df = detailed_df[keep_cols].copy()
         dashboard_df["Status_Summary"] = dashboard_df.apply(
-            lambda r: f"{r['Validation_Status']} - {r['Issues_Found']} issues" if r[
+            lambda r: f"{r['Validation_Status']} - {r['Issues_Found']} issues" if r['Issues_Found'] > 0 else f"{r['Validation_Status']} - No issues",
+            axis=1
+        )
+        dashboard_df.to_excel(dashboard_path, index=False, engine="openpyxl")
+        print(f"📋 Invoice-level dashboard report created: {dashboard_path}")
+
+        delta_path = f"data/delta_report_{today_str}.xlsx"
+        dashboard_df.to_excel(delta_path, index=False, engine="openpyxl")
+        print(f"📋 Invoice-level delta report created: {delta_path}")
+
+        summary_html_path = f"data/email_summary_{today_str}.html"
+        with open(summary_html_path, "w", encoding="utf-8") as f:
+            f.write(email_summary["html_summary"])
+        print(f"📧 Email summary saved: {summary_html_path}")
+
+        # Step 16: Enhance + exact-format final + email
+        print("🚀 Step 16: Applying enhanced features...")
+        try:
+            enhancement_result = enhance_validation_results(detailed_df, email_summary)
+            if enhancement_result.get('enhancement_applied'):
+                print("✅ Enhancement successful!")
+            else:
+                print(f"⚠️ Enhancement failed: {enhancement_result.get('error', 'Unknown error')}")
+        except Exception as e:
+            logging.error(f"⚠️ Enhancement step error: {e}")
+            print("📊 Continuing with original validation report")
+
+        # Email sending
+        try:
+            from email_notifier import EnhancedEmailSystem
+            email_system = EnhancedEmailSystem()
             
-    if __name__ == "__main__":
+            # Prepare email data
+            stats = email_summary.get("statistics", {})
+            validation_data = {
+                "failed": stats.get("failed_invoices", 0),
+                "warnings": stats.get("warning_invoices", 0),
+                "passed": stats.get("passed_invoices", 0)
+            }
+            
+            deadline_date = datetime.now() + timedelta(days=3)
+            html_body = email_system.create_professional_html_template(validation_data, deadline_date)
+            
+            # Create and attach files
+            zip_file = email_system.create_invoice_zip(validation_period=f"{cumulative_start}_to_{cumulative_end}")
+            
+            subject = f"🚨 URGENT: Invoice Validation Report - Action Required by {deadline_date.strftime('%B %d, %Y')}"
+            
+            if email_system.default_recipients:
+                success = email_system.send_email_with_attachments(
+                    email_system.default_recipients,
+                    subject,
+                    html_body,
+                    zip_file
+                )
+                
+                if success:
+                    print("📧 Professional email sent successfully with validation report and invoice attachments!")
+                else:
+                    print("⚠️ Email sending failed")
+            else:
+                print("⚠️ No email recipients configured")
+                
+        except Exception as e:
+            print(f"⚠️ Email sending failed: {e}")
+
+        print("✅ Detailed cumulative validation workflow completed successfully!")
+        
+        # Final summary to console
+        print("")
+        print("📊 FINAL SUMMARY:")
+        print(f"   📦 Current batch: {batch_start} to {batch_end}")
+        print(f"   🔄 Cumulative range: {cumulative_start} to {cumulative_end}")
+        print(f"   📅 Total days validated: {(datetime.strptime(cumulative_end, '%Y-%m-%d') - datetime.strptime(cumulative_start, '%Y-%m-%d')).days + 1}")
+        print(f"   📋 Total invoices processed: {len(detailed_df)}")
+        if email_summary.get("statistics"):
+            stats = email_summary["statistics"]
+            print(f"   ✅ Passed: {stats.get('passed_invoices',0)} ({stats.get('pass_rate',0):.1f}%)")
+            print(f"   ⚠️ Warnings: {stats.get('warning_invoices',0)}")
+            print(f"   ❌ Failed: {stats.get('failed_invoices',0)}")
+            print(f"   👤 Total Creators: {stats.get('total_creators',0)}")
+            print(f"   ❓ Unknown Creators: {stats.get('unknown_creators',0)}")
+            print(f"   🏥 Health Status: {'Needs Attention' if stats.get('pass_rate',0) < 80 else 'Good'}")
+        print(f"   ⏰ Next run in: {VALIDATION_INTERVAL_DAYS} days")
+        print(f"   🗂️ Archive threshold: {ACTIVE_VALIDATION_MONTHS} months")
+        return True
+
+    except Exception as e:
+        logging.error(f"❌ Unexpected error in detailed cumulative validation workflow: {e}")
+        logging.error(traceback.format_exc())
+        return False
+
+if __name__ == "__main__":
     ok = run_invoice_validation()
     if not ok:
         print("❌ Detailed cumulative validation failed!")
