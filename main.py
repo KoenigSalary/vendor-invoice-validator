@@ -179,29 +179,55 @@ def download_cumulative_data(start_str: str, end_str: str) -> str:
     print(f"📊 Range covers: {(end_date - start_date).days + 1} days")
     return rms_download(start_date, end_date)
 
-
-def validate_downloaded_files(download_dir: str) -> dict:
-    """Check presence & basic sanity of invoice_download.xls and invoices.zip."""
-    required = ["invoice_download.xls", "invoices.zip"]
-    results = {}
-    for fname in required:
-        path = os.path.join(download_dir, fname)
-        if os.path.exists(path):
-            size = os.path.getsize(path)
-            print(f"✅ Found {fname}: {size} bytes")
-            results[fname] = "ok" if size >= 50 else "small"
-            try:
-                with open(path, "rb") as f:
-                    header = f.read(20)
-                print(f"🔍 {fname} header: {header}")
-            except Exception as e:
-                print(f"⚠️ Could not read {fname} header: {e}")
+def validate_downloaded_files(run_dir):
+    """
+    Validate that required files exist in the run directory
+    """
+    try:
+        logging.info(f"🔍 Step 5: Verifying files in directory: {run_dir}")
+        
+        # Define expected files
+        expected_files = {
+            'invoice_download.xls': 'Excel invoice data',
+            'invoices.zip': 'ZIP invoice files'
+        }
+        
+        missing_files = []
+        found_files = []
+        
+        # Check each expected file
+        for filename, description in expected_files.items():
+            file_path = os.path.join(run_dir, filename)
+            
+            if os.path.exists(file_path):
+                file_size = os.path.getsize(file_path)
+                found_files.append((filename, file_size))
+                logging.info(f"✅ Found {filename}: {file_size} bytes")
+                
+                # Read file header for verification
+                try:
+                    with open(file_path, 'rb') as f:
+                        header = f.read(20)
+                    logging.info(f"🔍 {filename} header: {header}")
+                except Exception as e:
+                    logging.warning(f"⚠️ Could not read header for {filename}: {e}")
+                    
+            else:
+                missing_files.append(filename)
+                logging.error(f"❌ Missing file: {filename}")
+        
+        # Return validation result
+        if missing_files:
+            logging.error(f"❌ Missing files: {missing_files}")
+            return False, missing_files
         else:
-            print(f"❌ Missing file: {fname}")
-            results[fname] = "missing"
-    return results
-
-
+            logging.info(f"✅ All files validated successfully: {len(found_files)} files found")
+            return True, found_files
+            
+    except Exception as e:
+        logging.error(f"❌ File validation error: {e}")
+        return False, [f"Validation error: {str(e)}"]
+        
 def read_invoice_file(invoice_file: str) -> pd.DataFrame:
     """Robust reader: try Excel engines, then CSV sniffing (handles tabular XLS-TSV export)."""
     print(f"🔍 Attempting to read file: {invoice_file}")
