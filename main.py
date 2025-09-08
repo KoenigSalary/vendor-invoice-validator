@@ -819,7 +819,7 @@ def run_invoice_validation() -> bool:
 
         # Step 5
         # Fix 1: Validate downloaded files
-        run_dir = os.path.dirname(download_path)  # Get directory from file path
+        run_dir = os.path.dirname(run_dir)  
         # OR manually construct: 
         # run_dir = f"/home/runner/work/vendor-invoice-validator/vendor-invoice-validator/data/{validation_date}"
 
