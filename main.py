@@ -227,6 +227,23 @@ def validate_downloaded_files(run_dir):
     except Exception as e:
         logging.error(f"❌ File validation error: {e}")
         return False, [f"Validation error: {str(e)}"]
+
+        run_dir = "/home/runner/work/vendor-invoice-validator/vendor-invoice-validator/data/2025-09-07"
+
+        logging.info(f"📁 Checking directory: {run_dir}")
+        logging.info(f"📁 Directory exists: {os.path.exists(run_dir)}")
+
+        if os.path.exists(run_dir):
+            files = os.listdir(run_dir)
+            logging.info(f"📁 Files found: {files}")
+    
+            for file in files:
+                file_path = os.path.join(run_dir, file)
+                if os.path.isfile(file_path):
+                    size = os.path.getsize(file_path)
+                    logging.info(f"📄 {file}: {size} bytes")
+        else:
+            logging.error(f"❌ Directory does not exist: {run_dir}")
         
 def read_invoice_file(invoice_file: str) -> pd.DataFrame:
     """Robust reader: try Excel engines, then CSV sniffing (handles tabular XLS-TSV export)."""
@@ -303,7 +320,6 @@ def read_invoice_file(invoice_file: str) -> pd.DataFrame:
         print(f"⚠️ Could not read file content: {e}")
 
     raise Exception("Could not read invoice file in any supported format")
-
 
 def filter_invoices_by_date(df: pd.DataFrame, start_str: str, end_str: str) -> pd.DataFrame:
     """Filter by PurchaseInvDate in [start, end]."""
