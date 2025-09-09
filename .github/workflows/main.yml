@@ -50,8 +50,8 @@ jobs:
         RMS_BASE_URL: https://rms.koenig-solutions.com
         DB_PATH: invoice_validation.db
         EXCEL_PATH: invoice_validation_report.xlsx
-        RMS_USERNAME: ${{ secrets.RMS_USERNAME }}
-        RMS_PASSWORD: ${{ secrets.RMS_PASSWORD }}
+        RMS_USER: ${{ secrets.RMS_USERNAME }}        # Changed from RMS_USERNAME
+        RMS_PASS: ${{ secrets.RMS_PASSWORD }}        # Changed from RMS_PASSWORD
         SMTP_USER: ${{ secrets.SMTP_USER }}
         SMTP_PASS: ${{ secrets.SMTP_PASS }}
         SMTP_HOST: ${{ secrets.SMTP_HOST }}
@@ -60,7 +60,7 @@ jobs:
         SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
         AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
         EMAIL_DEBUG: ${{ secrets.EMAIL_DEBUG }}
-        
+  
     - name: Upload validation results
       uses: actions/upload-artifact@v4
       if: always()
