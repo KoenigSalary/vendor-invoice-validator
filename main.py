@@ -866,10 +866,17 @@ if SEND_EMAIL:
 else:
     print("✉️ Email sending skipped (SEND_EMAIL not set).")
 
-if __name__ == "__main__":
+def main():
+    """Main entry point that handles command line arguments"""
+    if len(sys.argv) > 1 and sys.argv[1] == "run":
+        print("🚀 Running invoice validation via command line...")
+    
     ok = run_invoice_validation()
     if not ok:
         print("❌ Detailed cumulative validation failed!")
-        raise SystemExit(1)
+        sys.exit(1)
     print("🎉 Detailed cumulative validation completed successfully!")
-    raise SystemExit(0)
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()
