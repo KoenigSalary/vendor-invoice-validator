@@ -1,4 +1,0 @@
-Invoice_ID,Invoice_Date,Vendor_Name,Amount,Location,Currency,Vendor_Address,Invoice_Type,Payment_Terms,Due_Date,Tax_Rate,Description,PO_Number,Category,Approval_Status
-INV2024001,2024-08-10,Microsoft Corporation,125000,Delhi,INR,"One Microsoft Way, Redmond",Service,Net 30,2024-09-10,18,Software Licenses,PO2024001,IT Services,Pending
-INV2024002,2024-08-11,Amazon Web Services,75000,Mumbai,INR,"410 Terry Ave N, Seattle",Service,Net 15,2024-08-26,18,Cloud Services,PO2024002,IT Infrastructure,Approved
-INV2024003,2024-08-12,Dell Technologies,250000,Bangalore,INR,"One Dell Way, Round Rock",Hardware,Net 45,2024-09-26,18,Server Hardware,PO2024003,Equipment,Pending
