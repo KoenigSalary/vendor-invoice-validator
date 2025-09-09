@@ -1,8 +1,7 @@
-Copy#!/usr/bin/env python3
+from __future__ import annotations
+
 # main.py
 # Complete workflow runner for RMS invoice validation + exact-format email report.
-
-from __future__ import annotations
 
 import os
 import re
