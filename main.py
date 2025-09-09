@@ -835,6 +835,36 @@ def run_invoice_validation() -> bool:
         logging.error(f"Traceback: {traceback.format_exc()}")
         return False
 
+# --- Email (send the 3 reports only) ---
+SEND_EMAIL = os.getenv("SEND_EMAIL", "0") == "1"
+
+subject = f"Invoice Validation Report - {today_str}"
+html_body = EnhancedEmailSystem().create_professional_html_template(
+    {
+        "failed":  int(stats.get("failed_invoices", 0)),
+        "warnings": int(stats.get("warning_invoices", 0)),
+        "passed":  int(stats.get("passed_invoices", 0)),
+    },
+    datetime.now() + timedelta(days=3),
+)
+
+# Attach ONLY these three generated files
+attachments = [
+    detailed_report_path,    # data/invoice_validation_detailed_{today}.xlsx
+    dashboard_path,          # data/{today}/validation_result.xlsx
+    delta_path               # data/delta_report_{today}.xlsx
+]
+
+if SEND_EMAIL:
+    notifier = EmailNotifier()  # uses SMTP_* and AP_TEAM_EMAIL_LIST from env
+    sent = notifier.send_validation_report(subject, html_body, attachments=attachments)
+    if sent:
+        print("📧 Email sent with 3 attachments.")
+    else:
+        print("⚠️ Email send failed (returned False)")
+else:
+    print("✉️ Email sending skipped (SEND_EMAIL not set).")
+
 if __name__ == "__main__":
     ok = run_invoice_validation()
     if not ok:
