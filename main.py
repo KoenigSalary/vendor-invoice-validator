@@ -45,9 +45,10 @@ if not logger.handlers:
     )
 
 # ============== Environment & DB bootstrap ==============
-load_dotenv()
-create_tables()
-
+from dotenv import load_dotenv
+if os.getenv("GITHUB_ACTIONS") != "true":
+    load_dotenv()
+    
 # ============== Config ==============
 VALIDATION_INTERVAL_DAYS = 4
 VALIDATION_BATCH_DAYS    = 4
