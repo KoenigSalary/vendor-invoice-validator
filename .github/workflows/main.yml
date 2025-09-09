@@ -52,9 +52,6 @@ jobs:
         EXCEL_PATH: invoice_validation_report.xlsx
         RMS_USERNAME: ${{ secrets.RMS_USERNAME }}
         RMS_PASSWORD: ${{ secrets.RMS_PASSWORD }}
-        
-        SEND_EMAIL=1                                 # turn email ON
-        
         SMTP_USER: ${{ secrets.SMTP_USER }}
         SMTP_PASS: ${{ secrets.SMTP_PASS }}
         SMTP_HOST: ${{ secrets.SMTP_HOST }}
