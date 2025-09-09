@@ -30,13 +30,12 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pandas==2.0.3 numpy==1.24.3 requests==2.31.0 schedule==1.2.0
-        pip install openpyxl==3.1.2 xlsxwriter==3.1.7 python-dateutil==2.8.2 pytz==2.8.2
-        pip install beautifulsoup4==4.12.2 lxml==4.9.3 
-        pip install selenium==4.15.0 webdriver-manager==4.0.1
-        pip install streamlit==1.28.1 plotly==5.17.0
-        pip install xlrd>=2.0.1
-        pip install python-dotenv>=1.0.0
+        pip install pandas numpy requests schedule
+        pip install openpyxl xlsxwriter python-dateutil pytz
+        pip install beautifulsoup4 lxml 
+        pip install selenium webdriver-manager
+        pip install streamlit plotly
+        pip install xlrd python-dotenv
         
     - name: Verify Chrome installation
       run: |
