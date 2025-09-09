@@ -835,7 +835,7 @@ def run_invoice_validation() -> bool:
         logging.error(f"Traceback: {traceback.format_exc()}")
         return False
 
-# --- Email (send the 3 reports only) ---
+# --- Email (send exactly the 3 reports) ---
 SEND_EMAIL = os.getenv("SEND_EMAIL", "0") == "1"
 
 subject = f"Invoice Validation Report - {today_str}"
