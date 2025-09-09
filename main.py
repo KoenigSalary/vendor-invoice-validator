@@ -61,9 +61,18 @@ def check_environment():
     """Check if all required environment variables and modules are available"""
     print("🔍 Checking environment setup...")
     
-    # Check required environment variables
-    required_env = ['RMS_USERNAME', 'RMS_PASSWORD', 'RMS_BASE_URL']
-    missing_env = [var for var in required_env if not os.getenv(var)]
+    # Check required environment variables - support both naming conventions
+    rms_user = os.getenv('RMS_USER') or os.getenv('RMS_USERNAME')
+    rms_pass = os.getenv('RMS_PASS') or os.getenv('RMS_PASSWORD')
+    rms_base_url = os.getenv('RMS_BASE_URL')
+    
+    missing_env = []
+    if not rms_user:
+        missing_env.append('RMS_USER or RMS_USERNAME')
+    if not rms_pass:
+        missing_env.append('RMS_PASS or RMS_PASSWORD')
+    if not rms_base_url:
+        missing_env.append('RMS_BASE_URL')
     
     if missing_env:
         print(f"❌ Missing required environment variables: {missing_env}")
@@ -100,8 +109,9 @@ def check_environment():
         return False
     
     print("✅ Environment check passed")
+    print(f"🔧 Using RMS credentials: RMS_USER={'✅' if rms_user else '❌'}, RMS_PASS={'✅' if rms_pass else '❌'}")
     return True
-
+    
 # ============== Helpers ==============
 
 def should_run_today() -> bool:
