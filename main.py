@@ -823,7 +823,7 @@ def analyze_zip_contents(zip_path: str) -> dict:
         analysis["extraction_status"] = f"error: {str(e)}"
     
     return analysis
-    
+
 def add_zip_info_to_report(detailed_report_path: str, run_dir: str):
     """Add ZIP analysis as a new sheet in the detailed report"""
     zip_path = os.path.join(run_dir, "invoices.zip")
@@ -878,7 +878,7 @@ def extract_invoice_pdfs(zip_path: str, extract_to: str, max_files: int = 50) ->
         extraction_info["status"] = f"error: {str(e)}"
     
     return extraction_info
-
+    
 # ============== MAIN RUNNER ==============
 
 def run_invoice_validation() -> bool:
@@ -969,38 +969,57 @@ def run_invoice_validation() -> bool:
             print(f"⚠️ Using fallback directory: {run_dir}")
             print("⚠️ Workflow will continue with empty dataset for testing")
 
-        # Step 5: verify (only invoice_download.xls required) - ENHANCED
-        print("🔍 Step 5: Validating downloaded files...")
-        ok, details = validate_downloaded_files(run_dir)
-        if not ok:
-            logging.error(f"❌ File validation failed: {details}")
-            # ... existing error handling ...
-        else:
-            logging.info(f"✅ Required files found: {details}")
-    
-            # NEW: Analyze ZIP contents if available
-            zip_path = os.path.join(run_dir, "invoices.zip")
-            if os.path.exists(zip_path):
-                print("📦 Step 5b: Analyzing ZIP contents...")
-               zip_analysis = analyze_zip_contents(zip_path)
-        
-               # Extract a sample of PDFs for verification
-               pdf_extract_dir = os.path.join(run_dir, "sample_pdfs")
-                if zip_analysis["pdf_files"] > 0:
-                    print("📂 Step 5c: Extracting sample PDFs...")
-                    extraction_info = extract_invoice_pdfs(zip_path, pdf_extract_dir, max_files=25)
+            # Step 5: verify (only invoice_download.xls required) - ENHANCED
+            print("🔍 Step 5: Validating downloaded files...")
+            ok, details = validate_downloaded_files(run_dir)
+            if not ok:
+                logging.error(f"❌ File validation failed: {details}")
             
-                    # Verify extracted PDFs match invoice data
-                    if extraction_info["extracted_count"] > 0:
-                        print(f"✅ Successfully extracted {extraction_info['extracted_count']} sample invoice PDFs")
-                        print(f"📋 Sample PDFs: {extraction_info['sample_pdfs'][:3]}")
-                    else:
-                        print("⚠️ No PDFs could be extracted from ZIP")
-                else:
-                    print("⚠️ No PDF files found in ZIP - may contain other formats")
-            else:
-                print("ℹ️ No invoices.zip file found - Excel data only")
+                # Try to find alternative file patterns
+                print("🔍 Searching for alternative file patterns...")
+                alternative_files = []
+                try:
+                    for file in os.listdir(run_dir):
+                        if file.lower().endswith(('.xls', '.xlsx', '.csv')):
+                            alternative_files.append(file)
                 
+                    if alternative_files:
+                        print(f"📋 Found alternative files: {alternative_files}")
+                        # Use the first available file
+                        invoice_path = os.path.join(run_dir, alternative_files[0])
+                        print(f"🔄 Using alternative file: {invoice_path}")
+                    else:
+                        print("❌ No suitable invoice files found")
+                        return False
+                except Exception as search_error:
+                    logging.error(f"❌ Error searching for alternative files: {search_error}")
+                    return False
+            else:
+                logging.info(f"✅ Required files found: {details}")
+            
+                # NEW: Analyze ZIP contents if available
+                zip_path = os.path.join(run_dir, "invoices.zip")
+                if os.path.exists(zip_path):
+                    print("📦 Step 5b: Analyzing ZIP contents...")
+                    zip_analysis = analyze_zip_contents(zip_path)
+                
+                    # Extract a sample of PDFs for verification
+                    pdf_extract_dir = os.path.join(run_dir, "sample_pdfs")
+                    if zip_analysis["pdf_files"] > 0:
+                        print("📂 Step 5c: Extracting sample PDFs...")
+                        extraction_info = extract_invoice_pdfs(zip_path, pdf_extract_dir, max_files=25)
+                    
+                        # Verify extracted PDFs match invoice data
+                        if extraction_info["extracted_count"] > 0:
+                            print(f"✅ Successfully extracted {extraction_info['extracted_count']} sample invoice PDFs")
+                            print(f"📋 Sample PDFs: {extraction_info['sample_pdfs'][:3]}")
+                        else:
+                            print("⚠️ No PDFs could be extracted from ZIP")
+                    else:
+                        print("⚠️ No PDF files found in ZIP - may contain other formats")
+                else:
+                    print("ℹ️ No invoices.zip file found - Excel data only")
+                    
         # Step 6: read export (do NOT fail the run if empty) - IMPROVED
         print("📊 Step 6: Reading RMS export file...")
         
