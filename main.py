@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+Copy#!/usr/bin/env python3
 # main.py
 # Complete workflow runner for RMS invoice validation + exact-format email report.
 
@@ -9,9 +9,9 @@ import re
 import glob
 import json
 import shutil
+import sys
 import logging
 import traceback
-import sys
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional, List, Tuple
@@ -1041,6 +1041,7 @@ def run_invoice_validation() -> bool:
             notifier = EmailNotifier()
             attachments = [detailed_report_path, dashboard_path, delta_path]
             notifier.send_validation_report(f"Invoice Validation Results - {today_str}", html_body, attachments=attachments)
+            print("📧 Email sent with 3 attachments.")
         else:
             print("✉️ Email sending skipped (SEND_EMAIL not set).")
 
@@ -1054,4 +1055,47 @@ def run_invoice_validation() -> bool:
         return False
 
 def main():
-    """Main
+    """Main entry point that handles command line arguments"""
+    print(f"🚀 Invoice Validation Agent starting at {datetime.now()}")
+    print(f"📁 Working directory: {os.getcwd()}")
+    print(f"🐍 Python version: {sys.version}")
+    
+    # Handle command line arguments
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "run":
+            print("📋 Running in GitHub Actions mode")
+        elif sys.argv[1] == "--help" or sys.argv[1] == "-h":
+            print("Usage: python main.py [run]")
+            sys.exit(0)
+        else:
+            print(f"⚠️ Unknown argument: {sys.argv[1]}")
+    
+    # Check environment
+    if not check_environment():
+        print("❌ Environment check failed!")
+        sys.exit(1)
+    
+    # Test database functions (best effort)
+    try:
+        create_tables()
+        print("✅ Database tables created/verified")
+    except Exception as e:
+        print(f"⚠️ Database warning: {e}")
+        # Continue anyway - database is optional for basic validation
+    
+    # Run validation
+    try:
+        ok = run_invoice_validation()
+        if ok:
+            print("🎉 Invoice validation completed successfully!")
+            sys.exit(0)
+        else:
+            print("❌ Invoice validation failed!")
+            sys.exit(1)
+    except Exception as e:
+        print(f"💥 Unexpected error: {e}")
+        logger.error(f"Fatal error: {e}", exc_info=True)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
