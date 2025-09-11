@@ -60,6 +60,7 @@ jobs:
         SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
         AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
         EMAIL_DEBUG: ${{ secrets.EMAIL_DEBUG }}
+        SEND_EMAIL: "1"
   
     - name: Upload validation results
       uses: actions/upload-artifact@v4
