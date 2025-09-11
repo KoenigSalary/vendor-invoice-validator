@@ -1,6 +1,3 @@
-Created: 2025-09-03 13:54:41
-Version: Production-Ready (Fixed)
-"""
 from rms_scraper import rms_download
 from validator_utils import validate_invoices
 # from updater import update_invoice_status        # (unused; keep commented if not used)
