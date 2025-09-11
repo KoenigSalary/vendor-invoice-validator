@@ -1,3 +1,6 @@
+Created: 2025-09-03 13:54:41
+Version: Production-Ready (Fixed)
+"""
 from rms_scraper import rms_download
 from validator_utils import validate_invoices
 # from updater import update_invoice_status        # (unused; keep commented if not used)
@@ -92,17 +95,18 @@ def map_invoice_entry_date(row):
 
 def map_invoice_modify_date(row):
     candidates = [
-        "Inv Mod Date","Invoice Modify Date","Invoice_Modify_Date",
+        "Inv Mod Date",  # PRIORITIZED - exact RMS column name
+        "Invoice Modify Date","Invoice_Modify_Date",
         "Modified On","ModifiedOn","ModifiedDate","Modified_Date",
         "Updated On","UpdatedOn","UpdatedDate","LastUpdated","Last_Changed","ModDate"
     ]
     v = _first_nonempty(row, candidates)
     if not v: return "Modify Date Not Available"
     return _fmt_date_or_default(_to_date_safe(v), "Modify Date Not Available")
-
 def map_invoice_creator_name(row):
     explicit_cols = [
-        "Inv Created By","Invoice Created By","Invoice_Created_By",
+        "Inv Created By",  # PRIORITIZED - exact RMS column name
+        "Invoice Created By","Invoice_Created_By",
         "CreatedBy","Created_By","Creator","CreatorName","Creator_Name",
         "EntryBy","Entry_By","InputBy","Input_By",
         "UserName","User_Name","PreparedBy","Prepared_By","MadeBy","Made_By",
@@ -119,7 +123,6 @@ def map_invoice_creator_name(row):
             if len(guess) > 2:
                 return guess
     return "Unknown"
-
 _MOP_REGEXES = [
     (re.compile(r"\b(neft|rtgs|imps|wire|bank\s*transfer|swift|tt)\b", re.I), "Bank Transfer"),
     (re.compile(r"\b(credit|debit)\s*card\b|\b(card\s*payment)\b|\bpos\b", re.I), "Credit Card"),
@@ -138,9 +141,10 @@ def _normalize_mop_text(val):
     return None
 
 def map_method_of_payment(row):
-    # 1) True MOP columns if they exist
+    # 1) True MOP columns if they exist - PRIORITIZE exact RMS column name
     explicit = _first_nonempty(row, [
-        "MOP","Mop","ModeOfPayment","Mode_of_Payment","PaymentMode","Payment_Mode",
+        "MOP",  # PRIORITIZED - exact RMS column name
+        "Mop","ModeOfPayment","Mode_of_Payment","PaymentMode","Payment_Mode",
         "PaymentMethod","Payment_Method","Method_of_Payment"
     ])
     label = _normalize_mop_text(explicit)
@@ -167,10 +171,7 @@ def map_method_of_payment(row):
     vt = str(row.get("VoucherTypeName","")).lower()
     if "bank" in vt: return "Bank Transfer"
     if "cash" in vt: return "Cash"
-    if ("cheque" in vt) or ("check" in vt): return "Cheque"
-
-    return "Standard Payment Terms"
-
+    return "Unknown"
 def map_invoice_currency(row):
     v = _first_nonempty(row, ["Inv Currency","Invoice Currency","InvoiceCurrency","Currency","CurrencyCode","Curr"])
     if not v: return "INR"
@@ -188,20 +189,31 @@ _LOCATION_TOKENS = [
 ]
 
 def map_invoice_location(row):
-    # 1) Obvious columns
-    v = _first_nonempty(row, ["Location","Inv Location","Invoice Location","Branch","Office","Site"])
+    # 1) Obvious columns - PRIORITIZE exact RMS column name
+    v = _first_nonempty(row, [
+        "Location",  # PRIORITIZED - exact RMS column name
+        "Inv Location","Invoice Location","Branch","Office","Site"
+    ])
     if v: return v
     # 2) State/City
     v = _first_nonempty(row, ["State","City"])
     if v: return v
-    # 3) Scan all text-like fields for well-known tokens (e.g., “DELHI 1”)
+    # 3) Scan all text-like fields for well-known tokens (e.g., "DELHI 1")
     for col in ["Narration","Remarks","Description","Invoice Address","Address","PartyName"]:
         s = str(row.get(col,""))
         for token in _LOCATION_TOKENS:
             if token.lower() in s.lower():
                 return token
     return "Unknown"
-    
+
+def map_remarks(row):
+    """Map remarks/notes field from RMS data."""
+    candidates = [
+        "Remarks", "Remark", "Notes", "Note", "Comments", "Comment",
+        "Narration", "Description", "Details", "Additional_Info", "Info"
+    ]
+    return _first_nonempty(row, candidates) or "No Remarks"
+
 # ---------- Scheduling ----------
 def should_run_today():
     """Check if validation should run today based on 4-day interval."""
@@ -506,6 +518,7 @@ def enrich_missing_fields(df):
     df["Invoice_Currency"]     = df.apply(map_invoice_currency, axis=1)
     df["Invoice_Location"]     = df.apply(map_invoice_location, axis=1)
     df["Account_Head"]         = df.apply(map_account_head, axis=1)
+    df["Remarks"]               = df.apply(map_remarks, axis=1)
 
     return df
 
@@ -614,6 +627,7 @@ def validate_invoices_with_details(df):
                     'Account_Head': account_head,
                     'Invoice_Currency': invoice_currency,
                     'Invoice_Location': invoice_location,
+                    'Remarks': _first_nonempty(row, ['Remarks', 'Remark', 'Notes', 'Narration']) or 'No Remarks',
                     'Vendor_Name': vendor,
                     'Amount': amount,
                     'Validation_Status': severity,
@@ -848,6 +862,11 @@ def run_invoice_validation():
             invoice_path = download_cumulative_data(cumulative_start, cumulative_end)
             print(f"✅ Cumulative data download completed. Path: {invoice_path}")
         except Exception as e:
+        # DEBUG: Log data download results
+        if "df" in locals() and not df.empty:
+            print(f"📊 DEBUG: Downloaded {len(df)} invoice records")
+            print(f"📊 DEBUG: DataFrame columns: {list(df.columns)[:10]}...")  # Show first 10 columns
+            print(f"📊 DEBUG: Sample data shape: {df.shape}")
             print(f"❌ Cumulative data download failed: {e}")
             return False
 
@@ -856,6 +875,15 @@ def run_invoice_validation():
         print(f"🔍 Step 5: Verifying files in directory: {download_dir}")
         validation_results = validate_downloaded_files(download_dir)
 
+        # DEBUG: Count PDF files in directory
+        if os.path.exists(download_dir):
+            all_files = os.listdir(download_dir)
+            pdf_files = [f for f in all_files if f.lower().endswith(".pdf")]
+            print(f"📂 DEBUG: Found {len(pdf_files)} PDF files out of {len(all_files)} total files")
+            if pdf_files:
+                print(f"📂 DEBUG: Sample PDFs: {pdf_files[:3]}")
+        else:
+            print(f"📂 DEBUG: Directory not found: {download_dir}")
         # Step 6
         invoice_file = os.path.join(download_dir, "invoice_download.xls")
         if validation_results.get("invoice_download.xls") == "missing":
@@ -1027,7 +1055,7 @@ def run_invoice_validation():
                 print("⚠️ No detailed validation results - creating empty report")
                 pd.DataFrame(columns=[
                     'Invoice_ID','Invoice_Number','Invoice_Date','Invoice_Entry_Date','Vendor_Name','Amount',
-                    'Invoice_Creator_Name','Method_of_Payment','Account_Head','Validation_Status','Issues_Found',
+                    'Invoice_Creator_Name','Method_of_Payment','Account_Head','Remarks','Validation_Status','Issues_Found',
                     'Issue_Details','GST_Number','Status_Summary'
                 ]).to_excel(detailed_report_path, index=False, engine='openpyxl')
                 print(f"✅ Empty enhanced report created: {detailed_report_path}")
