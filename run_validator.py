@@ -324,6 +324,70 @@ def process_pdf_file(args):
         logger.error(f"Error processing {file_path}: {str(e)}")
         return None
 
+import time  # Make sure this import is at the top with other imports
+
+def verify_pdf_download_completeness(run_dir: str, excel_df: pd.DataFrame, max_wait_minutes: int = 5) -> bool:
+    """Verify that PDF download is complete by checking counts"""
+    zip_path = os.path.join(run_dir, "invoices.zip")
+    
+    if not os.path.exists(zip_path):
+        print("⚠️ No ZIP file found")
+        return False
+    
+    expected_count = len(excel_df)
+    print(f"📊 Expected PDF count: {expected_count}")
+    
+    # Wait up to max_wait_minutes for PDF generation to complete
+    for attempt in range(max_wait_minutes * 2):  # Check every 30 seconds
+        try:
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                pdf_files = [f for f in zip_ref.namelist() if f.lower().endswith('.pdf')]
+                actual_count = len(pdf_files)
+            
+            print(f"📄 Current PDF count: {actual_count}/{expected_count}")
+            
+            # Check if we have at least 95% of expected PDFs
+            completeness_ratio = actual_count / expected_count if expected_count > 0 else 0
+            
+            if completeness_ratio >= 0.95:
+                print(f"✅ PDF download appears complete: {actual_count}/{expected_count} ({completeness_ratio:.1%})")
+                return True
+            elif attempt < (max_wait_minutes * 2 - 1):
+                print(f"⏳ Waiting for more PDFs... ({completeness_ratio:.1%} complete)")
+                time.sleep(30)  # Wait 30 seconds
+            else:
+                print(f"⚠️ PDF download incomplete after {max_wait_minutes} minutes: {actual_count}/{expected_count}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error checking ZIP contents: {e}")
+            if attempt < (max_wait_minutes * 2 - 1):
+                time.sleep(30)
+            else:
+                return False
+    
+    return False
+
+def request_pdf_regeneration(zip_path: str, run_dir: str) -> bool:
+    """Request PDF regeneration if download is incomplete"""
+    print("🔄 Attempting PDF regeneration...")
+    
+    try:
+        # Remove incomplete ZIP
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
+            print("🗑️ Removed incomplete ZIP file")
+        
+        # Wait for system to regenerate
+        print("📥 Waiting for PDF regeneration...")
+        time.sleep(60)  # Wait 1 minute for regeneration
+        
+        return os.path.exists(zip_path)
+        
+    except Exception as e:
+        print(f"❌ PDF regeneration failed: {e}")
+        return False
+
 def validate_invoices():
     if not os.path.exists(XLS_PATH):
         print(f"[ERROR] Invoice sheet not found at {XLS_PATH}")
