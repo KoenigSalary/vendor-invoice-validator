@@ -445,8 +445,8 @@ def is_valid_zip(zip_path):
             return None
         
         # === Step 4: Process PDF files (with parallel processing) ===
-        logger.info("🔄 Starting PDF validation...")
-        results = []
+        print("📥 Step 4: Starting download process...")
+        try:
         
         # Prepare arguments for parallel processing
         process_args = [(pdf_file, df) for pdf_file in pdf_files]
@@ -457,6 +457,12 @@ def is_valid_zip(zip_path):
         
         processed_count = 0
         matched_count = 0
+
+        print("🔄 Initiating RMS download with retry logic...")
+            run_path = enhanced_rms_download_with_retry(
+                datetime.strptime(cumulative_start, "%Y-%m-%d"),
+                datetime.strptime(cumulative_end, "%Y-%m-%d")
+            )
         
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all tasks
