@@ -1240,5 +1240,10 @@ def main():
         logger.error(f"Fatal error: {e}", exc_info=True)
         sys.exit(1)
 
+if os.getenv("SEND_EMAIL", "0") == "1":
+        email_test_passed = test_email_configuration()
+        if not email_test_passed:
+            print("⚠️ Email test failed, but continuing with validation...")
+
 if __name__ == "__main__":
     main()
