@@ -13,6 +13,7 @@ import zipfile
 import tempfile
 import logging
 import traceback
+import time
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional, List, Tuple
@@ -50,7 +51,7 @@ if not logger.handlers:
 # ============== Environment & DB bootstrap ==============
 if os.getenv("GITHUB_ACTIONS") != "true":
     load_dotenv()
-    
+
 # ============== Config ==============
 VALIDATION_INTERVAL_DAYS = 4
 VALIDATION_BATCH_DAYS    = 4
@@ -61,13 +62,13 @@ SEND_EMAIL               = os.getenv("SEND_EMAIL", "0") == "1"   # OFF by defaul
 # ============== Environment Check Function ==============
 def check_environment():
     """Check if all required environment variables and modules are available"""
-    print("🔍 Checking environment setup...")
-    
+    print("ðŸ” Checking environment setup...")
+
     # Check required environment variables - support both naming conventions
     rms_user = os.getenv('RMS_USER') or os.getenv('RMS_USERNAME')
     rms_pass = os.getenv('RMS_PASS') or os.getenv('RMS_PASSWORD')
     rms_base_url = os.getenv('RMS_BASE_URL')
-    
+
     missing_env = []
     if not rms_user:
         missing_env.append('RMS_USER or RMS_USERNAME')
@@ -75,45 +76,213 @@ def check_environment():
         missing_env.append('RMS_PASS or RMS_PASSWORD')
     if not rms_base_url:
         missing_env.append('RMS_BASE_URL')
-    
+
     if missing_env:
-        print(f"❌ Missing required environment variables: {missing_env}")
+        print(f"âŒ Missing required environment variables: {missing_env}")
         return False
-    
+
     # Check optional but recommended variables
     optional_env = ['SMTP_USER', 'SMTP_PASS', 'AP_TEAM_EMAIL_LIST']
     missing_optional = [var for var in optional_env if not os.getenv(var)]
-    
+
     if missing_optional:
-        print(f"⚠️ Missing optional environment variables (email disabled): {missing_optional}")
-    
+        print(f"âš ï¸ Missing optional environment variables (email disabled): {missing_optional}")
+
     # Test module imports
-    print("🔍 Testing module imports...")
+    print("ðŸ” Testing module imports...")
     try:
         from rms_scraper import rms_download
-        print("✅ rms_scraper imported successfully")
+        print("âœ… rms_scraper imported successfully")
     except ImportError as e:
-        print(f"❌ rms_scraper import failed: {e}")
+        print(f"âŒ rms_scraper import failed: {e}")
         return False
-        
+
     try:
         from validator_utils import validate_invoices
-        print("✅ validator_utils imported successfully")
+        print("âœ… validator_utils imported successfully")
     except ImportError as e:
-        print(f"❌ validator_utils import failed: {e}")
+        print(f"âŒ validator_utils import failed: {e}")
         return False
-        
+
     try:
         from email_notifier import EnhancedEmailSystem, EmailNotifier
-        print("✅ email_notifier imported successfully")
+        print("âœ… email_notifier imported successfully")
     except ImportError as e:
-        print(f"❌ email_notifier import failed: {e}")
+        print(f"âŒ email_notifier import failed: {e}")
         return False
-    
-    print("✅ Environment check passed")
-    print(f"🔧 Using RMS credentials: RMS_USER={'✅' if rms_user else '❌'}, RMS_PASS={'✅' if rms_pass else '❌'}")
+
+    print("âœ… Environment check passed")
+    print(f"ðŸ”§ Using RMS credentials: RMS_USER={'âœ…' if rms_user else 'âŒ'}, RMS_PASS={'âœ…' if rms_pass else 'âŒ'}")
     return True
-    
+
+# ============== Email Debug Functions ==============
+def debug_email_settings():
+    """Debug and display current email configuration"""
+    print("ðŸ“§ Email Configuration Debug:")
+    print(f"   SEND_EMAIL: {os.getenv('SEND_EMAIL', 'Not set')} (Parsed: {SEND_EMAIL})")
+    print(f"   SMTP_USER: {'âœ… Set' if os.getenv('SMTP_USER') else 'âŒ Not set'}")
+    print(f"   SMTP_PASS: {'âœ… Set' if os.getenv('SMTP_PASS') else 'âŒ Not set'}")
+    print(f"   AP_TEAM_EMAIL_LIST: {'âœ… Set' if os.getenv('AP_TEAM_EMAIL_LIST') else 'âŒ Not set'}")
+
+    # Show actual values (masked for security)
+    smtp_user = os.getenv('SMTP_USER', '')
+    ap_emails = os.getenv('AP_TEAM_EMAIL_LIST', '')
+
+    if smtp_user:
+        print(f"   SMTP User: {smtp_user[:3]}***@{smtp_user.split('@')[-1] if '@' in smtp_user else 'unknown'}")
+
+    if ap_emails:
+        email_list = [email.strip() for email in ap_emails.split(',')]
+        print(f"   Email Recipients: {len(email_list)} email(s)")
+        for i, email in enumerate(email_list[:3]):  # Show first 3 only
+            masked = f"{email[:2]}***@{email.split('@')[-1] if '@' in email else 'unknown'}"
+            print(f"     {i+1}. {masked}")
+        if len(email_list) > 3:
+            print(f"     ... and {len(email_list) - 3} more")
+
+def test_email_configuration() -> bool:
+    """Test email configuration without sending actual emails"""
+    try:
+        print("ðŸ“§ Testing email configuration...")
+
+        # Check if email is enabled
+        if not SEND_EMAIL:
+            print("âš ï¸ Email is disabled (SEND_EMAIL != 1)")
+            return False
+
+        # Check required environment variables
+        required_vars = ['SMTP_USER', 'SMTP_PASS', 'AP_TEAM_EMAIL_LIST']
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+
+        if missing_vars:
+            print(f"âŒ Missing email environment variables: {missing_vars}")
+            return False
+
+        # Try to create email notifier instance
+        try:
+            notifier = EmailNotifier()
+            print("âœ… EmailNotifier instance created successfully")
+
+            # Test email system initialization
+            email_system = EnhancedEmailSystem()
+            print("âœ… EnhancedEmailSystem instance created successfully")
+
+            return True
+
+        except Exception as e:
+            print(f"âŒ Failed to create email system: {e}")
+            return False
+
+    except Exception as e:
+        print(f"âŒ Email configuration test failed: {e}")
+        return False
+
+# ============== PDF Processing Functions ==============
+def verify_pdf_download_completeness(run_dir: str, excel_df: pd.DataFrame, max_wait_minutes: int = 5) -> bool:
+    """
+    Verify if PDF download is complete by comparing ZIP contents with Excel records
+
+    Args:
+        run_dir: Directory containing the downloads
+        excel_df: DataFrame with invoice records
+        max_wait_minutes: Maximum time to wait for ZIP file completion
+
+    Returns:
+        bool: True if PDF download appears complete, False otherwise
+    """
+    try:
+        zip_path = os.path.join(run_dir, "invoices.zip")
+
+        if not os.path.exists(zip_path):
+            print("ðŸ“¦ No invoices.zip found - PDF verification skipped")
+            return False
+
+        print(f"ðŸ“¦ Verifying PDF completeness against {len(excel_df)} invoice records...")
+
+        # Wait for ZIP file to stabilize (download might still be in progress)
+        initial_size = os.path.getsize(zip_path)
+        stable_count = 0
+        max_checks = max_wait_minutes * 12  # Check every 5 seconds
+
+        for check in range(max_checks):
+            time.sleep(5)
+            current_size = os.path.getsize(zip_path)
+
+            if current_size == initial_size:
+                stable_count += 1
+                if stable_count >= 3:  # Size stable for 15 seconds
+                    break
+            else:
+                stable_count = 0
+                initial_size = current_size
+                print(f"ðŸ“¥ ZIP still growing: {current_size / 1024 / 1024:.1f} MB...")
+
+        # Analyze ZIP contents
+        try:
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_files = zip_ref.namelist()
+                pdf_files = [f for f in zip_files if f.lower().endswith('.pdf')]
+
+                print(f"ðŸ“Š ZIP Analysis:")
+                print(f"   Total files: {len(zip_files)}")
+                print(f"   PDF files: {len(pdf_files)}")
+                print(f"   Excel records: {len(excel_df)}")
+
+                # Check if we have a reasonable number of PDFs
+                expected_min = len(excel_df) * 0.8  # At least 80% coverage
+
+                if len(pdf_files) >= expected_min:
+                    print(f"âœ… PDF completeness check passed: {len(pdf_files)}/{len(excel_df)} PDFs available")
+                    return True
+                else:
+                    print(f"âš ï¸ PDF completeness check failed: {len(pdf_files)}/{len(excel_df)} PDFs (< 80%)")
+                    return False
+
+        except zipfile.BadZipFile as e:
+            print(f"âŒ ZIP file is corrupted or incomplete: {e}")
+            return False
+
+    except Exception as e:
+        print(f"âŒ PDF verification failed: {e}")
+        return False
+
+def request_pdf_regeneration(zip_path: str, run_dir: str) -> bool:
+    """
+    Attempt to regenerate or fix incomplete PDF downloads
+
+    Args:
+        zip_path: Path to the existing ZIP file
+        run_dir: Download directory
+
+    Returns:
+        bool: True if regeneration was attempted, False otherwise
+    """
+    try:
+        print("ðŸ”„ Attempting PDF regeneration...")
+
+        # Create backup of existing ZIP if it exists
+        if os.path.exists(zip_path):
+            backup_path = f"{zip_path}.backup_{int(time.time())}"
+            shutil.copy2(zip_path, backup_path)
+            print(f"ðŸ’¾ Created backup: {backup_path}")
+
+        # For now, we'll just create a placeholder for PDF regeneration
+        # In a real implementation, this would call the RMS system again
+        # or implement retry logic
+
+        print("âš ï¸ PDF regeneration not fully implemented")
+        print("   - This would typically:")
+        print("   - Re-call the RMS download system with PDF-only mode")
+        print("   - Implement retry logic for failed PDF downloads")
+        print("   - Use alternative PDF extraction methods")
+
+        # Return True to indicate we attempted something
+        return True
+
+    except Exception as e:
+        print(f"âŒ PDF regeneration attempt failed: {e}")
+        return False
+
 # ============== Helpers ==============
 
 def should_run_today() -> bool:
@@ -139,7 +308,7 @@ def get_cumulative_validation_range() -> Tuple[str, str]:
         return get_current_batch_dates()
 
 def archive_data_older_than_three_months() -> int:
-    print(f"🗂️ Archiving validation data older than {ACTIVE_VALIDATION_MONTHS} months...")
+    print(f"ðŸ—‚ï¸ Archiving validation data older than {ACTIVE_VALIDATION_MONTHS} months...")
     data_dir = "data"
     archive_base = os.path.join(data_dir, ARCHIVE_FOLDER)
     validation_archive = os.path.join(archive_base, "validation_reports")
@@ -191,29 +360,29 @@ def archive_data_older_than_three_months() -> int:
     except Exception:
         pass
 
-    print(f"✅ Archiving completed. {archived} items archived to {archive_base}")
+    print(f"âœ… Archiving completed. {archived} items archived to {archive_base}")
     return archived
 
 def download_cumulative_data(start_str: str, end_str: str) -> str:
     start_date = datetime.strptime(start_str, "%Y-%m-%d")
     end_date = datetime.strptime(end_str, "%Y-%m-%d")
-    print(f"📥 Downloading cumulative validation data from {start_str} to {end_str}...")
-    print(f"📊 Range covers: {(end_date - start_date).days + 1} days")
+    print(f"ðŸ“¥ Downloading cumulative validation data from {start_str} to {end_str}...")
+    print(f"ðŸ“Š Range covers: {(end_date - start_date).days + 1} days")
     return rms_download(start_date, end_date)
 
 def _normalize_run_dir(run_path: str) -> Tuple[str, str]:
     """Accept directory OR full file path; return (run_dir, invoice_path)."""
     if not run_path:
         raise ValueError("Empty run_path provided")
-    
+
     try:
         # Convert to absolute path
         abs_path = os.path.abspath(run_path)
-        
+
         if os.path.isdir(abs_path):
             # It's a directory - look for invoice file
             run_dir = abs_path
-            
+
             # Try multiple possible invoice file names
             possible_files = [
                 "invoice_download.xls",
@@ -223,27 +392,27 @@ def _normalize_run_dir(run_path: str) -> Tuple[str, str]:
                 "export.xls",
                 "export.xlsx"
             ]
-            
+
             invoice_path = None
             for filename in possible_files:
                 candidate = os.path.join(run_dir, filename)
                 if os.path.exists(candidate):
                     invoice_path = candidate
                     break
-            
+
             # Default to expected name even if not found yet
             if not invoice_path:
                 invoice_path = os.path.join(run_dir, "invoice_download.xls")
-            
+
             return run_dir, invoice_path
-            
+
         elif os.path.isfile(abs_path):
             # It's a file - extract directory and use the file
             return os.path.dirname(abs_path), abs_path
         else:
             # Path doesn't exist yet - assume it will be a directory
             return abs_path, os.path.join(abs_path, "invoice_download.xls")
-            
+
     except Exception as e:
         logging.error(f"Error normalizing path '{run_path}': {e}")
         # Return safe defaults
@@ -255,7 +424,7 @@ def validate_downloaded_files(run_dir: str) -> Tuple[bool, List[str]]:
     invoices.zip is OPTIONAL (logged if missing).
     """
     try:
-        logging.info(f"🔍 Step 5: Verifying files in directory: {run_dir}")
+        logging.info(f"ðŸ” Step 5: Verifying files in directory: {run_dir}")
 
         required = ["invoice_download.xls"]
         optional = ["invoices.zip"]
@@ -266,27 +435,27 @@ def validate_downloaded_files(run_dir: str) -> Tuple[bool, List[str]]:
             p = os.path.join(run_dir, name)
             if os.path.exists(p):
                 found.append(f"{name} ({os.path.getsize(p)} bytes)")
-                logging.info(f"✅ Found {name}")
+                logging.info(f"âœ… Found {name}")
             else:
                 missing_req.append(name)
-                logging.error(f"❌ Missing required file: {name}")
+                logging.error(f"âŒ Missing required file: {name}")
 
         for name in optional:
             p = os.path.join(run_dir, name)
             if os.path.exists(p):
-                logging.info(f"ℹ️ Optional file present: {name}")
+                logging.info(f"â„¹ï¸ Optional file present: {name}")
             else:
-                logging.warning(f"ℹ️ Optional file missing (ok): {name}")
+                logging.warning(f"â„¹ï¸ Optional file missing (ok): {name}")
 
         if missing_req:
             return False, missing_req
         return True, found
     except Exception as e:
-        logging.error(f"❌ File validation error: {e}")
+        logging.error(f"âŒ File validation error: {e}")
         return False, [f"Validation error: {str(e)}"]
 
 def read_invoice_file(invoice_file: str) -> pd.DataFrame:
-    print(f"🔍 Attempting to read file: {invoice_file}")
+    print(f"ðŸ” Attempting to read file: {invoice_file}")
     if not os.path.exists(invoice_file):
         raise FileNotFoundError(invoice_file)
     p = Path(invoice_file)
@@ -330,7 +499,7 @@ def read_invoice_file(invoice_file: str) -> pd.DataFrame:
         pass
 
     # Last resort: empty df with no rows (so pipeline still completes)
-    logging.warning("⚠️ Could not parse file reliably; proceeding with empty DataFrame.")
+    logging.warning("âš ï¸ Could not parse file reliably; proceeding with empty DataFrame.")
     return pd.DataFrame()
 
 def filter_invoices_by_date(df: pd.DataFrame, start_str: str, end_str: str) -> pd.DataFrame:
@@ -391,7 +560,6 @@ def map_payment_method(payment_info) -> str:
     if re.search(r"\bcheque|check|dd|demand\s*draft\b", s):         return "Cheque"
     if re.search(r"\bcash|petty\s*cash\b", s):                      return "Cash"
     return s.strip().title()
-
 def _derive_payment_method(row) -> str:
     for c in _MOP_ALIASES:
         if c in row and str(row.get(c) or "").strip():
@@ -505,7 +673,7 @@ def find_creator_column(df: pd.DataFrame) -> Optional[str]:
     return None
 
 def validate_invoices_with_details(df: pd.DataFrame) -> Tuple[pd.DataFrame, list, pd.DataFrame]:
-    print("🔍 Running detailed invoice-level validation…")
+    print("ðŸ” Running detailed invoice-level validationâ€¦")
     if df is None or df.empty:
         # produce an empty but well-typed frame with expected columns
         cols = ["Invoice_ID","Invoice_Number","Invoice_Date","Vendor_Name","Amount",
@@ -535,26 +703,26 @@ def validate_invoices_with_details(df: pd.DataFrame) -> Tuple[pd.DataFrame, list
             creator = _derive_creator(row, creators_map)
 
         issues = []
-        status = "✅ PASS"
+        status = "âœ… PASS"
 
         if pd.isna(row.get("GSTNO")) or str(row.get("GSTNO")).strip() == "":
-            issues.append("Missing GST Number"); status = "❌ FAIL"
+            issues.append("Missing GST Number"); status = "âŒ FAIL"
         if pd.isna(row.get("Total")) or str(row.get("Total")).strip() == "":
-            issues.append("Missing Total Amount"); status = "❌ FAIL"
+            issues.append("Missing Total Amount"); status = "âŒ FAIL"
         else:
             try:
                 val = float(row.get("Total") or 0)
                 if val < 0:
                     issues.append(f"Negative Amount: {val}")
-                    if status == "✅ PASS": status = "⚠️ WARNING"
+                    if status == "âœ… PASS": status = "âš ï¸ WARNING"
             except Exception:
-                issues.append("Invalid Amount Format"); status = "❌ FAIL"
+                issues.append("Invalid Amount Format"); status = "âŒ FAIL"
         if not str(inv_num).strip():
-            issues.append("Missing Invoice Number"); status = "❌ FAIL"
+            issues.append("Missing Invoice Number"); status = "âŒ FAIL"
         if not str(inv_date).strip():
-            issues.append("Missing Invoice Date"); status = "❌ FAIL"
+            issues.append("Missing Invoice Date"); status = "âŒ FAIL"
         if not str(vendor).strip():
-            issues.append("Missing Vendor Name"); status = "❌ FAIL"
+            issues.append("Missing Vendor Name"); status = "âŒ FAIL"
 
         detailed.append({
             "Invoice_ID": invoice_id,
@@ -578,9 +746,9 @@ def generate_email_summary_statistics(detailed_df: pd.DataFrame,
                                       batch_start: str, batch_end: str,
                                       today_str: str) -> dict:
     total = len(detailed_df) if detailed_df is not None else 0
-    passed  = int((detailed_df["Validation_Status"] == "✅ PASS").sum()) if total else 0
-    warned  = int((detailed_df["Validation_Status"] == "⚠️ WARNING").sum()) if total else 0
-    failed  = int((detailed_df["Validation_Status"] == "❌ FAIL").sum()) if total else 0
+    passed  = int((detailed_df["Validation_Status"] == "âœ… PASS").sum()) if total else 0
+    warned  = int((detailed_df["Validation_Status"] == "âš ï¸ WARNING").sum()) if total else 0
+    failed  = int((detailed_df["Validation_Status"] == "âŒ FAIL").sum()) if total else 0
     pass_rate = (passed / total * 100) if total else 0.0
 
     html = EnhancedEmailSystem().create_professional_html_template(
@@ -601,9 +769,9 @@ def generate_detailed_validation_report(detailed_df: pd.DataFrame, today_str: st
     if detailed_df is None or detailed_df.empty:
         return []
     total = len(detailed_df)
-    passed  = int((detailed_df["Validation_Status"] == "✅ PASS").sum())
-    warned  = int((detailed_df["Validation_Status"] == "⚠️ WARNING").sum())
-    failed  = int((detailed_df["Validation_Status"] == "❌ FAIL").sum())
+    passed  = int((detailed_df["Validation_Status"] == "âœ… PASS").sum())
+    warned  = int((detailed_df["Validation_Status"] == "âš ï¸ WARNING").sum())
+    failed  = int((detailed_df["Validation_Status"] == "âŒ FAIL").sum())
     return [
         {"Report_Type": "Overall_Summary", "Description": "Total Invoice Count", "Count": total, "Percentage": "100.0%", "Status": "INFO"},
         {"Report_Type": "Overall_Summary", "Description": "Passed Validation",   "Count": passed, "Percentage": f"{(passed/total*100):.1f}%", "Status": "PASS"},
@@ -769,7 +937,7 @@ def build_final_validation_report(src_df: pd.DataFrame,
         if c not in final.columns:
             final[c] = ""
     return final[ordered_cols]
-                                      
+
 def analyze_zip_contents(zip_path: str) -> dict:
     """Analyze the contents of the invoices ZIP file"""
     analysis = {
@@ -781,56 +949,56 @@ def analyze_zip_contents(zip_path: str) -> dict:
         "total_size_mb": 0,
         "extraction_status": "success"
     }
-    
+
     try:
         if not os.path.exists(zip_path):
             analysis["extraction_status"] = "zip_not_found"
             return analysis
-        
+
         # Get ZIP file size
         zip_size = os.path.getsize(zip_path) / (1024 * 1024)  # MB
         analysis["total_size_mb"] = round(zip_size, 2)
-        
+
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             file_list = zip_ref.namelist()
             analysis["total_files"] = len(file_list)
-            
+
             for file_name in file_list[:10]:  # Sample first 10 files
                 analysis["sample_files"].append(file_name)
-            
+
             # Count file types
             for file_name in file_list:
                 if file_name.lower().endswith('.pdf'):
                     analysis["pdf_files"] += 1
                 else:
                     analysis["other_files"] += 1
-                
+
                 # Track file extensions
                 ext = os.path.splitext(file_name)[1].lower()
                 if ext:
                     analysis["file_types"][ext] = analysis["file_types"].get(ext, 0) + 1
-        
-        print(f"📦 ZIP Analysis Results:")
-        print(f"   📁 Total files: {analysis['total_files']}")
-        print(f"   📄 PDF files: {analysis['pdf_files']}")
-        print(f"   📋 Other files: {analysis['other_files']}")
-        print(f"   💾 ZIP size: {analysis['total_size_mb']} MB")
-        print(f"   🗂️ File types: {analysis['file_types']}")
-        print(f"   📋 Sample files: {analysis['sample_files'][:3]}")
-        
+
+        print(f"ðŸ“¦ ZIP Analysis Results:")
+        print(f"   ðŸ“ Total files: {analysis['total_files']}")
+        print(f"   ðŸ“„ PDF files: {analysis['pdf_files']}")
+        print(f"   ðŸ“‹ Other files: {analysis['other_files']}")
+        print(f"   ðŸ’¾ ZIP size: {analysis['total_size_mb']} MB")
+        print(f"   ðŸ—‚ï¸ File types: {analysis['file_types']}")
+        print(f"   ðŸ“‹ Sample files: {analysis['sample_files'][:3]}")
+
     except Exception as e:
-        print(f"❌ ZIP analysis failed: {e}")
+        print(f"âŒ ZIP analysis failed: {e}")
         analysis["extraction_status"] = f"error: {str(e)}"
-    
+
     return analysis
 
 def add_zip_info_to_report(detailed_report_path: str, run_dir: str):
     """Add ZIP analysis as a new sheet in the detailed report"""
     zip_path = os.path.join(run_dir, "invoices.zip")
-    
+
     if os.path.exists(zip_path):
         zip_analysis = analyze_zip_contents(zip_path)
-        
+
         # Create ZIP summary DataFrame
         zip_summary = pd.DataFrame([
             {"Metric": "Total Files in ZIP", "Value": zip_analysis["total_files"]},
@@ -840,12 +1008,12 @@ def add_zip_info_to_report(detailed_report_path: str, run_dir: str):
             {"Metric": "File Types", "Value": str(zip_analysis["file_types"])},
             {"Metric": "Extraction Status", "Value": zip_analysis["extraction_status"]},
         ])
-        
+
         # Add to existing Excel file
         with pd.ExcelWriter(detailed_report_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
             zip_summary.to_excel(writer, sheet_name="ZIP_Analysis", index=False)
-        
-        print(f"📦 ZIP analysis added to report: {zip_analysis['pdf_files']} PDFs found")
+
+        print(f"ðŸ“¦ ZIP analysis added to report: {zip_analysis['pdf_files']} PDFs found")
 
 def extract_invoice_pdfs(zip_path: str, extract_to: str, max_files: int = 50) -> dict:
     """Extract a sample of PDF files for verification"""
@@ -855,13 +1023,13 @@ def extract_invoice_pdfs(zip_path: str, extract_to: str, max_files: int = 50) ->
         "sample_pdfs": [],
         "status": "success"
     }
-    
+
     try:
         os.makedirs(extract_to, exist_ok=True)
-        
+
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             pdf_files = [f for f in zip_ref.namelist() if f.lower().endswith('.pdf')]
-            
+
             # Extract a sample of PDFs (not all to save space)
             for i, pdf_file in enumerate(pdf_files[:max_files]):
                 try:
@@ -869,16 +1037,16 @@ def extract_invoice_pdfs(zip_path: str, extract_to: str, max_files: int = 50) ->
                     extraction_info["extracted_count"] += 1
                     extraction_info["sample_pdfs"].append(pdf_file)
                 except Exception as extract_error:
-                    print(f"⚠️ Failed to extract {pdf_file}: {extract_error}")
-            
-        print(f"📂 Extracted {extraction_info['extracted_count']} PDF samples to {extract_to}")
-        
+                    print(f"âš ï¸ Failed to extract {pdf_file}: {extract_error}")
+
+        print(f"ðŸ“‚ Extracted {extraction_info['extracted_count']} PDF samples to {extract_to}")
+
     except Exception as e:
-        print(f"❌ PDF extraction failed: {e}")
+        print(f"âŒ PDF extraction failed: {e}")
         extraction_info["status"] = f"error: {str(e)}"
-    
+
     return extraction_info
-    
+
 # ============== MAIN RUNNER ==============
 
 def run_invoice_validation() -> bool:
@@ -886,13 +1054,13 @@ def run_invoice_validation() -> bool:
         today = datetime.today()
         today_str = today.strftime("%Y-%m-%d")
 
-        print(f"🚀 Starting DETAILED cumulative validation workflow for {today_str}")
-        print("📧 Email: disabled by default (SEND_EMAIL=1 to enable)")
-        print(f"⚙️ Config: every {VALIDATION_INTERVAL_DAYS} days (batch {VALIDATION_BATCH_DAYS} days), active {ACTIVE_VALIDATION_MONTHS} months")
+        print(f"ðŸš€ Starting DETAILED cumulative validation workflow for {today_str}")
+        print("ðŸ“§ Email: disabled by default (SEND_EMAIL=1 to enable)")
+        print(f"âš™ï¸ Config: every {VALIDATION_INTERVAL_DAYS} days (batch {VALIDATION_BATCH_DAYS} days), active {ACTIVE_VALIDATION_MONTHS} months")
 
         # Step 1: schedule
         if not should_run_today():
-            print("⏳ Skipping – not time yet")
+            print("â³ Skipping â€“ not time yet")
             return True
 
         # Step 2: archive
@@ -901,125 +1069,126 @@ def run_invoice_validation() -> bool:
         # Step 3: ranges
         cumulative_start, cumulative_end = get_cumulative_validation_range()
         batch_start, batch_end = get_current_batch_dates()
-        print(f"📅 Current batch: {batch_start} → {batch_end}")
-        print(f"📅 Cumulative: {cumulative_start} → {cumulative_end}")
+        print(f"ðŸ“… Current batch: {batch_start} â†’ {batch_end}")
+        print(f"ðŸ“… Cumulative: {cumulative_start} â†’ {cumulative_end}")
 
         # Step 4: download (CORRECTED)
-        print("📥 Step 4: Starting download process...")
+        print("ðŸ“¥ Step 4: Starting download process...")
         try:
             # Validate date range before download
             start_dt = datetime.strptime(cumulative_start, "%Y-%m-%d")
             end_dt = datetime.strptime(cumulative_end, "%Y-%m-%d")
-            
+
             if start_dt > end_dt:
                 raise ValueError(f"Invalid date range: start date {cumulative_start} is after end date {cumulative_end}")
-            
+
             days_span = (end_dt - start_dt).days + 1
-            print(f"📊 Downloading data for {days_span} days ({cumulative_start} to {cumulative_end})")
-            
+            print(f"ðŸ“Š Downloading data for {days_span} days ({cumulative_start} to {cumulative_end})")
+
             # Call the download function with proper error handling
-            print("🔄 Initiating RMS download...")
+            print("ðŸ”„ Initiating RMS download...")
             run_path = download_cumulative_data(cumulative_start, cumulative_end)
-            
+
             # Validate the returned path
             if not run_path:
                 raise ValueError("Download function returned empty/None path")
-            
+
             if not isinstance(run_path, str):
                 raise TypeError(f"Download function returned invalid type: {type(run_path)}, expected string")
-            
-            print(f"📂 Raw download path received: {run_path}")
-            
+
+            print(f"ðŸ“‚ Raw download path received: {run_path}")
+
             # Normalize the path and validate it exists
             run_dir, invoice_path = _normalize_run_dir(run_path)
-            
+
             # Validate run directory exists
             if not os.path.exists(run_dir):
                 raise FileNotFoundError(f"Download directory does not exist: {run_dir}")
-            
+
             if not os.path.isdir(run_dir):
                 raise NotADirectoryError(f"Path is not a directory: {run_dir}")
-            
-            print(f"✅ Run directory validated: {run_dir}")
-            print(f"📄 Expected invoice file: {invoice_path}")
-            
+
+            print(f"âœ… Run directory validated: {run_dir}")
+            print(f"ðŸ“„ Expected invoice file: {invoice_path}")
+
             # List contents of download directory for debugging
             try:
                 dir_contents = os.listdir(run_dir)
-                print(f"📋 Directory contents: {dir_contents}")
+                print(f"ðŸ“‹ Directory contents: {dir_contents}")
             except Exception as list_error:
-                print(f"⚠️ Could not list directory contents: {list_error}")
-            
+                print(f"âš ï¸ Could not list directory contents: {list_error}")
+
         except Exception as download_error:
-            logging.error(f"❌ Download process failed: {download_error}")
-            print(f"💥 Download error details: {download_error}")
-            
+            logging.error(f"âŒ Download process failed: {download_error}")
+            print(f"ðŸ’¥ Download error details: {download_error}")
+
             # Create fallback empty structure to allow workflow to continue
-            print("🔄 Creating fallback structure for graceful degradation...")
+            print("ðŸ”„ Creating fallback structure for graceful degradation...")
             fallback_dir = f"data/fallback_{today_str}"
             os.makedirs(fallback_dir, exist_ok=True)
-            
+
             # Create empty invoice file for testing
             fallback_invoice = os.path.join(fallback_dir, "invoice_download.xls")
             pd.DataFrame().to_excel(fallback_invoice, index=False, engine="openpyxl")
-            
+
             run_dir = fallback_dir
             invoice_path = fallback_invoice
-            
-            print(f"⚠️ Using fallback directory: {run_dir}")
-            print("⚠️ Workflow will continue with empty dataset for testing")
 
-            # Step 5: verify files and PDF completeness - ENHANCED
-        print("🔍 Step 5: Validating downloaded files...")
+            print(f"âš ï¸ Using fallback directory: {run_dir}")
+            print("âš ï¸ Workflow will continue with empty dataset for testing")
+
+        # Step 5: verify files and PDF completeness - ENHANCED
+        print("ðŸ” Step 5: Validating downloaded files...")
         ok, details = validate_downloaded_files(run_dir)
         if not ok:
-            logging.error(f"❌ File validation failed: {details}")
-            # ... existing error handling ...
+            logging.error(f"âŒ File validation failed: {details}")
+            print(f"ðŸ’¥ File validation error: {details}")
+            print("ðŸ”„ Continuing with available data...")
         else:
-            logging.info(f"✅ Required files found: {details}")
-            
+            logging.info(f"âœ… Required files found: {details}")
+
             # Read Excel file first to get expected count
             excel_path = os.path.join(run_dir, "invoice_download.xls")
             if os.path.exists(excel_path):
                 try:
                     excel_df = pd.read_excel(excel_path)
-                    print(f"📊 Excel contains {len(excel_df)} invoice records")
-                    
+                    print(f"ðŸ“Š Excel contains {len(excel_df)} invoice records")
+
                     # Verify PDF completeness
                     zip_path = os.path.join(run_dir, "invoices.zip")
                     if os.path.exists(zip_path):
-                        print("📦 Step 5b: Verifying PDF download completeness...")
-                        
+                        print("ðŸ“¦ Step 5b: Verifying PDF download completeness...")
+
                         pdf_complete = verify_pdf_download_completeness(run_dir, excel_df)
-                        
+
                         if not pdf_complete:
-                            print("⚠️ PDF download appears incomplete, attempting regeneration...")
+                            print("âš ï¸ PDF download appears incomplete, attempting regeneration...")
                             regeneration_success = request_pdf_regeneration(zip_path, run_dir)
-                            
+
                             if regeneration_success:
                                 # Re-verify after regeneration
                                 pdf_complete = verify_pdf_download_completeness(run_dir, excel_df, max_wait_minutes=2)
-                        
+
                         if pdf_complete:
                             # Analyze ZIP contents
                             zip_analysis = analyze_zip_contents(zip_path)
-                            
+
                             # Extract sample PDFs
                             pdf_extract_dir = os.path.join(run_dir, "sample_pdfs")
                             extraction_info = extract_invoice_pdfs(zip_path, pdf_extract_dir, max_files=25)
-                            
-                            print(f"✅ PDF verification complete: {zip_analysis['pdf_files']} PDFs available")
+
+                            print(f"âœ… PDF verification complete: {zip_analysis['pdf_files']} PDFs available")
                         else:
-                            print("⚠️ Continuing with incomplete PDF set - Excel data will still be processed")
+                            print("âš ï¸ Continuing with incomplete PDF set - Excel data will still be processed")
                     else:
-                        print("ℹ️ No invoices.zip file found - Excel data only")
-                        
+                        print("â„¹ï¸ No invoices.zip file found - Excel data only")
+
                 except Exception as excel_error:
-                    print(f"❌ Error reading Excel for PDF verification: {excel_error}")
-                    
+                    print(f"âŒ Error reading Excel for PDF verification: {excel_error}")
+
         # Step 6: read export (do NOT fail the run if empty) - IMPROVED
-        print("📊 Step 6: Reading RMS export file...")
-        
+        print("ðŸ“Š Step 6: Reading RMS export file...")
+
         # Double-check file existence before reading
         if not os.path.exists(invoice_path):
             # Try common alternative paths
@@ -1031,71 +1200,71 @@ def run_invoice_validation() -> bool:
                 os.path.join(run_dir, "export.xls"),
                 os.path.join(run_dir, "export.xlsx")
             ]
-            
+
             found_file = None
             for alt_path in alternative_paths:
                 if os.path.exists(alt_path):
                     found_file = alt_path
                     break
-            
+
             if found_file:
                 invoice_path = found_file
-                print(f"🔄 Using alternative file path: {invoice_path}")
+                print(f"ðŸ”„ Using alternative file path: {invoice_path}")
             else:
-                print(f"⚠️ Invoice file not found at: {invoice_path}")
-                print(f"📋 Checked alternatives: {alternative_paths}")
+                print(f"âš ï¸ Invoice file not found at: {invoice_path}")
+                print(f"ðŸ“‹ Checked alternatives: {alternative_paths}")
                 # Create empty DataFrame to continue workflow
                 src_df = pd.DataFrame()
-                print("⚠️ Continuing with empty dataset")
-        
+                print("âš ï¸ Continuing with empty dataset")
+
         if os.path.exists(invoice_path):
             try:
-                print(f"📖 Reading file: {invoice_path}")
+                print(f"ðŸ“– Reading file: {invoice_path}")
                 file_size = os.path.getsize(invoice_path)
-                print(f"📏 File size: {file_size} bytes")
-                
+                print(f"ðŸ“ File size: {file_size} bytes")
+
                 src_df = read_invoice_file(invoice_path)
                 if src_df is None:
                     src_df = pd.DataFrame()
-                    
-                print(f"✅ Loaded: {src_df.shape if hasattr(src_df,'shape') else (0,0)} rows/columns")
-                
+
+                print(f"âœ… Loaded: {src_df.shape if hasattr(src_df,'shape') else (0,0)} rows/columns")
+
                 # Log column information if data exists
                 if not src_df.empty:
-                    print(f"📊 Columns found: {list(src_df.columns)}")
-                    print(f"📈 Data sample: {len(src_df)} rows total")
+                    print(f"ðŸ“Š Columns found: {list(src_df.columns)}")
+                    print(f"ðŸ“ˆ Data sample: {len(src_df)} rows total")
                 else:
-                    print("⚠️ File loaded but contains no data")
-                    
+                    print("âš ï¸ File loaded but contains no data")
+
             except Exception as read_error:
-                logging.error(f"❌ Error reading invoice file: {read_error}")
-                print(f"💥 Read error details: {read_error}")
+                logging.error(f"âŒ Error reading invoice file: {read_error}")
+                print(f"ðŸ’¥ Read error details: {read_error}")
                 src_df = pd.DataFrame()
-                print("⚠️ Using empty DataFrame due to read error")
+                print("âš ï¸ Using empty DataFrame due to read error")
         else:
             src_df = pd.DataFrame()
 
         # Step 7: filter
-        print("🔄 Step 7: Filter to cumulative range…")
+        print("ðŸ”„ Step 7: Filter to cumulative rangeâ€¦")
         filtered_df = filter_invoices_by_date(src_df, cumulative_start, cumulative_end)
-        print(f"📦 Working rows: {len(filtered_df)}")
+        print(f"ðŸ“¦ Working rows: {len(filtered_df)}")
 
         # Step 8: validate
-        print("🔎 Step 8: Detailed validation on cumulative…")
+        print("ðŸ”Ž Step 8: Detailed validation on cumulativeâ€¦")
         detailed_df, summary_issues, problematic_df = validate_invoices_with_details(filtered_df)
 
         # Step 9: email stats (computed even if not sent)
-        print("📧 Step 9: Build email summary…")
+        print("ðŸ“§ Step 9: Build email summaryâ€¦")
         email_summary = generate_email_summary_statistics(
             detailed_df, cumulative_start, cumulative_end, batch_start, batch_end, today_str
         )
 
         # Step 10: summary sheet data
-        print("📋 Step 10: Build summary sheet data…")
+        print("ðŸ“‹ Step 10: Build summary sheet dataâ€¦")
         summary_sheet_rows = generate_detailed_validation_report(detailed_df, today_str)
 
         # Step 11/12: DB persistence (best-effort)
-        print("💾 Step 11: Save snapshot…")
+        print("ðŸ’¾ Step 11: Save snapshotâ€¦")
         try:
             save_invoice_snapshot(
                 detailed_df.to_dict("records") if not detailed_df.empty else [],
@@ -1109,7 +1278,7 @@ def run_invoice_validation() -> bool:
         except Exception as e:
             logging.warning(f"Snapshot save skipped: {e}")
 
-        print("📝 Step 12: Record run window…")
+        print("ðŸ“ Step 12: Record run windowâ€¦")
         try:
             record_run_window(
                 batch_start, batch_end,
@@ -1122,25 +1291,25 @@ def run_invoice_validation() -> bool:
             logging.warning(f"Run window record skipped: {e}")
 
         # Step 13: Save ONLY the 3 requested files
-        print("📑 Step 13: Save reports (3 files only)…")
+        print("ðŸ“‘ Step 13: Save reports (3 files only)â€¦")
         os.makedirs("data", exist_ok=True)
 
         # 13a) Invoice validation report (with multiple tabs + final 'Validation Report' later)
         detailed_report_path = f"data/invoice_validation_detailed_{today_str}.xlsx"
         with pd.ExcelWriter(detailed_report_path, engine="openpyxl") as writer:
             detailed_df.to_excel(writer, sheet_name="All_Invoices", index=False)
-            failed_df = detailed_df[detailed_df["Validation_Status"] == "❌ FAIL"] if not detailed_df.empty else pd.DataFrame()
+            failed_df = detailed_df[detailed_df["Validation_Status"] == "âŒ FAIL"] if not detailed_df.empty else pd.DataFrame()
             if not failed_df.empty:
                 failed_df.to_excel(writer, sheet_name="Failed_Invoices", index=False)
-            warn_df = detailed_df[detailed_df["Validation_Status"] == "⚠️ WARNING"] if not detailed_df.empty else pd.DataFrame()
+            warn_df = detailed_df[detailed_df["Validation_Status"] == "âš ï¸ WARNING"] if not detailed_df.empty else pd.DataFrame()
             if not warn_df.empty:
                 warn_df.to_excel(writer, sheet_name="Warning_Invoices", index=False)
-            pass_df = detailed_df[detailed_df["Validation_Status"] == "✅ PASS"] if not detailed_df.empty else pd.DataFrame()
+            pass_df = detailed_df[detailed_df["Validation_Status"] == "âœ… PASS"] if not detailed_df.empty else pd.DataFrame()
             if not pass_df.empty:
                 pass_df.to_excel(writer, sheet_name="Passed_Invoices", index=False)
             if summary_sheet_rows:
                 pd.DataFrame(summary_sheet_rows).to_excel(writer, sheet_name="Summary_Stats", index=False)
-        print(f"✅ Saved: {detailed_report_path}")
+        print(f"âœ… Saved: {detailed_report_path}")
 
         # 13b) Validation result (compact dashboard)
         os.makedirs(f"data/{today_str}", exist_ok=True)
@@ -1155,24 +1324,27 @@ def run_invoice_validation() -> bool:
                 axis=1
             )
         dashboard_df.to_excel(dashboard_path, index=False, engine="openpyxl")
-        print(f"📊 Dashboard saved: {dashboard_path}")
+        print(f"ðŸ“Š Dashboard saved: {dashboard_path}")
 
         # 13c) Delta
         delta_path = f"data/delta_report_{today_str}.xlsx"
         dashboard_df.to_excel(delta_path, index=False, engine="openpyxl")
-        print(f"📈 Delta saved: {delta_path}")
+        print(f"ðŸ“ˆ Delta saved: {delta_path}")
 
         # Step 14: Build exact-format final sheet and append to invoice_validation_detailed
-        print("🧩 Step 14: Build exact-format final sheet…")
+        print("ðŸ§© Step 14: Build exact-format final sheetâ€¦")
         final_df = build_final_validation_report(filtered_df, detailed_df, run_dir, datetime.now())
         with pd.ExcelWriter(detailed_report_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as xw:
             final_df.to_excel(xw, sheet_name="Validation Report", index=False)
-        print(f"✅ Final sheet 'Validation Report' written into: {detailed_report_path}")
+        print(f"âœ… Final sheet 'Validation Report' written into: {detailed_report_path}")
+
+        # Add ZIP analysis to the report
+        add_zip_info_to_report(detailed_report_path, run_dir)
 
         # Step 15: Optional email (3 attachments) - ENHANCED DEBUG
-        print("📧 Step 15: Email notification...")
+        print("ðŸ“§ Step 15: Email notification...")
         debug_email_settings()
-        
+
         if SEND_EMAIL:
             try:
                 stats = email_summary.get("statistics", {})
@@ -1182,78 +1354,86 @@ def run_invoice_validation() -> bool:
                      "passed": stats.get("passed_invoices", 0)},
                     datetime.now() + timedelta(days=3)
                 )
-                
-                print("📧 Creating email notifier...")
+
+                print("ðŸ“§ Creating email notifier...")
                 notifier = EmailNotifier()
-                
+
                 attachments = [detailed_report_path, dashboard_path, delta_path]
-                print(f"📎 Email attachments: {attachments}")
-                
-                print("📤 Sending email...")
+                print(f"ðŸ“Ž Email attachments: {attachments}")
+
+                print("ðŸ“¤ Sending email...")
                 email_sent = notifier.send_validation_report(
                     f"Invoice Validation Results - {today_str}", 
                     html_body, 
                     attachments=attachments
                 )
-                
+
                 if email_sent:
-                    print("✅ Email sent successfully with 3 attachments.")
+                    print("âœ… Email sent successfully with 3 attachments.")
                 else:
-                    print("❌ Email sending failed (returned False)")
-                    
+                    print("âŒ Email sending failed (returned False)")
+
             except Exception as email_error:
-                print(f"💥 Email error: {email_error}")
+                print(f"ðŸ’¥ Email error: {email_error}")
                 logging.error(f"Email sending error: {email_error}")
         else:
-            print("✉️ Email sending skipped (SEND_EMAIL not set or disabled).")
+            print("âœ‰ï¸ Email sending skipped (SEND_EMAIL not set or disabled).")
+
+        return True
+
+    except Exception as e:
+        print(f"ðŸ’¥ Fatal error in run_invoice_validation: {e}")
+        logging.error(f"Fatal validation error: {e}", exc_info=True)
+        return False
 
 def main():
     """Main entry point that handles command line arguments"""
-    print(f"🚀 Invoice Validation Agent starting at {datetime.now()}")
-    print(f"📁 Working directory: {os.getcwd()}")
-    print(f"🐍 Python version: {sys.version}")
-    
+    print(f"ðŸš€ Invoice Validation Agent starting at {datetime.now()}")
+    print(f"ðŸ“ Working directory: {os.getcwd()}")
+    print(f"ðŸ Python version: {sys.version}")
+
     # Handle command line arguments
     if len(sys.argv) > 1:
         if sys.argv[1] == "run":
-            print("📋 Running in GitHub Actions mode")
+            print("ðŸ“‹ Running in GitHub Actions mode")
         elif sys.argv[1] == "--help" or sys.argv[1] == "-h":
             print("Usage: python main.py [run]")
             sys.exit(0)
         else:
-            print(f"⚠️ Unknown argument: {sys.argv[1]}")
-    
+            print(f"âš ï¸ Unknown argument: {sys.argv[1]}")
+
     # Check environment
     if not check_environment():
-        print("❌ Environment check failed!")
+        print("âŒ Environment check failed!")
         sys.exit(1)
-    
+
     # Test database functions (best effort)
     try:
         create_tables()
-        print("✅ Database tables created/verified")
+        print("âœ… Database tables created/verified")
     except Exception as e:
-        print(f"⚠️ Database warning: {e}")
+        print(f"âš ï¸ Database warning: {e}")
         # Continue anyway - database is optional for basic validation
-    
+
+    # Test email configuration if enabled
+    if os.getenv("SEND_EMAIL", "0") == "1":
+        email_test_passed = test_email_configuration()
+        if not email_test_passed:
+            print("âš ï¸ Email test failed, but continuing with validation...")
+
     # Run validation
     try:
         ok = run_invoice_validation()
         if ok:
-            print("🎉 Invoice validation completed successfully!")
+            print("ðŸŽ‰ Invoice validation completed successfully!")
             sys.exit(0)
         else:
-            print("❌ Invoice validation failed!")
+            print("âŒ Invoice validation failed!")
             sys.exit(1)
     except Exception as e:
-        print(f"💥 Unexpected error: {e}")
+        print(f"ðŸ’¥ Unexpected error: {e}")
         logger.error(f"Fatal error: {e}", exc_info=True)
         sys.exit(1)
-
-if os.getenv("SEND_EMAIL", "0") == "1":
-        email_test_passed = test_email_configuration()
-        if not email_test_passed:
-            print("⚠️ Email test failed, but continuing with validation...")
 
 if __name__ == "__main__":
     main()
