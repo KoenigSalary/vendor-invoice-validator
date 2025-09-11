@@ -1172,30 +1172,43 @@ def run_invoice_validation() -> bool:
             final_df.to_excel(xw, sheet_name="Validation Report", index=False)
         print(f"✅ Final sheet 'Validation Report' written into: {detailed_report_path}")
 
-        # Step 15: Optional email (3 attachments)
+        # Step 15: Optional email (3 attachments) - ENHANCED DEBUG
+        print("📧 Step 15: Email notification...")
+        debug_email_settings()
+        
         if SEND_EMAIL:
-            stats = email_summary.get("statistics", {})
-            html_body = EnhancedEmailSystem().create_professional_html_template(
-                {"failed": stats.get("failed_invoices", 0),
-                 "warnings": stats.get("warning_invoices", 0),
-                 "passed": stats.get("passed_invoices", 0)},
-                datetime.now() + timedelta(days=3)
-            )
-            notifier = EmailNotifier()
-            attachments = [detailed_report_path, dashboard_path, delta_path]
-            notifier.send_validation_report(f"Invoice Validation Results - {today_str}", html_body, attachments=attachments)
-            print("📧 Email sent with 3 attachments.")
+            try:
+                stats = email_summary.get("statistics", {})
+                html_body = EnhancedEmailSystem().create_professional_html_template(
+                    {"failed": stats.get("failed_invoices", 0),
+                     "warnings": stats.get("warning_invoices", 0),
+                     "passed": stats.get("passed_invoices", 0)},
+                    datetime.now() + timedelta(days=3)
+                )
+                
+                print("📧 Creating email notifier...")
+                notifier = EmailNotifier()
+                
+                attachments = [detailed_report_path, dashboard_path, delta_path]
+                print(f"📎 Email attachments: {attachments}")
+                
+                print("📤 Sending email...")
+                email_sent = notifier.send_validation_report(
+                    f"Invoice Validation Results - {today_str}", 
+                    html_body, 
+                    attachments=attachments
+                )
+                
+                if email_sent:
+                    print("✅ Email sent successfully with 3 attachments.")
+                else:
+                    print("❌ Email sending failed (returned False)")
+                    
+            except Exception as email_error:
+                print(f"💥 Email error: {email_error}")
+                logging.error(f"Email sending error: {email_error}")
         else:
-            print("✉️ Email sending skipped (SEND_EMAIL not set).")
-
-        # Success even if there were zero invoices
-        print("✅ Detailed cumulative validation workflow completed successfully!")
-        return True
-
-    except Exception as e:
-        logging.error(f"❌ Unexpected error: {e}")
-        logging.error(f"Traceback: {traceback.format_exc()}")
-        return False
+            print("✉️ Email sending skipped (SEND_EMAIL not set or disabled).")
 
 def main():
     """Main entry point that handles command line arguments"""
