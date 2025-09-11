@@ -119,5 +119,56 @@ def enhanced_wait_and_click(driver, by, value, timeout=60, max_retries=3):
                 time.sleep(wait_time)
             else:
                 print(f"❌ All {max_retries} attempts failed for {by}={value}")
+
+    def enhanced_rms_download_with_retry(start_date, end_date, max_retries=3):
+    """Enhanced RMS download with retry logic for large datasets"""
+    
+    for attempt in range(max_retries):
+        print(f"📥 Download attempt {attempt + 1}/{max_retries}")
+        
+        try:
+            # Call your existing RMS download
+            result = rms_download(start_date, end_date)
+            
+            # Verify download completeness
+            run_dir = os.path.dirname(result) if os.path.isfile(result) else result
+            zip_path = os.path.join(run_dir, "invoices.zip")
+            excel_path = os.path.join(run_dir, "invoice_download.xls")
+            
+            if os.path.exists(zip_path) and os.path.exists(excel_path):
+                # Read Excel to get expected count
+                df = pd.read_excel(excel_path)
+                expected_count = len(df)
                 
-    return False
+                # Check ZIP contents
+                if os.path.exists(zip_path):
+                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                        pdf_files = [f for f in zip_ref.namelist() if f.lower().endswith('.pdf')]
+                        actual_count = len(pdf_files)
+                    
+                    print(f"📊 Expected PDFs: {expected_count}, Found: {actual_count}")
+                    
+                    # Check if counts match (allow 5% variance for processing delays)
+                    if actual_count >= expected_count * 0.95:
+                        print("✅ PDF download appears complete")
+                        return result
+                    else:
+                        print(f"⚠️ Incomplete PDF download: {actual_count}/{expected_count}")
+                        if attempt < max_retries - 1:
+                            print("🔄 Waiting 30 seconds before retry...")
+                            time.sleep(30)
+                            continue
+            
+            return result
+            
+        except Exception as e:
+            print(f"❌ Download attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                print("🔄 Retrying in 30 seconds...")
+                time.sleep(30)
+            else:
+                raise e
+    
+    return result
+
+            
