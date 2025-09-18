@@ -215,6 +215,7 @@ def download_cumulative_data(start_str, end_str):
 def find_creator_column(df):
     """Find the invoice creator column name from available columns"""
     possible_creator_columns = [
+        'Inv Created by', 'InvCreatedBy', 'Inv_Created_by',  # ✅ Add RMS field
         'CreatedBy', 'Created_By', 'InvoiceCreatedBy', 'Invoice_Created_By',
         'UserName', 'User_Name', 'CreatorName', 'Creator_Name',
         'EntryBy', 'Entry_By', 'InputBy', 'Input_By',
@@ -224,7 +225,7 @@ def find_creator_column(df):
     # Check exact matches first
     for col in possible_creator_columns:
         if col in df.columns:
-            print(f"âœ… Found creator column: {col}")
+            print(f"✅ Found creator column: {col}")
             return col
     
     # Check case-insensitive matches
@@ -232,28 +233,39 @@ def find_creator_column(df):
     for col in possible_creator_columns:
         if col.lower() in df_columns_lower:
             found_col = df_columns_lower[col.lower()]
-            print(f"âœ… Found creator column (case-insensitive): {found_col}")
+            print(f"✅ Found creator column (case-insensitive): {found_col}")
             return found_col
     
     # Check partial matches
     for df_col in df.columns:
-        if any(word in df_col.lower() for word in ['create', 'by', 'user', 'entry', 'made', 'prepared']):
-            print(f"âš ï¸ Potential creator column found: {df_col}")
+        if any(word in df_col.lower() for word in ['created', 'by', 'user', 'entry', 'made', 'prepared', 'inv']):
+            print(f"⚠️ Potential creator column found: {df_col}")
             return df_col
     
-    print("âš ï¸ No creator column found, will use 'Unknown'")
+    print("⚠️ No creator column found, will use 'Unknown'")
     return None
 
 def validate_invoices_with_details(df):
     """Run detailed validation that returns per-invoice validation results"""
-    print("ðŸ” Running detailed invoice-level validation...")
+    print("🔍 Running detailed invoice-level validation...")
+
+    # Print available columns for debugging
+        print(f"📋 Available columns: {list(df.columns)}")
+        print(f"🔍 Column mapping:")
+        print(f"   👤 Creator: {creator_column}")
+        print(f"   💳 Payment Method: {payment_method_column}")
+        print(f"   📅 Due Date: {due_date_column}")
+        print(f"   📝 Remarks: {remarks_column}")
     
     try:
         # Run the existing validation to get summary issues
         summary_issues, problematic_invoices_df = validate_invoices(df)
-        
-        # Find the creator column
+    
+        # Find all the required columns
         creator_column = find_creator_column(df)
+        payment_method_column = find_payment_method_column(df)
+        due_date_column = find_due_date_column(df)
+        remarks_column = find_remarks_column(df)
         
         # Now run detailed validation for each invoice
         detailed_results = []
@@ -266,6 +278,7 @@ def validate_invoices_with_details(df):
             invoice_date = row.get('PurchaseInvDate', 'N/A')
             vendor = row.get('PartyName', row.get('VendorName', 'N/A'))
             amount = row.get('Total', row.get('Amount', 0))
+            state = row.get('State', 'N/A')
             
             # Get Invoice Creator Name
             if creator_column:
@@ -274,12 +287,38 @@ def validate_invoices_with_details(df):
                     creator_name = 'Unknown'
             else:
                 creator_name = 'Unknown'
+
+            # Get Payment Method
+            if payment_method_column:
+                payment_method = str(row.get(payment_method_column, 'Unknown')).strip()
+                if not payment_method or payment_method.lower() in ['', 'nan', 'none', 'null']:
+                    payment_method = 'Unknown'
+            else:
+                payment_method = 'Unknown'
+            
+            # Get Due Date
+            if due_date_column:
+                due_date = row.get(due_date_column, 'N/A')
+            else:
+                due_date = 'N/A'
+            
+            # Get Remarks
+            if remarks_column:
+                remarks = str(row.get(remarks_column, '')).strip()
+                if not remarks or remarks.lower() in ['nan', 'none', 'null']:
+                    remarks = ''
+            else:
+                remarks = ''
+                
+            # Generate Location (you may need to define this based on your business logic)
+            location = f"{state} - India" if state and state != 'N/A' else 'Unknown Location'
+            
+            # Validate GST application
+            gst_validation = validate_gst_application(row)
             
             validation_issues = []
-            severity = "âœ… PASS"  # Default to pass
-            
-            # Check individual validation rules
-            
+            severity = "✅ PASS"  # Default to pass
+         
             # 1. Missing GSTNO
             if pd.isna(row.get('GSTNO')) or str(row.get('GSTNO')).strip() == '':
                 validation_issues.append("Missing GST Number")
@@ -325,8 +364,26 @@ def validate_invoices_with_details(df):
                 validation_issues.append("Missing Invoice Creator Name")
                 if severity == "âœ… PASS":
                     severity = "âš ï¸ WARNING"
+
+            # 8. Missing Payment Method (NEW)
+            if payment_method == 'Unknown' or not payment_method:
+                validation_issues.append("Missing Payment Method")
+                if severity == "✅ PASS":
+                    severity = "⚠️ WARNING"
             
-            # 8. Check for duplicate invoice numbers
+            # 9. Missing Due Date (NEW)
+            if due_date == 'N/A' or pd.isna(due_date):
+                validation_issues.append("Missing Due Date")
+                if severity == "✅ PASS":
+                    severity = "⚠️ WARNING"
+            
+            # 10. GST Validation (NEW)
+            if "⚠️" in gst_validation or "Error" in gst_validation:
+                validation_issues.append(f"GST Issue: {gst_validation}")
+                if severity == "✅ PASS":
+                    severity = "⚠️ WARNING"
+            
+            # 11. Check for duplicate invoice numbers
             if not pd.isna(invoice_number) and str(invoice_number).strip() != '':
                 duplicate_count = df[df['PurchaseInvNo'] == invoice_number].shape[0]
                 if duplicate_count > 1:
@@ -334,7 +391,7 @@ def validate_invoices_with_details(df):
                     if severity == "âœ… PASS":
                         severity = "âš ï¸ WARNING"
             
-            # 9. Date format validation
+            # 12. Date format validation
             try:
                 if not pd.isna(invoice_date):
                     pd.to_datetime(invoice_date)
@@ -342,7 +399,7 @@ def validate_invoices_with_details(df):
                 validation_issues.append("Invalid Date Format")
                 severity = "âŒ FAIL"
             
-            # 10. Future date validation
+            # 13. Future date validation
             try:
                 if not pd.isna(invoice_date):
                     inv_date = pd.to_datetime(invoice_date)
@@ -353,7 +410,7 @@ def validate_invoices_with_details(df):
             except:
                 pass
             
-            # 11. Very old date validation (more than 2 years)
+            # 14. Very old date validation (more than 2 years)
             try:
                 if not pd.isna(invoice_date):
                     inv_date = pd.to_datetime(invoice_date)
@@ -405,7 +462,7 @@ def validate_invoices_with_details(df):
         return detailed_df, summary_issues, problematic_invoices_df
         
     except Exception as e:
-        print(f"âŒ Detailed validation failed: {str(e)}")
+        print(f"❌ Detailed validation failed: {str(e)}")
         import traceback
         traceback.print_exc()
         return pd.DataFrame(), [], pd.DataFrame()
@@ -684,6 +741,105 @@ def generate_detailed_validation_report(detailed_df, today_str):
         print(f"âŒ Detailed report generation failed: {str(e)}")
         return []
 
+def find_payment_method_column(df):
+    """Find the Method of Payment column"""
+    possible_mop_columns = [
+        'MOP', 'Method of Payment', 'MethodOfPayment', 'Method_of_Payment',
+        'PaymentMethod', 'Payment_Method', 'PayMode', 'Pay_Mode',
+        'Payment_Mode', 'PaymentType', 'Payment_Type'
+    ]
+    
+    for col in possible_mop_columns:
+        if col in df.columns:
+            print(f"✅ Found payment method column: {col}")
+            return col
+    
+    # Case-insensitive check
+    df_columns_lower = {col.lower(): col for col in df.columns}
+    for col in possible_mop_columns:
+        if col.lower() in df_columns_lower:
+            found_col = df_columns_lower[col.lower()]
+            print(f"✅ Found payment method column (case-insensitive): {found_col}")
+            return found_col
+    
+    print("⚠️ No payment method column found")
+    return None
+
+def find_due_date_column(df):
+    """Find the Due Date column"""
+    possible_due_columns = [
+        'Due Date', 'DueDate', 'Due_Date', 'PaymentDue', 'Payment_Due',
+        'ExpiryDate', 'Expiry_Date', 'MaturityDate', 'Maturity_Date'
+    ]
+    
+    for col in possible_due_columns:
+        if col in df.columns:
+            print(f"✅ Found due date column: {col}")
+            return col
+    
+    print("⚠️ No due date column found")
+    return None
+
+def find_remarks_column(df):
+    """Find the Remarks column"""
+    possible_remarks_columns = [
+        'Remarks', 'Remark', 'Notes', 'Note', 'Comments', 'Comment',
+        'Description', 'Desc', 'Narration', 'Narrative'
+    ]
+    
+    for col in possible_remarks_columns:
+        if col in df.columns:
+            print(f"✅ Found remarks column: {col}")
+            return col
+    
+    print("⚠️ No remarks column found")
+    return None
+
+def extract_state_from_gstin(gstin):
+    """Extract state code from GSTIN"""
+    if pd.isna(gstin) or not gstin or len(str(gstin)) < 2:
+        return None
+    
+    gstin_str = str(gstin).strip()
+    if len(gstin_str) >= 2:
+        return gstin_str[:2]  # First 2 characters are state code
+    return None
+
+def validate_gst_application(row):
+    """Validate if correct GST (CGST/SGST vs IGST) is applied"""
+    try:
+        gstin = row.get('GSTNO', '')
+        state_code = extract_state_from_gstin(gstin)
+        
+        if not state_code:
+            return "Unknown State - Cannot validate GST"
+        
+        # Get GST amounts
+        cgst_amt = float(row.get('CGSTInputAmt', 0) or 0)
+        sgst_amt = float(row.get('SGSTInputAmt', 0) or 0)
+        igst_amt = float(row.get('IGST/VATInputAmt', 0) or 0)
+        
+        # Check if any GST is applied
+        total_gst = cgst_amt + sgst_amt + igst_amt
+        if total_gst == 0:
+            return "No GST Applied"
+        
+        # For intra-state transactions (same state), should use CGST+SGST
+        # For inter-state transactions (different states), should use IGST
+        # Note: This is simplified - in real scenario, you'd need to know the company's state
+        
+        if cgst_amt > 0 and sgst_amt > 0 and igst_amt == 0:
+            return f"CGST+SGST Applied (State: {state_code})"
+        elif igst_amt > 0 and cgst_amt == 0 and sgst_amt == 0:
+            return f"IGST Applied (State: {state_code})"
+        elif cgst_amt > 0 and igst_amt > 0:
+            return f"⚠️ Both CGST and IGST Applied (State: {state_code})"
+        else:
+            return f"⚠️ Unusual GST Pattern (State: {state_code})"
+            
+    except Exception as e:
+        return f"GST Validation Error: {str(e)}"
+
 def read_invoice_file(invoice_file):
     """
     Robust file reading with multiple format support and proper error handling
@@ -797,6 +953,30 @@ def read_invoice_file(invoice_file):
         raise Exception(f"Could not read invoice file in any supported format. Last error: {str(last_error)}")
     else:
         raise Exception("Could not read invoice file - unknown format or corrupted file")
+
+def debug_available_columns(df):
+    """Debug function to show all available columns"""
+    print(f"\n🔍 DEBUGGING AVAILABLE COLUMNS:")
+    print(f"📊 Total columns: {len(df.columns)}")
+    
+    for i, col in enumerate(df.columns, 1):
+        sample_value = df[col].dropna().iloc[0] if not df[col].dropna().empty else "No data"
+        print(f"   {i:2d}. {col} = {sample_value}")
+    
+    # Look for creator-related columns
+    creator_cols = [col for col in df.columns if 'creat' in col.lower() or 'by' in col.lower()]
+    if creator_cols:
+        print(f"\n👤 Creator-related columns found: {creator_cols}")
+    
+    # Look for payment-related columns  
+    payment_cols = [col for col in df.columns if 'mop' in col.lower() or 'pay' in col.lower()]
+    if payment_cols:
+        print(f"💳 Payment-related columns found: {payment_cols}")
+    
+    print("\n")
+
+# Add this call right after reading the invoice file:
+debug_available_columns(df)
         
 def validate_downloaded_files(download_dir): 
     """Validate that downloaded files exist and are not corrupted"""
@@ -935,6 +1115,22 @@ def run_invoice_validation():
         except Exception as e:
             print(f"âŒ Failed to read invoice file: {str(e)}")
             return False
+
+        # Step 7.5: Extract additional data from ZIP file
+        print("📦 Step 7.5: Extracting additional data from ZIP file...")
+        zip_file = os.path.join(download_dir, "invoices.zip")
+        if os.path.exists(zip_file):
+            try:
+                additional_data = extract_data_from_zip(zip_file, invoice_file)
+                print(f"✅ Additional data extracted: {len(additional_data)} files processed")
+        
+                # Merge additional data if found
+                if additional_data:
+                    # Logic to merge the additional columns into your main DataFrame
+                    # This is where you'd map the missing fields
+                    pass
+            except Exception as e:
+                print(f"⚠️ ZIP extraction failed: {str(e)}")
         
         # Step 8: Filter to cumulative validation range
         print("ðŸ”„ Step 8: Filtering to cumulative validation range...")
@@ -1288,6 +1484,61 @@ def run_invoice_validation():
         import traceback
         traceback.print_exc()
         return False
+
+def extract_data_from_zip(zip_path, excel_path):
+    """Extract additional data from ZIP file that might be missing from Excel"""
+    print(f"📦 Extracting additional data from ZIP: {zip_path}")
+    
+    try:
+        import zipfile
+        import tempfile
+        import os
+        
+        additional_data = {}
+        
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            # List all files in ZIP
+            file_list = zip_ref.namelist()
+            print(f"📁 Files in ZIP: {file_list}")
+            
+            # Extract to temporary directory
+            with tempfile.TemporaryDirectory() as temp_dir:
+                zip_ref.extractall(temp_dir)
+                
+                # Look for additional data files
+                for filename in file_list:
+                    if filename.endswith(('.csv', '.xlsx', '.xls', '.txt')):
+                        file_path = os.path.join(temp_dir, filename)
+                        print(f"📄 Processing: {filename}")
+                        
+                        try:
+                            if filename.endswith('.csv'):
+                                temp_df = pd.read_csv(file_path)
+                            elif filename.endswith(('.xlsx', '.xls')):
+                                temp_df = pd.read_excel(file_path)
+                            else:
+                                continue
+                                
+                            # Look for missing columns
+                            missing_columns = ['Inv Created by', 'MOP', 'Due Date', 'Remarks']
+                            found_columns = {}
+                            
+                            for col in missing_columns:
+                                if col in temp_df.columns:
+                                    found_columns[col] = temp_df[col].to_dict()
+                                    print(f"✅ Found missing column '{col}' in {filename}")
+                            
+                            if found_columns:
+                                additional_data[filename] = found_columns
+                                
+                        except Exception as e:
+                            print(f"⚠️ Error reading {filename}: {str(e)}")
+        
+        return additional_data
+        
+    except Exception as e:
+        print(f"⚠️ ZIP extraction failed: {str(e)}")
+        return {}
             
 # Run the validation if called directly
 if __name__ == "__main__":
