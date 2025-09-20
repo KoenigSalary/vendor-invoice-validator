@@ -250,12 +250,12 @@ def validate_invoices_with_details(df):
     print("🔍 Running detailed invoice-level validation...")
 
     # Print available columns for debugging
-        print(f"📋 Available columns: {list(df.columns)}")
-        print(f"🔍 Column mapping:")
-        print(f"   👤 Creator: {creator_column}")
-        print(f"   💳 Payment Method: {payment_method_column}")
-        print(f"   📅 Due Date: {due_date_column}")
-        print(f"   📝 Remarks: {remarks_column}")
+    print(f"📋 Available columns: {list(df.columns)}")
+    print(f"🔍 Column mapping:")
+    print(f"   👤 Creator: {creator_column}")
+    print(f"   💳 Payment Method: {payment_method_column}")
+    print(f"   📅 Due Date: {due_date_column}")
+    print(f"   📝 Remarks: {remarks_column}")
     
     try:
         # Run the existing validation to get summary issues
