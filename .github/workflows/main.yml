@@ -43,6 +43,12 @@ jobs:
         python -c "import selenium; print('Selenium:', selenium.__version__)"
         python -c "from webdriver_manager.chrome import ChromeDriverManager; print('WebDriver Manager: OK')"
         
+    # Step to auto-format code to fix indentation issues
+    - name: Auto-format Python code
+      run: |
+        pip install autopep8
+        autopep8 --in-place --aggressive --aggressive .
+        
     - name: Run invoice validation
       run: |
         python3 main.py run
