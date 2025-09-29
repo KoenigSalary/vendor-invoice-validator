@@ -16,6 +16,7 @@ from invoice_tracker import (
 import pandas as pd
 import os
 import shutil
+import sys 
 import configparser
 import argparse
 from pathlib import Path
@@ -1555,7 +1556,7 @@ def main():
         FORCE_RUN = True
     
     success = run_invoice_validation()
-    exit(0 if success else 1)
+    sys.exit(0 if success else 1)
 
 if __name__ == "__main__":
     main()
@@ -1577,16 +1578,15 @@ def safe_run_validation():
         return False
 
 # Run the validation if called directly
-if __name__ == "__main__":
-    import sys  # ← Add this line if missing
+if __name__ == "__main__": 
     success = run_invoice_validation()
     if not success:
         print("❌ Detailed cumulative validation failed!")
-        sys.exit(1)  # ← Change from exit(1)
+        sys.exit(1)
     else:   
         print("🎉 Detailed cumulative validation completed successfully!")
-        sys.exit(0)  # ← Change from exit(0)
-          
+        sys.exit(0)
+        
 class Config:
     def __init__(self):
         self.config = configparser.ConfigParser()
