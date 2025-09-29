@@ -983,7 +983,7 @@ def read_invoice_file(invoice_file):
     print("\n")
 
 # Add this call right after reading the invoice file:
-debug_available_columns(df)
+# debug_available_columns(df)
         
 def validate_downloaded_files(download_dir): 
     """Validate that downloaded files exist and are not corrupted"""
@@ -1480,8 +1480,6 @@ def run_invoice_validation():
         
         print(f"   â° Next run in: {VALIDATION_INTERVAL_DAYS} days")
         print(f"   ðŸ—‚ï¸ Archive threshold: {ACTIVE_VALIDATION_MONTHS} months")
-        
-        return True
                 
     except Exception as e:
         print(f"âŒ Unexpected error in detailed cumulative validation workflow: {str(e)}")
