@@ -16,7 +16,10 @@ from invoice_tracker import (
 import pandas as pd
 import os
 import shutil
+import configparser
+import argparse
 from pathlib import Path
+from functools import lru_cache
 from enhanced_processor_basic import enhance_validation_results
 
 # Load environment variables
@@ -33,7 +36,6 @@ ARCHIVE_FOLDER = "archived_data"  # Folder for data older than 3 months
 
 def should_run_today():
     """Check if validation should run today based on 4-day interval"""
-    return True  # â† ADD THIS LINE TO FORCE RUN
     
     try:
         last_run = get_last_run_date()
@@ -251,26 +253,32 @@ def validate_invoices_with_details(df):
 
     # Print available columns for debugging
     print(f"📋 Available columns: {list(df.columns)}")
-    print(f"🔍 Column mapping:")
-    print(f"   👤 Creator: {creator_column}")
-    print(f"   💳 Payment Method: {payment_method_column}")
-    print(f"   📅 Due Date: {due_date_column}")
-    print(f"   📝 Remarks: {remarks_column}")
+    
+    # Find all the required columns FIRST
+    creator_column = find_creator_column(df)
+    payment_method_column = find_payment_method_column(df)
+    due_date_column = find_due_date_column(df)
+    remarks_column = find_remarks_column(df)
+        
+@lru_cache(maxsize=1)
+def get_column_mappings(df_columns_tuple):
+    """Cache column mappings to avoid repeated searches"""
+    df_columns = list(df_columns_tuple)
+    return {
+        'creator': find_creator_column_cached(df_columns),
+        'payment_method': find_payment_method_column_cached(df_columns),
+        'due_date': find_due_date_column_cached(df_columns),
+        'remarks': find_remarks_column_cached(df_columns)
+    }
     
     try:
         # Run the existing validation to get summary issues
         summary_issues, problematic_invoices_df = validate_invoices(df)
-    
-        # Find all the required columns
-        creator_column = find_creator_column(df)
-        payment_method_column = find_payment_method_column(df)
-        due_date_column = find_due_date_column(df)
-        remarks_column = find_remarks_column(df)
         
         # Now run detailed validation for each invoice
         detailed_results = []
         
-        print(f"ðŸ“‹ Analyzing {len(df)} invoices for detailed validation...")
+        print(f"📋“‹ Analyzing {len(df)} invoices for detailed validation...")
         
         for index, row in df.iterrows():
             invoice_id = row.get('InvID', f'Row_{index}')
@@ -954,7 +962,6 @@ def read_invoice_file(invoice_file):
     else:
         raise Exception("Could not read invoice file - unknown format or corrupted file")
 
-def debug_available_columns(df):
     """Debug function to show all available columns"""
     print(f"\n🔍 DEBUGGING AVAILABLE COLUMNS:")
     print(f"📊 Total columns: {len(df.columns)}")
@@ -1308,10 +1315,7 @@ def run_invoice_validation():
             print(f"âŒ Failed to save detailed reports: {str(e)}")
             return False
 
-        enhancement_result = enhance_validation_results(detailed_df, email_summary)
-        if enhancement_result['success']: enhanced_df = enhancement_result['enhanced_df']
-
-        print("ðŸš€ Step 16: Applying enhanced features...")
+        print("🚀 Step 16: Applying enhanced features...")
         try:
     
             # Enhance the existing results
@@ -1539,13 +1543,59 @@ def extract_data_from_zip(zip_path, excel_path):
     except Exception as e:
         print(f"⚠️ ZIP extraction failed: {str(e)}")
         return {}
-            
-# Run the validation if called directly
-if __name__ == "__main__":
+
+def main():
+    parser = argparse.ArgumentParser(description='Invoice Validation System')
+    parser.add_argument('--force', action='store_true', help='Force run validation')
+    parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    parser.add_argument('--date-range', nargs=2, help='Custom date range (start end)')
+    
+    args = parser.parse_args()
+    
+    if args.force:
+        global FORCE_RUN
+        FORCE_RUN = True
+    
     success = run_invoice_validation()
-    if not success:
-        print("âŒ Detailed cumulative validation failed!")
-        exit(1)
-    else:   
-        print("ðŸŽ‰ Detailed cumulative validation completed successfully!")
-        exit(0)
+    exit(0 if success else 1)
+
+if __name__ == "__main__":
+    main()
+        
+def safe_run_validation():
+    """Wrapper with comprehensive error handling"""
+    try:
+        return run_invoice_validation()
+    except FileNotFoundError as e:
+        print(f"❌ File not found: {str(e)}")
+        return False
+    except pd.errors.EmptyDataError as e:
+        print(f"❌ Empty data error: {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ Unexpected error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+if __name__ == "__main__":
+    success = safe_run_validation()
+    exit(0 if success else 1)
+          
+class Config:
+    def __init__(self):
+        self.config = configparser.ConfigParser()
+        self.config.read('config.ini')
+        
+    @property
+    def validation_interval_days(self):
+        return self.config.getint('validation', 'interval_days', fallback=4)
+    
+    @property
+    def force_run(self):
+        return self.config.getboolean('validation', 'force_run', fallback=False)
+
+# Usage in should_run_today()
+config = Config()
+if config.force_run:
+    return True
