@@ -18,45 +18,54 @@ jobs:
       with:
         python-version: '3.9'
         
-    - name: Install Chrome
+    - name: Install Chrome (Updated Method)
       run: |
         sudo apt-get update
         sudo apt-get install -y wget gnupg
-        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+        # Updated Chrome installation method
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
         sudo apt-get update
         sudo apt-get install -y google-chrome-stable
 
-    - name: Auto-format with autopep8
-      run: |
-        pip install --upgrade pip
-        pip install autopep8
-        # Option A: recurse through folders
-        autopep8 --in-place --aggressive --aggressive --recursive .
-        # Option B (safer): only tracked Python files
-        # autopep8 --in-place --aggressive --aggressive $(git ls-files "*.py")
-        
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pandas numpy requests schedule
-        pip install openpyxl xlsxwriter python-dateutil pytz
-        pip install beautifulsoup4 lxml 
-        pip install selenium webdriver-manager
-        pip install streamlit plotly
-        pip install xlrd python-dotenv
+        # Install from requirements.txt if it exists, otherwise install individually
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        else
+          pip install pandas==2.0.3 numpy==1.24.3 requests==2.31.0 schedule==1.2.0
+          pip install openpyxl==3.1.2 xlsxwriter==3.1.7 python-dateutil==2.8.2 pytz==2023.3
+          pip install beautifulsoup4==4.12.2 lxml==4.9.3 
+          pip install selenium==4.15.0 webdriver-manager==4.0.1
+          pip install streamlit==1.28.1 plotly==5.17.0
+          pip install xlrd==2.0.1 python-dotenv==1.0.0
+        fi
+        # Install autopep8 for code formatting
+        pip install autopep8
         
-    - name: Verify Chrome installation
-      run: |
-        google-chrome --version
-        python -c "import selenium; print('Selenium:', selenium.__version__)"
-        python -c "from webdriver_manager.chrome import ChromeDriverManager; print('WebDriver Manager: OK')"
-        
-    # Step to auto-format code to fix indentation issues
     - name: Auto-format Python code
       run: |
-        pip install autopep8
-        autopep8 --in-place --aggressive --aggressive .
+        # Format all Python files recursively
+        autopep8 --in-place --aggressive --aggressive --recursive .
+        # Alternative: Only format tracked files
+        # find . -name "*.py" -type f -exec autopep8 --in-place --aggressive --aggressive {} \;
+        
+    - name: Verify installations
+      run: |
+        google-chrome --version
+        python -c "import selenium; print('Selenium version:', selenium.__version__)"
+        python -c "from webdriver_manager.chrome import ChromeDriverManager; print('WebDriver Manager: OK')"
+        python -c "import pandas as pd; print('Pandas version:', pd.__version__)"
+        
+    - name: Check if main.py exists
+      run: |
+        if [ ! -f main.py ]; then
+          echo "Error: main.py not found in repository root"
+          ls -la
+          exit 1
+        fi
         
     - name: Run invoice validation
       run: |
@@ -81,10 +90,21 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: validation-results
+        name: validation-results-${{ github.run_number }}
         path: |
           *.xlsx
           *.csv
           *.log
+          *.db
           data/
         retention-days: 30
+
+    - name: Upload logs on failure
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: failure-logs-${{ github.run_number }}
+        path: |
+          *.log
+          /tmp/*.log
+        retention-days: 7
