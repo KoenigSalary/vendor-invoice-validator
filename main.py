@@ -1576,9 +1576,16 @@ def safe_run_validation():
         traceback.print_exc()
         return False
 
+# Run the validation if called directly
 if __name__ == "__main__":
-    success = safe_run_validation()
-    exit(0 if success else 1)
+    import sys  # ← Add this line if missing
+    success = run_invoice_validation()
+    if not success:
+        print("❌ Detailed cumulative validation failed!")
+        sys.exit(1)  # ← Change from exit(1)
+    else:   
+        print("🎉 Detailed cumulative validation completed successfully!")
+        sys.exit(0)  # ← Change from exit(0)
           
 class Config:
     def __init__(self):
