@@ -1,0 +1,93 @@
+name: Force Fix Syntax Issue
+
+on:
+  workflow_dispatch:
+
+jobs:
+  force-fix:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout with force refresh
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        clean: true
+    
+    - name: Clear any Python cache
+      run: |
+        find . -name "*.pyc" -delete
+        find . -name "__pycache__" -type d -exec rm -rf {} + || true
+        
+    - name: Check actual file content
+      run: |
+        echo "=== FILE INFO ==="
+        ls -la main.py
+        wc -l main.py
+        echo "=== LAST 10 LINES ==="
+        tail -10 main.py
+        echo "=== AROUND LINE 1837 ==="
+        sed -n '1830,1840p' main.py || echo "Lines 1830-1840 do not exist"
+        
+    - name: Check for hidden characters
+      run: |
+        echo "=== CHECKING FOR HIDDEN CHARACTERS ==="
+        cat -A main.py | tail -20
+        
+    - name: Advanced syntax check
+      run: |
+        python3 -c "
+        import ast
+        import sys
+        
+        with open('main.py', 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        print(f'File size: {len(content)} chars')
+        print(f'Lines: {len(content.splitlines())}')
+        
+        try:
+            ast.parse(content)
+            print('✅ Syntax check passed')
+        except SyntaxError as e:
+            print(f'❌ Syntax error at line {e.lineno}:')
+            print(f'Error: {e.msg}')
+            print(f'Text: {repr(e.text)}')
+            
+            lines = content.splitlines()
+            if e.lineno <= len(lines):
+                context_start = max(0, e.lineno - 3)
+                context_end = min(len(lines), e.lineno + 3)
+                print(f'Context:')
+                for i in range(context_start, context_end):
+                    marker = '>>> ' if i + 1 == e.lineno else '    '
+                    line_content = repr(lines[i]) if i < len(lines) else 'EOF'
+                    print(f'{marker}{i+1:4d}: {line_content}')
+            else:
+                print(f'ERROR: Line {e.lineno} exceeds file length {len(lines)}')
+            sys.exit(1)
+        "
+
+    - name: Fix any potential issues
+      run: |
+        # Remove any trailing whitespace and fix line endings
+        sed -i 's/[[:space:]]*$//' main.py
+        
+        # Remove any orphaned return statements
+        grep -n "^return " main.py || echo "No orphaned return statements found"
+        
+        # Check if file ends properly
+        echo "=== CHECKING FILE END ==="
+        tail -5 main.py
+        
+    - name: Commit if changes made
+      run: |
+        if git diff --quiet; then
+          echo "No changes needed"
+        else
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add main.py
+          git commit -m "Fix: Clean up syntax and line endings"
+          git push
+        fi
