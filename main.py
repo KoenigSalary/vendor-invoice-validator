@@ -60,7 +60,7 @@ def require_env(keys: list[str]) -> dict:
 def action_download(salary_month_name: str | None, salary_year: int | None) -> None:
     # Ensure compatibility modules exist
     ensure_compatibility()
-    
+
     t = now_ist().date()
     if not (salary_month_name and salary_year):
         _, m_name, y = previous_month(t); salary_month_name = salary_month_name or m_name; salary_year = salary_year or y
@@ -94,23 +94,23 @@ def action_download(salary_month_name: str | None, salary_year: int | None) -> N
         if rms_bank_soa_download:
             try:
                 logging.info("Using unified rms_downloader...")
-                
+
                 # Try to call individual functions with the shared driver
                 if hasattr(rms_bank_soa_download, 'export_salary_sheet'):
                     logging.info("Downloading Salary sheet…")
                     rms_bank_soa_download.export_salary_sheet(driver, salary_month_name, int(salary_year))
-                
+
                 if hasattr(rms_bank_soa_download, 'export_tds'):
-                    logging.info("Downloading TDS…") 
+                    logging.info("Downloading TDS…")
                     rms_bank_soa_download.export_tds(driver, salary_month_name, int(salary_year))
-                
+
                 if hasattr(rms_bank_soa_download, 'export_bank_soa_for_salary_month'):
                     logging.info("Downloading Bank SOA…")
                     rms_bank_soa_download.export_bank_soa_for_salary_month(driver, salary_month_name, int(salary_year))
-                
+
                 logging.info("✅ Downloads completed via unified downloader")
                 return
-                
+
             except Exception as e:
                 logging.error(f"Unified downloader failed: {e}")
 
@@ -157,7 +157,7 @@ def action_download(salary_month_name: str | None, salary_year: int | None) -> N
                 safe_call_with_driver(bank_fn, driver, salary_month_name, int(salary_year))
             else:
                 logging.warning("No Bank SOA function found")
-                
+
     finally:
         if driver:
             try: driver.quit()
@@ -168,7 +168,7 @@ def action_download(salary_month_name: str | None, salary_year: int | None) -> N
 def action_all(month_name: str | None, year: int | None, skip_download: bool = False) -> None:
     """Run the complete workflow: download → reconcile → email"""
     logging.info(f"Starting complete workflow for {month_name or 'previous month'} {year or 'auto-detect year'}")
-    
+
     try:
         # Step 1: Download (unless skipped)
         if not skip_download:
@@ -176,19 +176,19 @@ def action_all(month_name: str | None, year: int | None, skip_download: bool = F
             action_download(month_name, year)
         else:
             logging.info("Step 1: Download skipped as requested")
-        
+
         # Step 2: Reconciliation
         logging.info("Step 2: Running reconciliation...")
         report_path = action_reconcile()
         if report_path:
             logging.info(f"✅ Reconciliation completed: {report_path}")
-        
+
         # Step 3: Email
         logging.info("Step 3: Sending email...")
         action_email()
-        
+
         logging.info("✅ Complete workflow finished successfully!")
-        
+
     except Exception as e:
         logging.error(f"❌ Workflow failed at some step: {str(e)}")
         raise e
@@ -214,7 +214,7 @@ def action_email() -> None:
 def action_download(salary_month_name: str | None, salary_year: int | None) -> None:
     # Ensure compatibility modules exist
     ensure_compatibility()
-    
+
     t = now_ist().date()
     if not (salary_month_name and salary_year):
         _, m_name, y = previous_month(t); salary_month_name = salary_month_name or m_name; salary_year = salary_year or y
@@ -225,19 +225,19 @@ def action_download(salary_month_name: str | None, salary_year: int | None) -> N
     if rms_bank_soa_download:
         try:
             logging.info("Using unified rms_bank_soa_download...")
-            
+
             # Set environment variables for the unified downloader
             os.environ['SALARY_MONTH'] = salary_month_name
             os.environ['SALARY_YEAR'] = str(salary_year)
-            
+
             # Call the main function from rms_bank_soa_download
             result = rms_bank_soa_download.main()
-            
+
             if result is None:  # main() completed successfully
                 logging.info("✅ All downloads completed via unified downloader")
             else:
                 logging.warning("⚠️ Unified downloader completed with warnings")
-                
+
         except Exception as e:
             logging.error(f"❌ Unified downloader failed: {e}")
     else:
@@ -286,7 +286,7 @@ def main(argv: list[str]) -> int:
 
 def create_missing_modules():
     """Create missing module files with compatibility functions"""
-    
+
     # Create rms_salary_download.py if it doesn't exist
     if not os.path.exists("rms_salary_download.py"):
         with open("rms_salary_download.py", "w") as f:
@@ -301,8 +301,8 @@ def export_salary(driver, month_name, year):
 
 __all__ = ['download_salary', 'export_salary', 'export_salary_sheet']
 ''')
-    
-    # Create rms_tds_download.py if it doesn't exist  
+
+    # Create rms_tds_download.py if it doesn't exist
     if not os.path.exists("rms_tds_download.py"):
         with open("rms_tds_download.py", "w") as f:
             f.write('''#!/usr/bin/env python3
@@ -324,9 +324,9 @@ def ensure_compatibility():
 
 def get_bank_soa_function():
     """Get the bank SOA function with proper parameter handling"""
-    bank_fn = resolve_func(rms_bank_soa_download, 
+    bank_fn = resolve_func(rms_bank_soa_download,
         ["download_bank_soa", "export_bank_soa_for_salary_month", "download_salary_bank_soa"])
-    
+
     if bank_fn and hasattr(bank_fn, '__code__'):
         # Create a wrapper that handles the parameter correctly
         def bank_soa_wrapper(driver_or_month, month_name=None, year=None):
@@ -337,20 +337,20 @@ def get_bank_soa_function():
                 # Called with driver (new style)
                 return bank_fn(driver_or_month, month_name, year)
         return bank_soa_wrapper
-    
+
     return bank_fn
 
 def safe_call_with_driver(func, driver, month_name, year):
     """Safely call a function with driver, handling parameter variations"""
     if not func:
         return None
-        
+
     try:
         # Check if function expects driver parameter
         if hasattr(func, '__code__'):
             param_count = func.__code__.co_argcount
             param_names = func.__code__.co_varnames[:param_count]
-            
+
             if 'driver' in param_names or param_count >= 3:
                 # Function expects driver parameter
                 return func(driver, month_name, year)
@@ -363,7 +363,7 @@ def safe_call_with_driver(func, driver, month_name, year):
                 return func(driver, month_name, year)
             except TypeError:
                 return func(month_name, year)
-                
+
     except Exception as e:
         logging.warning(f"Error calling {func.__name__}: {e}")
         return None
