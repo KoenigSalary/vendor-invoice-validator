@@ -1,0 +1,48 @@
+name: Debug Syntax Error
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Python syntax check with details
+      run: |
+        python3 -c "
+        import ast
+        import traceback
+        
+        try:
+            with open('main.py', 'r') as f:
+                content = f.read()
+            
+            print(f'File has {len(content.splitlines())} lines')
+            
+            # Try to parse
+            ast.parse(content)
+            print('✅ Syntax is valid')
+            
+        except SyntaxError as e:
+            print(f'❌ Syntax Error:')
+            print(f'  Line: {e.lineno}')
+            print(f'  Column: {e.offset}') 
+            print(f'  Error: {e.msg}')
+            print(f'  Text: {e.text}')
+            
+            # Show context around error
+            lines = content.splitlines()
+            start = max(0, e.lineno - 3)
+            end = min(len(lines), e.lineno + 2)
+            
+            print(f'\\nContext around line {e.lineno}:')
+            for i in range(start, end):
+                marker = '>>> ' if i + 1 == e.lineno else '    '
+                print(f'{marker}{i+1:4d}: {lines[i]}')
+            
+        except Exception as e:
+            print(f'❌ Other error: {e}')
+            traceback.print_exc()
+        "
