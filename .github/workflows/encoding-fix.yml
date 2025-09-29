@@ -1,0 +1,41 @@
+name: Fix Encoding Issues
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-encoding:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Fix encoding and invisible characters
+      run: |
+        # Convert to UTF-8 and remove any BOM
+        iconv -f UTF-8 -t UTF-8 main.py > main_clean.py
+        mv main_clean.py main.py
+        
+        # Remove carriage returns and fix line endings
+        sed -i 's/\r$//' main.py
+        
+        # Remove trailing whitespace
+        sed -i 's/[[:space:]]*$//' main.py
+        
+        # Ensure file ends with newline
+        echo "" >> main.py
+        
+        # Remove the extra empty line we just added if file already ended with newline
+        sed -i -e :a -e '/^\s*$/N;ba' -e 's/\n\s*$//' main.py
+        
+    - name: Verify syntax after cleaning
+      run: |
+        python3 -m py_compile main.py
+        echo "✅ Cleaned file passes syntax check"
+        
+    - name: Commit cleaned file
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add main.py
+        git diff --staged --quiet || git commit -m "Fix: Clean encoding and line endings"
+        git push
