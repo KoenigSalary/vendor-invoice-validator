@@ -2,12 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import sqlite3
 import os
 from datetime import datetime, timedelta
-import json
-from pathlib import Path
 import random
 
 # Page configuration
