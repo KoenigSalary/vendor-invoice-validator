@@ -421,21 +421,31 @@ def read_invoice_file(invoice_file):
         print(f"⚠️ CSV reading failed: {str(e)}")
         last_error = e
 
-    # Method 4: Try HTML parsing
-    try:
-        print("🌐 Attempting to read as HTML...")
-        tables = pd.read_html(invoice_file, flavor='lxml')
-        if tables and len(tables) > 0:
-            df = tables[0]  # Get first table
-            print(f"✅ Successfully read HTML file. Shape: {df.shape}")
+   try:
+    print("🌐 Attempting to read as HTML (optional)…")
+    ENABLE_HTML_PARSE = True  # set False to hard-disable if you never expect HTML
+
+    if ENABLE_HTML_PARSE:
+        try:
+            # Try with BeautifulSoup backend if bs4 is installed (no lxml needed)
+            import bs4  # noqa: F401
+            tables = pd.read_html(invoice_file)  # pandas will use bs4+html5lib if available
+        except Exception as inner_e:
+            # If bs4/html5lib not present, skip HTML parsing gracefully
+            print(f"ℹ️ Skipping HTML parsing (no bs4/html5lib or parsing error): {inner_e}")
+            tables = []
+
+        if tables:
+            df = tables[0]
+            print(f"✅ Successfully read HTML table. Shape: {df.shape}")
             print(f"📄 Columns: {list(df.columns)}")
             return df
         else:
-            print("⚠️ No tables found in HTML")
-    except Exception as e:
-        print(f"⚠️ HTML parsing failed: {str(e)}")
-        last_error = e
-
+            print("⚠️ No tables found in HTML or parser unavailable")
+            
+except Exception as e:
+    print(f"⚠️ HTML parsing outer error: {e}")
+    # do not set last_error here—HTML is optional
     # Method 5: Try reading as plain text and show sample
     try:
         print("📝 Attempting to read file content for debugging...")
