@@ -85,41 +85,34 @@ jobs:
         fi
 
     # ✅ FIXED: no stray space before p.write_text; add CRLF normalization
-    - name: Normalize main.py encoding to UTF-8
+    - name: Normalize Python files to UTF-8 & strip hidden chars
       run: |
         python - <<'PY'
-        import pathlib
-        p = pathlib.Path("main.py")
-        raw = p.read_bytes()
-
-        # detect & decode with a few common encodings
-        for enc in ("utf-8", "cp1252", "latin-1"):
-            try:
-                text = raw.decode(enc)
-                break
-            except UnicodeDecodeError:
-                continue
-        else:
-            text = raw.decode("cp1252", errors="replace")
-
-        # normalize smart punctuation and line endings
+        import pathlib, sys
         repl = {
-            "“": '"', "”": '"', "„": '"',
-            "‘": "'", "’": "'", "‚": "'",
-            "–": "-", "—": "-",
-            "…": "...",
-            "\ufeff": ""  # strip BOM
+            "\u0085": "...",   # NEXT LINE -> ellipsis or space
+            "\u201c": '"', "\u201d": '"',  # smart double quotes
+            "\u2018": "'", "\u2019": "'",  # smart single quotes
+            "\u2013": "-", "\u2014": "-",  # en/em dash
+            "\ufeff": ""                      # BOM
         }
-        for k, v in repl.items():
-            text = text.replace(k, v)
-        text = text.replace("\r\n", "\n").replace("\r", "\n")
-
-        # ensure coding cookie and save as UTF-8
-        if not text.lstrip().startswith("# -*- coding: utf-8 -*-"):
-            text = "# -*- coding: utf-8 -*-\n" + text
-
-        p.write_text(text, encoding="utf-8")
-        print("Rewrote main.py as UTF-8")
+        for p in pathlib.Path(".").rglob("*.py"):
+            raw = p.read_bytes()
+            # try decodes
+            for enc in ("utf-8", "cp1252", "latin-1"):
+                try:
+                    text = raw.decode(enc)
+                    break
+                 except UnicodeDecodeError:
+                    continue
+            else:
+                text = raw.decode("cp1252", errors="replace")
+            for k, v in repl.items():
+                text = text.replace(k, v)
+            if not text.lstrip().startswith("# -*- coding: utf-8 -*-"):
+                text = "# -*- coding: utf-8 -*-\n" + text
+            p.write_text(text, encoding="utf-8")
+            print(f"Normalized: {p}")
         PY
 
     - name: Syntax check
