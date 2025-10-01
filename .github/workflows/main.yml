@@ -60,6 +60,11 @@ jobs:
           exit 1
         fi
 
+    - name: Clean smart quotes and hidden chars
+      run: |
+        perl -pi -e 's/\x{85}/.../g' main.py
+        perl -pi -e 's/[“”]/"/g; s/[‘’]/'\''/g; s/[–—]/-/g; s/…/.../g' main.py
+
     - name: Auto-format Python code
       run: |
         autopep8 --in-place --aggressive --aggressive --recursive .
