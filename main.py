@@ -421,32 +421,33 @@ def read_invoice_file(invoice_file):
         print(f"⚠️ CSV reading failed: {str(e)}")
         last_error = e
 
-   try:
-    print("🌐 Attempting to read as HTML (optional)…")
-    ENABLE_HTML_PARSE = True  # set False to hard-disable if you never expect HTML
+       # Method 4: Try reading as HTML
+    try:
+        print("🌐 Attempting to read as HTML (optional)…")
+        ENABLE_HTML_PARSE = True  # set False to hard-disable if you never expect HTML
 
-    if ENABLE_HTML_PARSE:
-        try:
-            # Try with BeautifulSoup backend if bs4 is installed (no lxml needed)
-            import bs4  # noqa: F401
-            tables = pd.read_html(invoice_file)  # pandas will use bs4+html5lib if available
-        except Exception as inner_e:
-            # If bs4/html5lib not present, skip HTML parsing gracefully
-            print(f"ℹ️ Skipping HTML parsing (no bs4/html5lib or parsing error): {inner_e}")
-            tables = []
+        if ENABLE_HTML_PARSE:
+            try:
+                # Try with BeautifulSoup backend if bs4 is installed (no lxml needed)
+                import bs4  # noqa: F401
+                tables = pd.read_html(invoice_file)  # pandas will use bs4+html5lib if available
+            except Exception as inner_e:
+                # If bs4/html5lib not present, skip HTML parsing gracefully
+                print(f"ℹ️ Skipping HTML parsing (no bs4/html5lib or parsing error): {inner_e}")
+                tables = []
 
-        if tables:
-            df = tables[0]
-            print(f"✅ Successfully read HTML table. Shape: {df.shape}")
-            print(f"📄 Columns: {list(df.columns)}")
-            return df
-        else:
-            print("⚠️ No tables found in HTML or parser unavailable")
-            
-except Exception as e:
-    print(f"⚠️ HTML parsing outer error: {e}")
-    # do not set last_error here—HTML is optional
-    # Method 5: Try reading as plain text and show sample
+            if tables:
+                df = tables[0]
+                print(f"✅ Successfully read HTML table. Shape: {df.shape}")
+                print(f"📄 Columns: {list(df.columns)}")
+                return df
+            else:
+                print("⚠️ No tables found in HTML or parser unavailable")
+
+    except Exception as e:
+        print(f"⚠️ HTML parsing outer error: {e}")
+        # do not set last_error here—HTML is optional
+
     try:
         print("📝 Attempting to read file content for debugging...")
         with open(invoice_file, 'r', encoding='utf-8', errors='ignore') as f:
