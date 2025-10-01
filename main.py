@@ -342,145 +342,173 @@ def validate_gst_application(row):
     except Exception as e:
         return f"GST Validation Error: {str(e)}"
 
-def read_invoice_file(invoice_file):
+# --- Resolve the invoice file path BEFORE reading ---
+from glob import glob
+
+def find_invoice_file():
     """
-    Robust file reading with multiple format support and proper error handling
+    Locate the invoice file with robust fallbacks:
+    1) $INVOICE_FILE env override
+    2) ./data/<today>/invoice_download.xls
+    3) Latest .xls/.xlsx in ./data/<today> or ./data
+    4) Any invoice-like file pattern in repo
     """
-    print(f"🔍 Attempting to read file: {invoice_file}")
+    # 1) explicit override
+    env_override = os.getenv("INVOICE_FILE")
+    if env_override and os.path.exists(env_override):
+        return env_override
 
-    # Ensure parent folder exists (defensive on hosted runners)
-    parent = os.path.dirname(os.path.abspath(invoice_file))
-    if parent and not os.path.exists(parent):
-        os.makedirs(parent, exist_ok=True)
+    # 2) default location for today's run
+    today_str = datetime.today().strftime("%Y-%m-%d")
+    default_dir = os.path.join("data", today_str)
+    candidate = os.path.join(default_dir, "invoice_download.xls")
+    if os.path.exists(candidate):
+        return candidate
 
-    # Check if file exists
-    if not os.path.exists(invoice_file):
-        raise FileNotFoundError(f"Invoice file not found: {invoice_file}")
+    # 3) latest xls/xlsx in today's dir, then in ./data
+    for search_dir in [default_dir, "data", "."]:
+        patterns = [
+            os.path.join(search_dir, "*.xls"),
+            os.path.join(search_dir, "*.xlsx"),
+        ]
+        files = []
+        for p in patterns:
+            files.extend(glob(p))
+        if files:
+            files.sort(key=os.path.getmtime, reverse=True)
+            return files[0]
 
-    # Get file info
-    file_path = Path(invoice_file)
-    file_ext = file_path.suffix.lower()
-    file_size = os.path.getsize(invoice_file)
-    print(f"🗂 File: {file_path.name}, Extension: {file_ext}, Size: {file_size} bytes")
+    # 4) last resort: any invoice-like file
+    patterns = ["*invoice*.xls", "*invoice*.xlsx", "*download*.xls", "*download*.xlsx"]
+    files = []
+    for p in patterns:
+        files.extend(glob(p))
+    if files:
+        files.sort(key=os.path.getmtime, reverse=True)
+        return files[0]
 
-    # Check if file is too small (likely corrupted or empty)
-    if file_size < 50:
-        raise ValueError(f"File appears to be too small ({file_size} bytes) - likely corrupted or empty")
+    return None
 
-    # Read file header to detect actual format
-    try:
-        with open(invoice_file, 'rb') as f:
-            header = f.read(50)
-        print(f"🔍 File header (first 20 bytes): {header[:20]}")
-    except Exception as e:
-        print(f"⚠️ Could not read file header: {e}")
+# Resolve path
+invoice_file = find_invoice_file()
+if not invoice_file:
+    raise FileNotFoundError(
+        "Could not find an invoice Excel. "
+        "Set INVOICE_FILE=/path/to/file.xlsx or ensure data/<YYYY-MM-DD>/invoice_download.xls exists."
+    )
 
-    df = None
-    last_error = None
+print(f"📥 Using invoice file: {invoice_file}")
 
-    # Method 1: Try Excel with openpyxl engine (most reliable for .xlsx)
-    try:
-        print("📊 Attempting to read as Excel with openpyxl engine...")
-        df = pd.read_excel(invoice_file, engine='openpyxl')
-        print(f"✅ Successfully read Excel file with openpyxl. Shape: {df.shape}")
-        print(f"📄 Columns: {list(df.columns)}")
-        return df
-    except Exception as e:
-        print(f"⚠️ openpyxl engine failed: {str(e)}")
-        last_error = e
+# Ensure parent directory exists (for hosted runners that don’t pre-create folders)
+download_dir = os.path.dirname(os.path.abspath(invoice_file))
+os.makedirs(download_dir, exist_ok=True)
 
-    # Method 2: Try Excel with xlrd engine (for older .xls files)
-    if file_ext == '.xls':
-        try:
-            print("📊 Attempting to read as Excel with xlrd engine...")
-            df = pd.read_excel(invoice_file, engine='xlrd')
-            print(f"✅ Successfully read Excel file with xlrd. Shape: {df.shape}")
-            print(f"📄 Columns: {list(df.columns)}")
-            return df
-        except Exception as e:
-            print(f"⚠️ xlrd engine failed: {str(e)}")
-            last_error = e
-
-    # Method 3: Try reading as CSV with different separators
-    try:
-        print("📄 Attempting to read as CSV...")
-        # Try common separators
-        separators = [',', ';', '\t', '|']
-        for sep in separators:
-            try:
-                df_test = pd.read_csv(invoice_file, sep=sep, nrows=5)
-                if df_test.shape[1] > 1:  # Multiple columns detected
-                    df = pd.read_csv(invoice_file, sep=sep)
-                    print(f"✅ Successfully read as CSV with separator '{sep}'. Shape: {df.shape}")
-                    print(f"📄 Columns: {list(df.columns)}")
-                    return df
-            except Exception:
-                continue
-        print("⚠️ CSV reading failed with all separators")
-    except Exception as e:
-        print(f"⚠️ CSV reading failed: {str(e)}")
-        last_error = e
-
-       # Method 4: Try reading as HTML
-    try:
-        print("🌐 Attempting to read as HTML (optional)…")
-        ENABLE_HTML_PARSE = True  # set False to hard-disable if you never expect HTML
-
-        if ENABLE_HTML_PARSE:
-            try:
-                # Try with BeautifulSoup backend if bs4 is installed (no lxml needed)
-                import bs4  # noqa: F401
-                tables = pd.read_html(invoice_file)  # pandas will use bs4+html5lib if available
-            except Exception as inner_e:
-                # If bs4/html5lib not present, skip HTML parsing gracefully
-                print(f"ℹ️ Skipping HTML parsing (no bs4/html5lib or parsing error): {inner_e}")
-                tables = []
-
-            if tables:
-                df = tables[0]
-                print(f"✅ Successfully read HTML table. Shape: {df.shape}")
-                print(f"📄 Columns: {list(df.columns)}")
-                return df
-            else:
-                print("⚠️ No tables found in HTML or parser unavailable")
-
-    except Exception as e:
-        print(f"⚠️ HTML parsing outer error: {e}")
-        # do not set last_error here—HTML is optional
-
-    try:
-        print("📝 Attempting to read file content for debugging...")
-        with open(invoice_file, 'r', encoding='utf-8', errors='ignore') as f:
-            content_sample = f.read(500)  # Read first 500 characters
-        print(f"🗂 File content sample:\n{repr(content_sample)}")
-
-        # Try to detect if it's actually a different format
-        if content_sample.strip().startswith('<!DOCTYPE') or content_sample.strip().startswith('<html'):
-            print("🔍 File appears to be HTML format")
-        elif content_sample.strip().startswith('{') or content_sample.strip().startswith('['):
-            print("🔍 File appears to be JSON format")
-        elif ',' in content_sample and '\n' in content_sample:
-            print("🔍 File appears to be CSV-like format")
-
-    except Exception as e:
-        print(f"⚠️ Could not read file content: {e}")
-
-    # If all methods failed, raise the most relevant error
-    if last_error:
-        raise Exception(f"Could not read invoice file in any supported format. Last error: {str(last_error)}")
-    else:
-        raise Exception("Could not read invoice file - unknown format or corrupted file")
-
+# --- Read and normalize ---
 df_raw = read_invoice_file(invoice_file)
+
+# Normalize to your canonical column names (maps from your screenshot)
+# NOTE: requires you to have implemented `normalize_columns(df)` to use this mapping.
+COLUMN_MAP = {
+    # Canonical → source
+    "Invoice_Creator_Name": ["Inv Created By", "InvCreatedBy", "CreatedBy", "Created_By"],
+    "MOP": ["MOP", "Method of Payment", "MethodOfPayment", "PaymentMethod", "Payment_Mode", "PayMode", "Pay_Mode"],
+    "Due_Date": ["DueDate", "Due Date", "PaymentDue", "ExpiryDate", "MaturityDate"],
+    "Location": ["Location"],
+    "SCID": ["SCID#", "SCID"],
+    "Invoice_Currency": ["Inv Currency", "Currency", "Invoice Currency"],
+    "Invoice_Number": ["Invoice#", "PurchaseInvNo", "InvoiceNumber"],
+    "Invoice_Date": ["Inv Date", "PurchaseInvDate", "InvoiceDate"],
+    "Amount": ["Invoice Amount", "Total", "Amount"],
+}
+
+def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    df_norm = df.copy()
+    # Build a lowercase lookup for case-insensitive matching
+    lower_map = {c.lower(): c for c in df_norm.columns}
+
+    def first_existing(source_names):
+        for name in source_names:
+            # exact
+            if name in df_norm.columns:
+                return name
+            # case-insensitive
+            key = name.lower()
+            if key in lower_map:
+                return lower_map[key]
+        return None
+
+    for canon, sources in COLUMN_MAP.items():
+        src = first_existing(sources)
+        if src is None:
+            # create empty column if missing
+            df_norm[canon] = pd.NA
+        else:
+            if src != canon:
+                df_norm[canon] = df_norm[src]
+            # optional: drop the original src after mapping
+            # if src != canon and src in df_norm.columns:
+            #     df_norm.drop(columns=[src], inplace=True, errors="ignore")
+
+    # De-duplicate accidental duplicates (e.g., Location or Currency twice)
+    df_norm = df_norm.loc[:, ~df_norm.columns.duplicated(keep="first")]
+    return df_norm
+
 main_norm = normalize_columns(df_raw)
 
-# If you have SOA data (sheet or separate file), merge it:
+# If SOA is available, merge missing fields from it (fill-only, don’t overwrite good data)
+def merge_from_soa(main_df: pd.DataFrame, soa_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Merge by Invoice_Number when possible; fill only missing canonical fields.
+    SOA is expected to carry columns like those in COLUMN_MAP targets.
+    """
+    # Best effort: find a join key
+    left_key = "Invoice_Number" if "Invoice_Number" in main_df.columns else None
+    right_key = None
+    if left_key:
+        # try to locate the SOA column that looks like invoice number
+        for cand in ["Invoice_Number", "Invoice#", "PurchaseInvNo", "InvoiceNo", "Invoice Number"]:
+            if cand in soa_df.columns:
+                right_key = cand
+                break
+
+    if left_key and right_key:
+        merged = main_df.merge(
+            soa_df,
+            how="left",
+            left_on=left_key,
+            right_on=right_key,
+            suffixes=("", "_SOA"),
+        )
+        # fields we want to fill from SOA if missing
+        fill_targets = [
+            "Invoice_Creator_Name",
+            "MOP",
+            "Due_Date",
+            "Location",
+            "SCID",
+            "Invoice_Currency",
+        ]
+        for col in fill_targets:
+            soa_col = f"{col}_SOA" if f"{col}_SOA" in merged.columns else None
+            if soa_col:
+                merged[col] = merged[col].where(merged[col].notna() & (merged[col] != ""), merged[soa_col])
+        # drop SOA helper columns
+        merged = merged[[c for c in merged.columns if not c.endswith("_SOA") and c != right_key]]
+        return merged
+    else:
+        # No join—just return original
+        print("ℹ️ Could not join SOA (no matching invoice number column). Skipping merge.")
+        return main_df
+
+# Attach SOA if present
 soa_path = os.path.join(download_dir, "soa_export.xlsx")
 if os.path.exists(soa_path):
-    soa_df = pd.read_excel(soa_path, engine="openpyxl")
-    main_norm = merge_from_soa(main_norm, soa_df)
-
-# proceed with validate_invoices(main_norm) / detailed logic…
+    try:
+        soa_df = pd.read_excel(soa_path, engine="openpyxl")
+        main_norm = merge_from_soa(main_norm, soa_df)
+        print("✅ Missing fields backfilled from SOA where available.")
+    except Exception as e:
+        print(f"⚠️ SOA merge skipped (read error): {e}")
 
 def debug_available_columns(df):
     """Debug function to show all available columns"""
