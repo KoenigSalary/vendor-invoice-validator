@@ -18,7 +18,6 @@ import os
 import shutil
 from pathlib import Path
 from enhanced_processor_basic import enhance_validation_results
-from validator_utils import normalize_columns, merge_from_soa
 
 # Load environment variables
 load_dotenv()
@@ -1568,6 +1567,79 @@ def run_invoice_validation():
         import traceback
         traceback.print_exc()
         return False
+
+# --- after you've set today_str and download_dir, and after validating files ---
+
+from glob import glob
+from validator_utils import normalize_columns, merge_from_soa  # <-- make sure this import exists
+
+# ### NEW: resolve invoice file path robustly
+# Prefer what rms_download returned, else fall back to conventional names
+invoice_file = None
+# 1) If your rms_download(...) returned a path, keep it:
+try:
+    if 'invoice_path' in locals() and invoice_path and os.path.exists(invoice_path):
+        invoice_file = invoice_path
+except Exception:
+    pass
+
+# 2) Conventional file name used by your downloader
+if not invoice_file:
+    candidate = os.path.join(download_dir, "invoice_download.xls")
+    if os.path.exists(candidate):
+        invoice_file = candidate
+
+# 3) Try any .xlsx/.xls in the folder (pick the most recent)
+if not invoice_file:
+    excel_candidates = sorted(
+        glob(os.path.join(download_dir, "*.xls")) + glob(os.path.join(download_dir, "*.xlsx")),
+        key=os.path.getmtime,
+        reverse=True
+    )
+    if excel_candidates:
+        invoice_file = excel_candidates[0]
+
+if not invoice_file:
+    raise FileNotFoundError(f"No invoice Excel found in {download_dir}")
+
+print(f"✅ Using invoice file: {invoice_file}")
+
+# === Read RMS file
+df_raw = read_invoice_file(invoice_file)
+if df_raw is None or df_raw.empty:
+    print("❌ DataFrame is empty after reading file")
+    raise SystemExit(1)
+
+# === Normalize RMS columns to canonical names
+df_norm = normalize_columns(df_raw)
+
+# ### NEW: Pull missing columns from SOA (if available)
+soa_file = None
+# Common names produced by your export / zip extraction
+for name in ("soa_export.xlsx", "SOA.xlsx", "rms_soa.xlsx"):
+    cand = os.path.join(download_dir, name)
+    if os.path.exists(cand):
+        soa_file = cand
+        break
+
+# If you extracted a ZIP earlier, you might have put it under download_dir/soa/
+if not soa_file:
+    alt = glob(os.path.join(download_dir, "soa", "*.xlsx"))
+    if alt:
+        soa_file = alt[0]
+
+if soa_file:
+    print(f"🔗 Merging SOA data from: {soa_file}")
+    try:
+        soa_df = pd.read_excel(soa_file, engine="openpyxl")
+        df_norm = merge_from_soa(df_norm, soa_df)
+    except Exception as e:
+        print(f"⚠️ SOA merge skipped due to error: {e}")
+else:
+    print("ℹ️ No SOA file found. Proceeding without SOA enrichment.")
+
+# From here on, use df_norm everywhere instead of the raw df
+# e.g. detailed_df, summary_issues, problematic_invoices_df = validate_invoices_with_details(df_norm)
 
 # Run the validation if called directly
 if __name__ == "__main__":
