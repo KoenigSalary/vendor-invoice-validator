@@ -44,6 +44,27 @@ jobs:
         fi
         pip install autopep8
 
+    - name: Show lines around 581 for debugging
+      run: |
+        echo "----- main.py lines 570..595 -----"
+        nl -ba main.py | sed -n '570,595p' || true
+        echo "---------------------------------"
+
+    # Optional: auto-fix the common mistake: newline right after print(f"
+    - name: Auto-fix accidental newline after print(f"
+      run: |
+        perl -0777 -pe 's/print\(f"\s*\n\s*/print(f""/g' -i main.py
+        # Replace any smart quotes pasted from docs/chats
+        perl -0777 -pe 's/[“”]/"/g; s/[‘’]/'\''/g' -i main.py
+
+    # Guard: fail if any print(f" remains split across lines
+    - name: Guard for split f-strings
+      run: |
+        if grep -n 'print(f" *$' -n main.py; then
+          echo "Error: Found a print(f\" that ends at end-of-line. Fix the line(s) above." >&2
+          exit 1
+        fi
+        
     - name: Auto-format Python code
       run: |
         autopep8 --in-place --aggressive --aggressive --recursive .
