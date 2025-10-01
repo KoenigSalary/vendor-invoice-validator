@@ -1,10 +1,3 @@
-name: Invoice Validation Workflow
-
-on:
-  schedule:
-    - cron: '0 6 */4 * *'   # every 4 days at 06:00 UTC
-  workflow_dispatch:
-
 jobs:
   validate-invoices:
     runs-on: ubuntu-latest
@@ -31,7 +24,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip cache purge
-        # Install numpy first (avoids compatibility errors)
         pip install --no-cache-dir numpy==1.24.3
         if [ -f requirements.txt ]; then
           pip install --no-cache-dir -r requirements.txt --force-reinstall
@@ -50,21 +42,18 @@ jobs:
         nl -ba main.py | sed -n '570,595p' || true
         echo "---------------------------------"
 
-    # Optional: auto-fix the common mistake: newline right after print(f"
     - name: Auto-fix accidental newline after print(f"
       run: |
         perl -0777 -pe 's/print\(f"\s*\n\s*/print(f""/g' -i main.py
-        # Replace any smart quotes pasted from docs/chats
         perl -0777 -pe 's/[“”]/"/g; s/[‘’]/'\''/g' -i main.py
 
-    # Guard: fail if any print(f" remains split across lines
     - name: Guard for split f-strings
       run: |
-        if grep -n 'print(f" *$' -n main.py; then
+        if grep -n 'print(f" *$' main.py; then
           echo "Error: Found a print(f\" that ends at end-of-line. Fix the line(s) above." >&2
           exit 1
         fi
-        
+
     - name: Auto-format Python code
       run: |
         autopep8 --in-place --aggressive --aggressive --recursive .
@@ -84,6 +73,7 @@ jobs:
           exit 1
         fi
 
+    # ✅ FIXED: no stray space before p.write_text; add CRLF normalization
     - name: Normalize main.py encoding to UTF-8
       run: |
         python - <<'PY'
@@ -101,7 +91,7 @@ jobs:
         else:
             text = raw.decode("cp1252", errors="replace")
 
-        # normalize common smart punctuation
+        # normalize smart punctuation and line endings
         repl = {
             "“": '"', "”": '"', "„": '"',
             "‘": "'", "’": "'", "‚": "'",
@@ -111,14 +101,18 @@ jobs:
         }
         for k, v in repl.items():
             text = text.replace(k, v)
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
 
         # ensure coding cookie and save as UTF-8
         if not text.lstrip().startswith("# -*- coding: utf-8 -*-"):
             text = "# -*- coding: utf-8 -*-\n" + text
 
-         p.write_text(text, encoding="utf-8")
+        p.write_text(text, encoding="utf-8")
         print("Rewrote main.py as UTF-8")
         PY
+
+    - name: Syntax check
+      run: python -m py_compile main.py
 
     - name: Run invoice validation
       run: python3 main.py run
