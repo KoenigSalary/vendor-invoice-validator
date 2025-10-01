@@ -546,7 +546,7 @@ def debug_available_columns(df):
 ")
 
 def validate_downloaded_files(download_dir):
-    ""Validate that downloaded files exist and are not corrupted"""""""
+    """Validate that downloaded files exist and are not corrupted"""
     required_files = ["invoice_download.xls", "invoices.zip"]
     validation_results = {}
 
