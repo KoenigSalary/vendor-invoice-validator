@@ -186,7 +186,7 @@ def archive_data_older_than_three_months():
         try:
             from invoice_tracker import archive_validation_records_before_date
             archive_validation_records_before_date(cutoff_str)
-            print(f"✅ Database records archived before {cutoff_str}")
+            print(f"… Database records archived before {cutoff_str}")
         except Exception as e:
             print(f"⚠️ Database archiving failed: {str(e)}")
 
@@ -196,7 +196,6 @@ def archive_data_older_than_three_months():
     except Exception as e:
         print(f"❌ Archiving failed: {str(e)}")
         return 0
-
 
 def download_cumulative_data(start_str, end_str):
     """Download invoice data for the cumulative validation range"""
