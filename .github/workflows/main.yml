@@ -2,7 +2,7 @@ name: Invoice Validation Workflow
 
 on:
   schedule:
-    - cron: '0 6 */4 * *'
+    - cron: '0 6 */4 * *'   # every 4 days at 06:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -18,25 +18,10 @@ jobs:
       with:
         python-version: '3.11.9'
         
-        - name: Install deps
-          run: |
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt
-
-        - name: Check versions
-          run: |
-            google-chrome --version
-            python - <<'PY'
-        import selenium, pandas
-        print("Selenium version:", selenium.__version__)
-        print("Pandas version:", pandas.__version__)
-        PY
-      
-    - name: Install Chrome (Updated Method)
+    - name: Install Chrome
       run: |
         sudo apt-get update
         sudo apt-get install -y wget gnupg
-        # Updated Chrome installation method
         wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg
         echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
         sudo apt-get update
@@ -46,35 +31,30 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip cache purge
-        # Install numpy first to avoid binary compatibility issues
+        # Install numpy first (avoids compatibility errors)
         pip install --no-cache-dir numpy==1.24.3
-        # Install from requirements.txt if it exists, otherwise install individually
         if [ -f requirements.txt ]; then
           pip install --no-cache-dir -r requirements.txt --force-reinstall
         else
           pip install pandas==2.0.3 requests==2.31.0 schedule==1.2.0
           pip install openpyxl==3.1.2 xlsxwriter==3.1.7 python-dateutil==2.8.2 pytz==2023.3
-          pip install beautifulsoup4==4.12.2 lxml==4.9.3 
+          pip install beautifulsoup4==4.12.2 lxml==4.9.3
           pip install selenium==4.15.0 webdriver-manager==4.0.1
           pip install plotly==5.17.0 xlrd==2.0.1 python-dotenv==1.0.0
         fi
-        # Install autopep8 for code formatting
         pip install autopep8
-         
+
     - name: Auto-format Python code
       run: |
-        # Format all Python files recursively
         autopep8 --in-place --aggressive --aggressive --recursive .
-        # Alternative: Only format tracked files
-        # find . -name "*.py" -type f -exec autopep8 --in-place --aggressive --aggressive {} \;
-        
+
     - name: Verify installations
       run: |
         google-chrome --version
         python -c "import selenium; print('Selenium version:', selenium.__version__)"
         python -c "from webdriver_manager.chrome import ChromeDriverManager; print('WebDriver Manager: OK')"
         python -c "import pandas as pd; print('Pandas version:', pd.__version__)"
-        
+
     - name: Check if main.py exists
       run: |
         if [ ! -f main.py ]; then
@@ -82,10 +62,9 @@ jobs:
           ls -la
           exit 1
         fi
-        
+
     - name: Run invoice validation
-      run: |
-        python3 main.py run
+      run: python3 main.py run
       env:
         RMS_BASE_URL: https://rms.koenig-solutions.com
         DB_PATH: invoice_validation.db
@@ -101,7 +80,7 @@ jobs:
         AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
         EMAIL_DEBUG: "false"
         SEND_EMAIL: 1
-  
+
     - name: Upload validation results
       uses: actions/upload-artifact@v4
       if: always()
