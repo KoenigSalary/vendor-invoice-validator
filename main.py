@@ -18,6 +18,7 @@ import os
 import shutil
 from pathlib import Path
 from enhanced_processor_basic import enhance_validation_results
+from validator_utils import normalize_columns, merge_from_soa
 
 # Load environment variables
 load_dotenv()
@@ -459,6 +460,17 @@ def read_invoice_file(invoice_file):
         raise Exception(f"Could not read invoice file in any supported format. Last error: {str(last_error)}")
     else:
         raise Exception("Could not read invoice file - unknown format or corrupted file")
+
+df_raw = read_invoice_file(invoice_file)
+main_norm = normalize_columns(df_raw)
+
+# If you have SOA data (sheet or separate file), merge it:
+soa_path = os.path.join(download_dir, "soa_export.xlsx")
+if os.path.exists(soa_path):
+    soa_df = pd.read_excel(soa_path, engine="openpyxl")
+    main_norm = merge_from_soa(main_norm, soa_df)
+
+# proceed with validate_invoices(main_norm) / detailed logic…
 
 def debug_available_columns(df):
     """Debug function to show all available columns"""
