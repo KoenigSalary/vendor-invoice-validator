@@ -18,6 +18,20 @@ jobs:
       with:
         python-version: '3.11.9'
         
+        - name: Install deps
+          run: |
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+
+        - name: Check versions
+          run: |
+            google-chrome --version
+            python - <<'PY'
+        import selenium, pandas
+        print("Selenium version:", selenium.__version__)
+        print("Pandas version:", pandas.__version__)
+        PY
+      
     - name: Install Chrome (Updated Method)
       run: |
         sudo apt-get update
