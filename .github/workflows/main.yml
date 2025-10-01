@@ -84,6 +84,42 @@ jobs:
           exit 1
         fi
 
+    - name: Normalize main.py encoding to UTF-8
+      run: |
+        python - <<'PY'
+        import pathlib
+        p = pathlib.Path("main.py")
+        raw = p.read_bytes()
+
+        # detect & decode with a few common encodings
+        for enc in ("utf-8", "cp1252", "latin-1"):
+            try:
+                text = raw.decode(enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            text = raw.decode("cp1252", errors="replace")
+
+        # normalize common smart punctuation
+        repl = {
+            "“": '"', "”": '"', "„": '"',
+            "‘": "'", "’": "'", "‚": "'",
+            "–": "-", "—": "-",
+            "…": "...",
+            "\ufeff": ""  # strip BOM
+        }
+        for k, v in repl.items():
+            text = text.replace(k, v)
+
+        # ensure coding cookie and save as UTF-8
+        if not text.lstrip().startswith("# -*- coding: utf-8 -*-"):
+            text = "# -*- coding: utf-8 -*-\n" + text
+
+         p.write_text(text, encoding="utf-8")
+        print("Rewrote main.py as UTF-8")
+        PY
+
     - name: Run invoice validation
       run: python3 main.py run
       env:
