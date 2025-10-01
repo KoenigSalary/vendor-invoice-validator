@@ -4,6 +4,116 @@ from datetime import datetime, timedelta
 import glob
 import zipfile
 
+COLUMN_MAP_PRIORITIES = {
+    "invoice_id":     ["Invoice Id","InvID","InvoiceID","ID"],
+    "invoice_number": ["Invoice#","PurchaseInvNo","InvoiceNumber","InvNo","BillNo"],
+    "invoice_date":   ["Inv Date","PurchaseInvDate","InvoiceDate","InvDate","BillDate"],
+    "vendor_name":    ["Vendor","PartyName","VendorName","SupplierName"],
+    "gstin":          ["GSTNo","GSTNO","GSTIN","GST No","GST_No"],
+    "amount":         ["Invoice Amount","Total","Amount","GrandTotal","NetAmount"],
+    "creator":        ["Inv Created By","Inv Created by","InvCreatedBy","CreatedBy","UserName","EntryBy","PreparedBy"],
+    "mop":            ["MOP","Method of Payment","PaymentMethod","PayMode","Payment_Mode","PaymentType"],
+    "due_date":       ["DueDate","Due Date","PaymentDue","MaturityDate"],
+    "remarks":        ["Remarks","Remark","Notes","Comments","Narration"],
+    "state":          ["Location","State","PartyState","Branch"],
+    "currency":       ["Inv Currency","InvoiceCurrency","Currency","InvCurrency"],
+    "scid":           ["SCID#","SCID","SC Id","SalesContractId","SaleContractID"],
+}
+
+def _choose_first(df, names):
+    for n in names:
+        if n in df.columns: return n
+    low = {c.lower(): c for c in df.columns}
+    for n in names:
+        if n.lower() in low: return low[n.lower()]
+    return None
+
+def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.loc[:, ~df.columns.duplicated()].copy()
+    chosen = {k: _choose_first(df, v) for k, v in COLUMN_MAP_PRIORITIES.items()}
+    out = pd.DataFrame(index=df.index)
+    out["Invoice_ID"]           = df.get(chosen["invoice_id"], df.index.astype(str))
+    out["Invoice_Number"]       = df.get(chosen["invoice_number"], "")
+    out["Invoice_Date"]         = pd.to_datetime(df.get(chosen["invoice_date"]), errors="coerce")
+    out["Vendor_Name"]          = df.get(chosen["vendor_name"], "")
+    out["GST_Number"]           = df.get(chosen["gstin"], "")
+    out["Amount"]               = pd.to_numeric(df.get(chosen["amount"]), errors="coerce")
+    out["Invoice_Creator_Name"] = df.get(chosen["creator"], "")
+    out["Method_of_Payment"]    = df.get(chosen["mop"], "")
+    out["Due_Date"]             = pd.to_datetime(df.get(chosen["due_date"]), errors="coerce")
+    out["Remarks"]              = df.get(chosen["remarks"], "")
+    out["Raw_State"]            = df.get(chosen["state"], "")
+    out["Invoice_Currency"]     = df.get(chosen["currency"], "INR")
+    out["SCID"]                 = df.get(chosen["scid"], "")
+
+    # Location
+    def _state_from_gstin(g):
+        s = str(g).strip()
+        return s[:2] if len(s) >= 2 else ""
+    def _compute_location(row):
+        st = str(row["Raw_State"]).strip()
+        if st and st.lower() not in ("nan","none","null",""): return st
+        sc = _state_from_gstin(row["GST_Number"])
+        return sc or ""
+    out["Location"] = out.apply(_compute_location, axis=1)
+
+    # Due-date alert
+    today = pd.Timestamp("today").normalize()
+    dd = out["Due_Date"]
+    out["Due_Date_Notification"] = ""
+    m = dd.notna()
+    out.loc[m, "Due_Date_Notification"] = dd[m].apply(
+        lambda d: "OVERDUE" if d.date() < today.date()
+        else ("YES" if (d.date() - today.date()).days <= 2 else "NO")
+    )
+
+    # Defaults
+    out["TDS_Status"] = "Coming Soon"
+
+    # Clean creator
+    def _clean(s):
+        s = str(s).strip()
+        return "" if s.lower() in ("nan","none","null") else s
+    out["Invoice_Creator_Name"] = out["Invoice_Creator_Name"].apply(_clean)
+
+    out.replace({pd.NaT: ""}, inplace=True)
+    out.fillna("", inplace=True)
+    return out
+
+def merge_from_soa(main_df: pd.DataFrame, soa_df: pd.DataFrame) -> pd.DataFrame:
+    m = main_df.copy()
+    s = normalize_columns(soa_df)
+    key = "Invoice_Number"
+    if key not in m.columns or key not in s.columns or (m[key] == "").all():
+        key = "Invoice_ID"
+    fill_cols = ["Invoice_Creator_Name","Method_of_Payment","Due_Date",
+                 "Location","Invoice_Currency","SCID","Remarks"]
+    avail = [c for c in fill_cols if c in s.columns]
+    s_red = s[[key] + avail].drop_duplicates(subset=[key])
+    m = m.merge(s_red, on=key, how="left", suffixes=("", "_SOA"))
+    for c in avail:
+        sc = f"{c}_SOA"
+        if sc in m.columns:
+            if c == "Due_Date":
+                m[c] = pd.to_datetime(m[c], errors="coerce")
+                m[sc] = pd.to_datetime(m[sc], errors="coerce")
+                m[c] = m[c].where(m[c].notna(), m[sc])
+            else:
+                m[c] = m[c].where(m[c].astype(str).str.strip() != "", m[sc])
+            m.drop(columns=[sc], inplace=True, errors="ignore")
+    # recompute alerts
+    if "Due_Date" in m.columns:
+        today = pd.Timestamp("today").normalize()
+        dd = pd.to_datetime(m["Due_Date"], errors="coerce")
+        m["Due_Date_Notification"] = ""
+        mask = dd.notna()
+        m.loc[mask, "Due_Date_Notification"] = dd[mask].apply(
+            lambda d: "OVERDUE" if d.date() < today.date()
+            else ("YES" if (d.date() - today.date()).days <= 2 else "NO")
+        )
+    m = m.loc[:, ~m.columns.duplicated()].copy()
+    return m
+
 def try_read_file(file_path):
     """Enhanced file reading with better error handling"""
     try:
