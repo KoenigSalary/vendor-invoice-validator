@@ -1,3 +1,9 @@
+name: Invoice Validation Workflow
+on:
+  schedule:
+    - cron: '0 6 */4 * *'
+  workflow_dispatch:
+
 jobs:
   validate-invoices:
     runs-on: ubuntu-latest
@@ -42,7 +48,7 @@ jobs:
         nl -ba main.py | sed -n '570,595p' || true
         echo "---------------------------------"
 
-    - name: Auto-fix accidental newline after print(f"
+    - name: "Auto-fix accidental newline after print(f\")"
       run: |
         perl -0777 -pe 's/print\(f"\s*\n\s*/print(f""/g' -i main.py
         perl -0777 -pe 's/[“”]/"/g; s/[‘’]/'\''/g' -i main.py
