@@ -7,3 +7,7 @@ html5lib>=1.1
 # streamlit/plotly if used:
 streamlit>=1.36
 plotly>=5.20
+selenium>=4.25.0
+# either use Selenium Manager (recommended) OR webdriver-manager—not both
+webdriver-manager>=4.0.2
+pandas>=2.2,<3
