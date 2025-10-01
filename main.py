@@ -194,6 +194,7 @@ def archive_data_older_than_three_months():
         print(f"❌ Archiving failed: {str(e)}")
         return 0
 
+
 def download_cumulative_data(start_str, end_str):
     """Download invoice data for the cumulative validation range"""
     start_date = datetime.strptime(start_str, "%Y-%m-%d")
@@ -209,6 +210,7 @@ def download_cumulative_data(start_str, end_str):
     except Exception as e:
         print(f"❌ Cumulative data download failed: {str(e)}")
         raise
+
 
 def find_creator_column(df):
     """Find the invoice creator column name from available columns"""
@@ -243,6 +245,7 @@ def find_creator_column(df):
     print("⚠️ No creator column found, will use 'Unknown'")
     return None
 
+
 def find_payment_method_column(df):
     """Find the Method of Payment column"""
     possible_mop_columns = [
@@ -267,6 +270,7 @@ def find_payment_method_column(df):
     print("⚠️ No payment method column found")
     return None
 
+
 def find_due_date_column(df):
     """Find the Due Date column"""
     possible_due_columns = [
@@ -281,6 +285,7 @@ def find_due_date_column(df):
 
     print("⚠️ No due date column found")
     return None
+
 
 def find_remarks_column(df):
     """Find the Remarks column"""
@@ -297,6 +302,7 @@ def find_remarks_column(df):
     print("⚠️ No remarks column found")
     return None
 
+
 def extract_state_from_gstin(gstin):
     """Extract state code from GSTIN"""
     if pd.isna(gstin) or not gstin or len(str(gstin)) < 2:
@@ -306,6 +312,7 @@ def extract_state_from_gstin(gstin):
     if len(gstin_str) >= 2:
         return gstin_str[:2]  # First 2 characters are state code
     return None
+
 
 def validate_gst_application(row):
     """Validate if correct GST (CGST/SGST vs IGST) is applied"""
@@ -344,6 +351,7 @@ def validate_gst_application(row):
 
 # --- Resolve the invoice file path BEFORE reading ---
 from glob import glob
+
 
 def find_invoice_file():
     """
@@ -453,7 +461,9 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     df_norm = df_norm.loc[:, ~df_norm.columns.duplicated(keep="first")]
     return df_norm
 
+
 main_norm = normalize_columns(df_raw)
+
 
 # If SOA is available, merge missing fields from it (fill-only, don’t overwrite good data)
 def merge_from_soa(main_df: pd.DataFrame, soa_df: pd.DataFrame) -> pd.DataFrame:
@@ -512,7 +522,8 @@ if os.path.exists(soa_path):
 
 def debug_available_columns(df):
     """Debug function to show all available columns"""
-    print(f"\n🔍 DEBUGGING AVAILABLE COLUMNS:")
+    print(f"
+🔍 DEBUGGING AVAILABLE COLUMNS:")
     print(f"📊 Total columns: {len(df.columns)}")
 
     for i, col in enumerate(df.columns, 1):
@@ -523,17 +534,19 @@ def debug_available_columns(df):
     # Look for creator-related columns
     creator_cols = [col for col in df.columns if 'creat' in col.lower() or 'by' in col.lower()]
     if creator_cols:
-        print(f"\n👤 Creator-related columns found: {creator_cols}")
+        print(f"
+👤 Creator-related columns found: {creator_cols}")
 
     # Look for payment-related columns
     payment_cols = [col for col in df.columns if 'mop' in col.lower() or 'pay' in col.lower()]
     if payment_cols:
         print(f"💳 Payment-related columns found: {payment_cols}")
 
-    print("\n")
+    print("
+")
 
 def validate_downloaded_files(download_dir):
-    """Validate that downloaded files exist and are not corrupted"""
+    ""Validate that downloaded files exist and are not corrupted"""""""
     required_files = ["invoice_download.xls", "invoices.zip"]
     validation_results = {}
 
@@ -966,7 +979,7 @@ def generate_email_summary_statistics(detailed_df, cumulative_start, cumulative_
 """
         for i, (issue, count) in enumerate(top_issues, 1):
             percentage = (count / total_invoices * 100) if total_invoices > 0 else 0
-            text_summary += f"{i}. {issue}: {count:,} invoices ({percentage:.1f}%)\n"
+            text_summary += f{i}. {issue}: {count:,} invoices ({percentage:.1f}%)\n"""
 
         text_summary += f"""
 📈 OVERALL HEALTH: {health_icon} {health_status} - {pass_rate:.1f}% pass rate
