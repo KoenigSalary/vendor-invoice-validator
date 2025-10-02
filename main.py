@@ -34,6 +34,29 @@ VALIDATION_BATCH_DAYS = 4     # Each batch covers 4 days
 ACTIVE_VALIDATION_MONTHS = 3  # Keep 3 months of active validation data
 ARCHIVE_FOLDER = "archived_data"  # Folder for data older than 3 months
 
+_pd_read_excel = pd.read_excel
+
+def _smart_read_excel(io_obj, *args, **kwargs):
+    # If caller already chose an engine, respect it
+    if "engine" not in kwargs:
+        suffix = None
+        try:
+            if isinstance(io_obj, (str, os.PathLike)):
+                suffix = pathlib.Path(io_obj).suffix.lower()
+        except Exception:
+            pass
+
+        # Choose engine by extension
+        if suffix == ".xls":
+            kwargs["engine"] = "xlrd"        # needs xlrd==1.2.0
+        elif suffix in (".xlsx", ".xlsm", ".xltx", ".xltm"):
+            kwargs.setdefault("engine", "openpyxl")
+
+    return _pd_read_excel(io_obj, *args, **kwargs)
+
+# Patch pandas
+pd.read_excel = _smart_read_excel
+
 def should_run_today():
     """Check if validation should run today based on 4-day interval"""
     # return True  # ← keep for force-run during local testing
