@@ -39,86 +39,57 @@ jobs:
           python -c "import selenium; print('Selenium:', selenium.__version__)"
           python -c "import pandas as pd; print('Pandas:', pd.__version__)"
 
-      - name: Repair common broken f-strings
+      - name: Repair unterminated print strings in main.py
         run: |
-          python - <<'PY'
-          import re, pathlib
-          p = pathlib.Path("main.py")
-          s = p.read_text(encoding="utf-8")
+            python - <<'PY'
+            import re, pathlib
 
-          # 1) If someone split lines right after print(f"
-          s = re.sub(r'print\(\s*f"\s*\n\s*', 'print(f"', s)
+            p = pathlib.Path("main.py")
+            s = p.read_text(encoding="utf-8")
 
-          # 2) Rare: print(f"""...") got ellipsis injected
-          s = re.sub(r'print\(\s*f"""\s*\.\.\.\s*', 'print(f"', s)
+            # 1) Quick join when someone split right after the opening quote.
+            #    Example: print(f"\n   -> turn into: print(f""
+            s = re.sub(r'print\(\s*f?"\s*\n\s*', 'print(f"""', s)
 
-          # 3) Naive join: if a line has an opening print(f" and ends without a closing quote,
-          #    merge subsequent lines until we hit the first double quote.
-          lines = s.splitlines(True)
-          out = []
-          open_idx = None
-          for i, line in enumerate(lines):
-              if open_idx is None:
-                  out.append(line)
-                  if re.search(r'print\(\s*f"\s*[^"]*$', line):
-                      open_idx = len(out) - 1
-              else:
-                  out[open_idx] = out[open_idx].rstrip('\n') + line
-                  # Close once we see a double quote on a later line
-                  if '"' in line:
-                      open_idx = None
+            # 2) Generic fixer: if a line starts a print with an opening quote but no closing quote on that line,
+            #    convert to triple-quoted and close at the first double-quote encountered later.
+            lines = s.splitlines(True)
+            out = []
+            open_idx = None  # index in out where the open print started
+            for line in lines:
+                if open_idx is None:
+                    # Does this line start a print with an opening " and no closing " on same line?
+                    if re.search(r'^\s*print\(\s*f?"[^"]*$', line):
+                        # Switch the opening " to """
+                        line = line.replace('print(f"', 'print(f"""').replace('print("', 'print("""')
+                        out.append(line)
+                        open_idx = len(out) - 1
+                    else:
+                        out.append(line)
+                else:
+                    # We are inside an open multi-line print. Append this line to the opener
+                    out[open_idx] = out[open_idx].rstrip('\n') + line
+                    # When we see a double quote, close the triple quotes at the first occurrence.
+                    if '"' in line:
+                        # Replace only the FIRST " after opening with """
+                        idx = out[open_idx].find('"', out[open_idx].find('print(') + 6)  # search after print(
+                        if idx != -1:
+                            out[open_idx] = out[open_idx][:idx] + '"""' + out[open_idx][idx+1:]
+                            open_idx = None
 
-          s2 = ''.join(out)
-          p.write_text(s2, encoding="utf-8")
-          print("Applied f-string repairs")
-          PY
+            # If still open at EOF, hard-close it
+            if open_idx is not None:
+                out[open_idx] = out[open_idx].rstrip('\n') + '""")\n'
+                open_idx = None
 
-      - name: Show lines around the error spot
-        run: |
-          echo "----- main.py lines 540..580 -----"
-          nl -ba main.py | sed -n '540,580p' || true
-          echo "----------------------------------"
-          
-      - name: Repair common broken f-strings
-        run: |
-          python - <<'PY'
-          import re, pathlib
-          p = pathlib.Path("main.py")
-          s = p.read_text(encoding="utf-8")
-
-          # 1) If someone split lines right after print(f"
-          s = re.sub(r'print\(\s*f"\s*\n\s*', 'print(f"', s)
-
-          # 2) Rare: print(f"""...") got ellipsis injected
-          s = re.sub(r'print\(\s*f"""\s*\.\.\.\s*', 'print(f"', s)
-
-          # 3) Naive join: if a line has an opening print(f" and ends without a closing quote,
-          #    merge subsequent lines until we hit the first double quote.
-          lines = s.splitlines(True)
-          out = []
-          open_idx = None
-          for i, line in enumerate(lines):
-              if open_idx is None:
-                  out.append(line)
-                  if re.search(r'print\(\s*f"\s*[^"]*$', line):
-                      open_idx = len(out) - 1
-              else:
-                  out[open_idx] = out[open_idx].rstrip('\n') + line
-                  # Close once we see a double quote on a later line
-                  if '"' in line:
-                      open_idx = None
-
-          s2 = ''.join(out)
-          p.write_text(s2, encoding="utf-8")
-          print("Applied f-string repairs")
-          PY
-
-      - name: Show lines around the error spot
-        run: |
-          echo "----- main.py lines 540..580 -----"
-          nl -ba main.py | sed -n '540,580p' || true
-          echo "----------------------------------"
-
+            fixed = ''.join(out)
+            if fixed != s:
+                print("Applied unterminated print-string repairs.")
+                p.write_text(fixed, encoding="utf-8")
+            else:
+                print("No repairs needed.")
+            PY
+            
       - name: Byte-compile to catch syntax early
         run: python -m py_compile main.py
 
