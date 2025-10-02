@@ -10,157 +10,107 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11.9'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11.9'
 
-    - name: Install Chrome
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y wget gnupg unzip fonts-liberation
-        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg
-        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
-        sudo apt-get update
-        sudo apt-get install -y google-chrome-stable
+      - name: Install Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg unzip fonts-liberation
+          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
 
-     - name: Install Python dependencies
-       run: |
-        python -m pip install --upgrade pip
-        pip cache purge
-        pip install --no-cache-dir numpy==1.24.3
-        if [ -f requirements.txt ]; then
-          pip install --no-cache-dir -r requirements.txt --force-reinstall
-        else
-          pip install pandas==2.0.3 requests==2.31.0 schedule==1.2.0
-          pip install openpyxl==3.1.2 xlsxwriter==3.1.7 python-dateutil==2.8.2 pytz==2023.3
-          pip install beautifulsoup4==4.12.2 lxml==4.9.3
-          pip install selenium==4.15.0 webdriver-manager==4.0.1
-          pip install plotly==5.17.0 xlrd==1.2.0 python-dotenv==1.0.0
-        fi
-        pip install autopep8    - name: Show lines around 581 for debugging
-        
-      run: |
-        echo "----- main.py lines 570..595 -----"
-        nl -ba main.py | sed -n '570,595p' || true
-        echo "---------------------------------"
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip cache purge
+          pip install --no-cache-dir numpy==1.24.3
+          if [ -f requirements.txt ]; then
+            pip install --no-cache-dir -r requirements.txt --force-reinstall
+          else
+            pip install pandas==2.0.3 requests==2.31.0 schedule==1.2.0
+            pip install openpyxl==3.1.2 xlsxwriter==3.1.7 python-dateutil==2.8.2 pytz==2023.3
+            pip install beautifulsoup4==4.12.2 lxml==4.9.3
+            pip install selenium==4.15.0 webdriver-manager==4.0.1
+            pip install plotly==5.17.0 xlrd==1.2.0 python-dotenv==1.0.0
+          fi
+          pip install autopep8
 
-    - name: Clean smart quotes and hidden chars (quick pass)
-      run: |
-        perl -pi -e 's/\x{85}/.../g' main.py
-        perl -pi -e 's/[“”]/"/g; s/[‘’]/'\''/g; s/[–—]/-/g; s/…/.../g' main.py
+      - name: Show lines around 581 for debugging
+        run: |
+          echo "----- main.py lines 570..595 -----"
+          nl -ba main.py | sed -n '570,595p' || true
+          echo "---------------------------------"
 
-    - name: Purge C1 controls & normalize quotes in *.py
-      run: |
-        # 1) Remove any C1 control chars (0x80–0x9F) from all Python files
-        perl -CS -MFile::Find -e "
-          my @f; find { wanted => sub { push @f, \$File::Find::name if /\.py$/ } }, '.';
-          for my \$p (@f) {
-            local \$/; open my \$in, '<:raw', \$p or die \$!;
-            my \$s = <\$in>; close \$in;
-            \$s =~ s/[\\x80-\\x9F]//g;       # strip all C1 controls
-            # normalize common smart punctuation and BOM
-            \$s =~ s/\\x{201C}|\\x{201D}/\"/g;   # “ ”
-            \$s =~ s/\\x{2018}|\\x{2019}/'/g;    # ‘ ’
-            \$s =~ s/\\x{2013}|\\x{2014}/-/g;    # – —
-            \$s =~ s/\\x{2026}/.../g;            # …
-            \$s =~ s/\\x{FEFF}//g;               # BOM
-            open my \$out, '>:raw', \$p or die \$!;
-            print \$out \$s; close \$out;
-            print qq(Cleaned \$p\n);
-          }
-        "
-        # 2) Ensure coding cookie and save as UTF-8 text (safe re-write)
-        python - <<'PY'
-        import pathlib
-        for p in pathlib.Path(".").rglob("*.py"):
-            t = p.read_text(errors="replace")
-            if not t.lstrip().startswith("# -*- coding: utf-8 -*-"):
-                t = "# -*- coding: utf-8 -*-\n" + t
-            p.write_text(t, encoding="utf-8")
-            print(f"Rewrote UTF-8: {p}")
-        PY
-        # 3) Quick guard: fail if any C1 controls remain
-        if grep -nP "[\x80-\x9F]" -R --include="*.py" .; then
-          echo "❌ Found remaining C1 control characters" >&2
-          exit 1
-        fi
+      # (Optional) If you truly need the cleanup steps, add them back *carefully* as separate steps.
 
-    - name: Fix common split/garbled f-strings
-      run: |
-        # collapse accidental newline after: print(f"
-        perl -0777 -pe "s/print\(f\"\s*\n\s*/print(f\"\"/g" -i main.py
-        # fix stray triple-quote with ellipsis pattern: print(f"""... Text") -> print(f"Text")
-        perl -0777 -pe "s/print\(\s*f\"\"\"\s*\.\.\.\s*/print(f\"/g" -i main.py
+      - name: Auto-format Python code
+        run: |
+          autopep8 --in-place --aggressive --aggressive --recursive .
 
-    - name: Guard for split f-strings
-      run: |
-        if grep -n 'print(f" *$' main.py; then
-          echo "Error: Found a print(f\" that ends at end-of-line. Fix the line(s) above." >&2
-          exit 1
-        fi
+      - name: Verify installations
+        run: |
+          google-chrome --version
+          python -c "import selenium; print('Selenium version:', selenium.__version__)"
+          python -c "from webdriver_manager.chrome import ChromeDriverManager; print('WebDriver Manager: OK')"
+          python -c "import pandas as pd; print('Pandas version:', pd.__version__)"
 
-    - name: Auto-format Python code
-      run: |
-        autopep8 --in-place --aggressive --aggressive --recursive .
+      - name: Check if main.py exists
+        run: |
+          if [ ! -f main.py ]; then
+            echo "Error: main.py not found in repository root"
+            ls -la
+            exit 1
+          fi
 
-    - name: Verify installations
-      run: |
-        google-chrome --version
-        python -c "import selenium; print('Selenium version:', selenium.__version__)"
-        python -c "from webdriver_manager.chrome import ChromeDriverManager; print('WebDriver Manager: OK')"
-        python -c "import pandas as pd; print('Pandas version:', pd.__version__)"
+      - name: Byte-compile to catch syntax early
+        run: python -m py_compile main.py
 
-    - name: Check if main.py exists
-      run: |
-        if [ ! -f main.py ]; then
-          echo "Error: main.py not found in repository root"
-          ls -la
-          exit 1
-        fi
+      - name: Run invoice validation (xvfb)
+        run: xvfb-run -a python3 main.py run 2>&1 | tee run.log
+        env:
+          RMS_BASE_URL: https://rms.koenig-solutions.com
+          DB_PATH: invoice_validation.db
+          EXCEL_PATH: invoice_validation_report.xlsx
+          RMS_USER: ${{ secrets.RMS_USER }}
+          RMS_PASS: ${{ secrets.RMS_PASS }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
+          SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
+          AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
+          EMAIL_DEBUG: "false"
+          SEND_EMAIL: "1"
 
-    - name: Byte-compile to catch syntax early
-      run: python -m py_compile main.py
+      - name: Upload validation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-results-${{ github.run_number }}
+          path: |
+            *.xlsx
+            *.csv
+            *.log
+            *.db
+            data/
+          retention-days: 30
 
-    - name: Run invoice validation (xvfb)
-      run: xvfb-run -a python3 main.py run
-      env:        RMS_BASE_URL: https://rms.koenig-solutions.com
-        DB_PATH: invoice_validation.db
-        EXCEL_PATH: invoice_validation_report.xlsx
-        RMS_USER: ${{ secrets.RMS_USER }}
-        RMS_PASS: ${{ secrets.RMS_PASS }}
-        SMTP_USER: ${{ secrets.SMTP_USER }}
-        SMTP_PASS: ${{ secrets.SMTP_PASS }}
-        SMTP_HOST: ${{ secrets.SMTP_HOST }}
-        SMTP_PORT: ${{ secrets.SMTP_PORT }}
-        SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
-        SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
-        AP_TEAM_EMAIL_LIST: ${{ secrets.AP_TEAM_EMAIL_LIST }}
-        EMAIL_DEBUG: "false"
-        SEND_EMAIL: 1
-
-    - name: Upload validation results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: validation-results-${{ github.run_number }}
-        path: |
-          *.xlsx
-          *.csv
-          *.log
-          *.db
-          data/
-        retention-days: 30
-
-    - name: Upload logs on failure
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: failure-logs-${{ github.run_number }}
-        path: |
-          *.log
-          /tmp/*.log
-        retention-days: 7
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-logs-${{ github.run_number }}
+          path: |
+            run.log
+            *.log
+            /tmp/*.log
+          retention-days: 7
