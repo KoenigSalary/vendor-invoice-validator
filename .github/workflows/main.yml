@@ -88,29 +88,35 @@ jobs:
     - name: Normalize Python files to UTF-8 & strip hidden chars
       run: |
         python - <<'PY'
-        import pathlib, sys
-        repl = {
-            "\u0085": "...",   # NEXT LINE -> ellipsis or space
+        import pathlib
+
+        REPL = {
+            "\u0085": "...",     # NEXT LINE -> replace with ellipsis (or " ")
             "\u201c": '"', "\u201d": '"',  # smart double quotes
             "\u2018": "'", "\u2019": "'",  # smart single quotes
             "\u2013": "-", "\u2014": "-",  # en/em dash
-            "\ufeff": ""                      # BOM
+            "\ufeff": ""                     # BOM
         }
+
         for p in pathlib.Path(".").rglob("*.py"):
             raw = p.read_bytes()
-            # try decodes
+            # try a few common decodes
             for enc in ("utf-8", "cp1252", "latin-1"):
                 try:
                     text = raw.decode(enc)
                     break
-                 except UnicodeDecodeError:
-                    continue
+                except UnicodeDecodeError:
+                    pass
             else:
                 text = raw.decode("cp1252", errors="replace")
-            for k, v in repl.items():
+
+            for k, v in REPL.items():
                 text = text.replace(k, v)
+
+            # ensure coding cookie
             if not text.lstrip().startswith("# -*- coding: utf-8 -*-"):
                 text = "# -*- coding: utf-8 -*-\n" + text
+
             p.write_text(text, encoding="utf-8")
             print(f"Normalized: {p}")
         PY
