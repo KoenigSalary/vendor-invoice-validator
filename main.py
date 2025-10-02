@@ -21,6 +21,8 @@ import os
 import shutil
 from pathlib import Path
 from enhanced_processor_basic import enhance_validation_results
+from selenium.webdriver import Chrome, ChromeOptions
+from webdriver_manager.chrome import ChromeDriverManager
 
 # Load environment variables
 load_dotenv()
@@ -35,27 +37,33 @@ ACTIVE_VALIDATION_MONTHS = 3  # Keep 3 months of active validation data
 ARCHIVE_FOLDER = "archived_data"  # Folder for data older than 3 months
 
 _pd_read_excel = pd.read_excel
-
 def _smart_read_excel(io_obj, *args, **kwargs):
-    # If caller already chose an engine, respect it
     if "engine" not in kwargs:
-        suffix = None
+        ext = None
         try:
             if isinstance(io_obj, (str, os.PathLike)):
-                suffix = pathlib.Path(io_obj).suffix.lower()
+                ext = pathlib.Path(io_obj).suffix.lower()
         except Exception:
             pass
-
-        # Choose engine by extension
-        if suffix == ".xls":
-            kwargs["engine"] = "xlrd"        # needs xlrd==1.2.0
-        elif suffix in (".xlsx", ".xlsm", ".xltx", ".xltm"):
-            kwargs.setdefault("engine", "openpyxl")
-
+        if ext == ".xls":
+            kwargs["engine"] = "xlrd"          # xlrd==2.0.1 handles .xls
+        elif ext in (".xlsx", ".xlsm", ".xltx", ".xltm"):
+            kwargs["engine"] = "openpyxl"
     return _pd_read_excel(io_obj, *args, **kwargs)
-
-# Patch pandas
 pd.read_excel = _smart_read_excel
+
+def make_driver():
+    opts = ChromeOptions()
+    # Works both under xvfb and plain headless
+    opts.add_argument("--headless=new")
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--window-size=1920,1080")
+    opts.add_argument("--remote-debugging-port=9222")
+    # If you need downloads, also set prefs directory
+    # opts.add_experimental_option("prefs", {"download.default_directory": "/home/runner/work/downloads"})
+    driver = Chrome(ChromeDriverManager().install(), options=opts)
+    return driver
 
 def should_run_today():
     """Check if validation should run today based on 4-day interval"""
