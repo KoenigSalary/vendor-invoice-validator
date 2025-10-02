@@ -904,7 +904,7 @@ def generate_email_summary_statistics(detailed_df, cumulative_start, cumulative_
         html_summary = f"""
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
-                📊 Invoice Validation Summary - {today_str}
+                Invoice Validation Summary - {today_str}
             </h2>
 
             <div style="background-color: #ecf0f1; padding: 15px; border-radius: 5px; margin: 15px 0;">
