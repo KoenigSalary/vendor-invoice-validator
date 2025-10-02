@@ -1,22 +1,23 @@
 name: Invoice Validation Workflow
+
 on:
   schedule:
-    - cron: '0 6 */4 * *'
+    - cron: '0 6 */4 * *'   # every 4 days at 06:00 UTC
   workflow_dispatch:
 
 jobs:
   validate-invoices:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11.9'
-        
+
     - name: Install Chrome
       run: |
         sudo apt-get update
@@ -48,7 +49,7 @@ jobs:
         nl -ba main.py | sed -n '570,595p' || true
         echo "---------------------------------"
 
-    - name: "Auto-fix accidental newline after print(f\")"
+    - name: Auto-fix accidental newline after print(f")
       run: |
         perl -0777 -pe 's/print\(f"\s*\n\s*/print(f""/g' -i main.py
         perl -0777 -pe 's/[“”]/"/g; s/[‘’]/'\''/g' -i main.py
@@ -60,10 +61,39 @@ jobs:
           exit 1
         fi
 
-    - name: Clean smart quotes and hidden chars
+    - name: Clean smart quotes and hidden chars (quick pass)
       run: |
         perl -pi -e 's/\x{85}/.../g' main.py
         perl -pi -e 's/[“”]/"/g; s/[‘’]/'\''/g; s/[–—]/-/g; s/…/.../g' main.py
+
+    - name: Normalize Python files to UTF-8 & strip hidden chars
+      run: |
+        python - <<'PY'
+        import pathlib
+        REPL = {
+            "\u0085": "...",
+            "\u201c": '"', "\u201d": '"',
+            "\u2018": "'", "\u2019": "'",
+            "\u2013": "-", "\u2014": "-",
+            "\ufeff": ""
+        }
+        for p in pathlib.Path(".").rglob("*.py"):
+            raw = p.read_bytes()
+            for enc in ("utf-8", "cp1252", "latin-1"):
+                try:
+                    text = raw.decode(enc)
+                    break
+                except UnicodeDecodeError:
+                    pass
+            else:
+                text = raw.decode("cp1252", errors="replace")
+            for k, v in REPL.items():
+                text = text.replace(k, v)
+            if not text.lstrip().startswith("# -*- coding: utf-8 -*-"):
+                text = "# -*- coding: utf-8 -*-\n" + text
+            p.write_text(text, encoding="utf-8")
+            print(f"Normalized: {p}")
+        PY
 
     - name: Auto-format Python code
       run: |
@@ -84,73 +114,7 @@ jobs:
           exit 1
         fi
 
-    # ✅ FIXED: no stray space before p.write_text; add CRLF normalization
-    - name: Normalize Python files to UTF-8 & strip hidden chars
-      run: |
-        python - <<'PY'
-        import pathlib
-
-        REPL = {
-            "\u0085": "...",     # NEXT LINE -> replace with ellipsis (or " ")
-            "\u201c": '"', "\u201d": '"',  # smart double quotes
-            "\u2018": "'", "\u2019": "'",  # smart single quotes
-            "\u2013": "-", "\u2014": "-",  # en/em dash
-            "\ufeff": ""                     # BOM
-        }
-
-        for p in pathlib.Path(".").rglob("*.py"):
-            raw = p.read_bytes()
-            # try a few common decodes
-            for enc in ("utf-8", "cp1252", "latin-1"):
-                try:
-                    text = raw.decode(enc)
-                    break
-                except UnicodeDecodeError:
-                    pass
-            else:
-                text = raw.decode("cp1252", errors="replace")
-
-            for k, v in REPL.items():
-                text = text.replace(k, v)
-
-            # ensure coding cookie
-            if not text.lstrip().startswith("# -*- coding: utf-8 -*-"):
-                text = "# -*- coding: utf-8 -*-\n" + text
-
-            p.write_text(text, encoding="utf-8")
-            print(f"Normalized: {p}")
-        PY
-
-      - name: Strip hidden characters from *.py
-      run: |
-        perl -CS -MFile::Find -e '
-          my @f; find { wanted => sub { push @f, $File::Find::name if /\.py$/ } }, ".";
-          for my $p (@f) {
-            local $/; open my $in, "<:raw", $p or die $!;
-            my $s = <$in>; close $in;
-            $s =~ s/\x{85}/.../g;     # U+0085
-            $s =~ s/\x{201[8,9]}/'/g; # smart single quotes
-            $s =~ s/\x{201[c,d]}/"/g; # smart double quotes
-            $s =~ s/\x{201[3,4]}/-/g; # en/em dash
-            $s =~ s/\x{feff}//g;      # BOM
-            open my $out, ">:encoding(UTF-8)", $p or die $!;
-            print $out "# -*- coding: utf-8 -*-\n" unless $s =~ /^\s*#\s*-\*-\s*coding:\s*utf-8\s*-\*-/;
-            print $out $s; close $out;
-            print "Cleaned $p\n";
-          }
-        '
-
-        - name: Fail if any split f-strings remain
-        run: |
-          if grep -nE 'print\(\s*f"\s*$' main.py; then
-            echo "Found a split f-string (print(f\" at end of line)). Fix it." >&2
-            exit 1
-          fi
-
-      - name: Byte-compile to catch syntax early
-        run: python -m py_compile main.py
-
-    - name: Syntax check
+    - name: Byte-compile to catch syntax early
       run: python -m py_compile main.py
 
     - name: Run invoice validation
