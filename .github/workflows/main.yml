@@ -39,6 +39,46 @@ jobs:
           python -c "import selenium; print('Selenium:', selenium.__version__)"
           python -c "import pandas as pd; print('Pandas:', pd.__version__)"
 
+      - name: Repair common broken f-strings
+        run: |
+          python - <<'PY'
+          import re, pathlib
+          p = pathlib.Path("main.py")
+          s = p.read_text(encoding="utf-8")
+
+          # 1) If someone split lines right after print(f"
+          s = re.sub(r'print\(\s*f"\s*\n\s*', 'print(f"', s)
+
+          # 2) Rare: print(f"""...") got ellipsis injected
+          s = re.sub(r'print\(\s*f"""\s*\.\.\.\s*', 'print(f"', s)
+
+          # 3) Naive join: if a line has an opening print(f" and ends without a closing quote,
+          #    merge subsequent lines until we hit the first double quote.
+          lines = s.splitlines(True)
+          out = []
+          open_idx = None
+          for i, line in enumerate(lines):
+              if open_idx is None:
+                  out.append(line)
+                  if re.search(r'print\(\s*f"\s*[^"]*$', line):
+                      open_idx = len(out) - 1
+              else:
+                  out[open_idx] = out[open_idx].rstrip('\n') + line
+                  # Close once we see a double quote on a later line
+                  if '"' in line:
+                      open_idx = None
+
+          s2 = ''.join(out)
+          p.write_text(s2, encoding="utf-8")
+          print("Applied f-string repairs")
+          PY
+
+      - name: Show lines around the error spot
+        run: |
+          echo "----- main.py lines 540..580 -----"
+          nl -ba main.py | sed -n '540,580p' || true
+          echo "----------------------------------"
+
       - name: Byte-compile to catch syntax early
         run: python -m py_compile main.py
 
