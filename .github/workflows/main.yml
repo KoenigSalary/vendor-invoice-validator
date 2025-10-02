@@ -49,10 +49,53 @@ jobs:
         nl -ba main.py | sed -n '570,595p' || true
         echo "---------------------------------"
 
-    - name: "Auto-fix accidental newline after print(f\")"
+    - name: Clean smart quotes and hidden chars (quick pass)
       run: |
-        perl -0777 -pe 's/print\(f"\s*\n\s*/print(f""/g' -i main.py
-        perl -0777 -pe 's/[“”]/"/g; s/[‘’]/'\''/g' -i main.py
+        perl -pi -e 's/\x{85}/.../g' main.py
+        perl -pi -e 's/[“”]/"/g; s/[‘’]/'\''/g; s/[–—]/-/g; s/…/.../g' main.py
+
+    - name: Purge C1 controls & normalize quotes in *.py
+      run: |
+        # 1) Remove any C1 control chars (0x80–0x9F) from all Python files
+        perl -CS -MFile::Find -e "
+          my @f; find { wanted => sub { push @f, \$File::Find::name if /\.py$/ } }, '.';
+          for my \$p (@f) {
+            local \$/; open my \$in, '<:raw', \$p or die \$!;
+            my \$s = <\$in>; close \$in;
+            \$s =~ s/[\\x80-\\x9F]//g;       # strip all C1 controls
+            # normalize common smart punctuation and BOM
+            \$s =~ s/\\x{201C}|\\x{201D}/\"/g;   # “ ”
+            \$s =~ s/\\x{2018}|\\x{2019}/'/g;    # ‘ ’
+            \$s =~ s/\\x{2013}|\\x{2014}/-/g;    # – —
+            \$s =~ s/\\x{2026}/.../g;            # …
+            \$s =~ s/\\x{FEFF}//g;               # BOM
+            open my \$out, '>:raw', \$p or die \$!;
+            print \$out \$s; close \$out;
+            print qq(Cleaned \$p\n);
+          }
+        "
+        # 2) Ensure coding cookie and save as UTF-8 text (safe re-write)
+        python - <<'PY'
+        import pathlib
+        for p in pathlib.Path(".").rglob("*.py"):
+            t = p.read_text(errors="replace")
+            if not t.lstrip().startswith("# -*- coding: utf-8 -*-"):
+                t = "# -*- coding: utf-8 -*-\n" + t
+            p.write_text(t, encoding="utf-8")
+            print(f"Rewrote UTF-8: {p}")
+        PY
+        # 3) Quick guard: fail if any C1 controls remain
+        if grep -nP "[\x80-\x9F]" -R --include="*.py" .; then
+          echo "❌ Found remaining C1 control characters" >&2
+          exit 1
+        fi
+
+    - name: Fix common split/garbled f-strings
+      run: |
+        # collapse accidental newline after: print(f"
+        perl -0777 -pe "s/print\(f\"\s*\n\s*/print(f\"\"/g" -i main.py
+        # fix stray triple-quote with ellipsis pattern: print(f"""... Text") -> print(f"Text")
+        perl -0777 -pe "s/print\(\s*f\"\"\"\s*\.\.\.\s*/print(f\"/g" -i main.py
 
     - name: Guard for split f-strings
       run: |
@@ -60,40 +103,6 @@ jobs:
           echo "Error: Found a print(f\" that ends at end-of-line. Fix the line(s) above." >&2
           exit 1
         fi
-
-    - name: Clean smart quotes and hidden chars (quick pass)
-      run: |
-        perl -pi -e 's/\x{85}/.../g' main.py
-        perl -pi -e 's/[“”]/"/g; s/[‘’]/'\''/g; s/[–—]/-/g; s/…/.../g' main.py
-
-    - name: Normalize Python files to UTF-8 & strip hidden chars
-      run: |
-        python - <<'PY'
-        import pathlib
-        REPL = {
-            "\u0085": "...",
-            "\u201c": '"', "\u201d": '"',
-            "\u2018": "'", "\u2019": "'",
-            "\u2013": "-", "\u2014": "-",
-            "\ufeff": ""
-        }
-        for p in pathlib.Path(".").rglob("*.py"):
-            raw = p.read_bytes()
-            for enc in ("utf-8", "cp1252", "latin-1"):
-                try:
-                    text = raw.decode(enc)
-                    break
-                except UnicodeDecodeError:
-                    pass
-            else:
-                text = raw.decode("cp1252", errors="replace")
-            for k, v in REPL.items():
-                text = text.replace(k, v)
-            if not text.lstrip().startswith("# -*- coding: utf-8 -*-"):
-                text = "# -*- coding: utf-8 -*-\n" + text
-            p.write_text(text, encoding="utf-8")
-            print(f"Normalized: {p}")
-        PY
 
     - name: Auto-format Python code
       run: |
@@ -113,56 +122,6 @@ jobs:
           ls -la
           exit 1
         fi
-
-    - name: Patch broken single-line f-strings
-      run: |
-        # Fix any print(f"""...<text>") -> print(f"<text>")
-        perl -0777 -pe 's/print\(\s*f"""\s*\.\.\.\s*/print(f"/g' -i main.py
-        # Also normalize any leftover smart quotes & dashes
-        perl -0777 -pe 's/[“”]/"/g; s/[‘’]/'\''/g; s/[–—]/-/g; s/\x{85}/.../g; s/\x{feff}//g' -i main.py
-
-      - name: Purge C1 controls & normalize quotes in *.py
-      run: |
-        # 1) Remove any C1 control chars (0x80–0x9F) from all Python files
-        perl -CS -MFile::Find -e '
-          my @f; find { wanted => sub { push @f, $File::Find::name if /\.py$/ } }, ".";
-          for my $p (@f) {
-            local $/; open my $in, "<:raw", $p or die $!;
-            my $s = <$in>; close $in;
-            $s =~ s/[\x80-\x9F]//g;      # strip all C1 controls (incl. \x85, \x8F, etc.)
-            # normalize common smart punctuation and BOM
-            $s =~ s/\x{201C}|\x{201D}/"/g;   # “ ”
-            $s =~ s/\x{2018}|\x{2019}/'/g;   # ‘ ’
-            $s =~ s/\x{2013}|\x{2014}/-/g;   # – —
-            $s =~ s/\x{2026}/.../g;          # …
-            $s =~ s/\x{FEFF}//g;             # BOM
-            open my $out, ">:raw", $p or die $!;
-            print $out $s; close $out;
-            print "Cleaned $p\n";
-          }
-        '
-        # 2) Ensure coding cookie and save as UTF-8 text (safe re-write)
-        python - <<'PY'
-        import pathlib
-        for p in pathlib.Path(".").rglob("*.py"):
-            t = p.read_text(errors="replace")
-            if not t.lstrip().startswith("# -*- coding: utf-8 -*-"):
-                t = "# -*- coding: utf-8 -*-\n" + t
-            p.write_text(t, encoding="utf-8")
-            print(f"Rewrote UTF-8: {p}")
-        PY
-        # 3) Quick guard: fail if any C1 controls remain
-        if grep -nP "[\\x80-\\x9F]" -R --include="*.py" .; then
-          echo "❌ Found remaining C1 control characters" >&2
-          exit 1
-        fi
-
-    - name: Fix common split/garbled f-strings
-      run: |
-        # collapse accidental newline after print(f"
-        perl -0777 -pe 's/print\(f"\s*\n\s*/print(f""/g' -i main.py
-        # fix stray triple-quote with ellipsis pattern
-        perl -0777 -pe 's/print\(\s*f"""\s*\.\.\.\s*/print(f"/g' -i main.py
 
     - name: Byte-compile to catch syntax early
       run: python -m py_compile main.py
