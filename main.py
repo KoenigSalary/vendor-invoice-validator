@@ -565,18 +565,17 @@ def debug_available_columns(df):
         print(f"   {i:2d}. {col} = {sample_value}")
 
     # Look for creator-related columns
-    creator_cols = [col for col in df.columns if 'creat' in col.lower() or 'by' in col.lower()]
+    creator_cols = [c for c in df.columns if 'creator' in c.lower() or 'created by' in c.lower()]
     if creator_cols:
-        print(f"
-👤 Creator-related columns found: {creator_cols}")
+        print(f"👤 Creator-related columns found: {creator_cols}")
 
     # Look for payment-related columns
     payment_cols = [col for col in df.columns if 'mop' in col.lower() or 'pay' in col.lower()]
     if payment_cols:
         print(f"💳 Payment-related columns found: {payment_cols}")
 
-    print("
-")
+    # Blank line for readability
+    print()
 
 def validate_downloaded_files(download_dir):
     """Validate that downloaded files exist and are not corrupted"""
