@@ -31,49 +31,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip cache purge
-          pip install --no-cache-dir numpy==1.24.3
-          if [ -f requirements.txt ]; then
-            pip install --no-cache-dir -r requirements.txt --force-reinstall
-          else
-            pip install pandas==2.0.3 requests==2.31.0 schedule==1.2.0
-            pip install openpyxl==3.1.2 xlsxwriter==3.1.7 python-dateutil==2.8.2 pytz==2023.3
-            pip install beautifulsoup4==4.12.2 lxml==4.9.3
-            pip install selenium==4.15.0 webdriver-manager==4.0.1
-            pip install plotly==5.17.0 xlrd==1.2.0 python-dotenv==1.0.0
-          fi
-          pip install autopep8
-
-      - name: Show lines around 581 for debugging
-        run: |
-          echo "----- main.py lines 570..595 -----"
-          nl -ba main.py | sed -n '570,595p' || true
-          echo "---------------------------------"
-
-      # (Optional) If you truly need the cleanup steps, add them back *carefully* as separate steps.
-
-      - name: Auto-format Python code
-        run: |
-          autopep8 --in-place --aggressive --aggressive --recursive .
+          pip install --no-cache-dir -r requirements.txt
 
       - name: Verify installations
         run: |
           google-chrome --version
-          python -c "import selenium; print('Selenium version:', selenium.__version__)"
-          python -c "from webdriver_manager.chrome import ChromeDriverManager; print('WebDriver Manager: OK')"
-          python -c "import pandas as pd; print('Pandas version:', pd.__version__)"
-
-      - name: Check if main.py exists
-        run: |
-          if [ ! -f main.py ]; then
-            echo "Error: main.py not found in repository root"
-            ls -la
-            exit 1
-          fi
+          python -c "import selenium; print('Selenium:', selenium.__version__)"
+          python -c "import pandas as pd; print('Pandas:', pd.__version__)"
 
       - name: Byte-compile to catch syntax early
         run: python -m py_compile main.py
 
-      - name: Run invoice validation (xvfb)
+      - name: Run invoice validation (headless via xvfb)
         run: xvfb-run -a python3 main.py run 2>&1 | tee run.log
         env:
           RMS_BASE_URL: https://rms.koenig-solutions.com
@@ -91,26 +60,16 @@ jobs:
           EMAIL_DEBUG: "false"
           SEND_EMAIL: "1"
 
-      - name: Upload validation results
+      - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: validation-results-${{ github.run_number }}
+          name: results-${{ github.run_number }}
           path: |
+            run.log
             *.xlsx
             *.csv
             *.log
             *.db
             data/
           retention-days: 30
-
-      - name: Upload logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: failure-logs-${{ github.run_number }}
-          path: |
-            run.log
-            *.log
-            /tmp/*.log
-          retention-days: 7
