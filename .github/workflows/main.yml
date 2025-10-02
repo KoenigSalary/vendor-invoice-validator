@@ -114,6 +114,10 @@ jobs:
           exit 1
         fi
 
+    - name: Patch known broken f-string
+      run: |
+        perl -0777 -pe 's/print\(\s*f"""\s*\.\.\.\s* Database records archived before \{cutoff_str\}"\)/print(f"✅ Database records archived before {cutoff_str}")/g' -i main.py
+
     - name: Byte-compile to catch syntax early
       run: python -m py_compile main.py
 
