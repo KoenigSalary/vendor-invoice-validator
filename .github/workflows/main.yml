@@ -21,14 +21,14 @@ jobs:
     - name: Install Chrome
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget gnupg
+        sudo apt-get install -y wget gnupg unzip fonts-liberation
         wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg
         echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
         sudo apt-get update
         sudo apt-get install -y google-chrome-stable
 
-    - name: Install Python dependencies
-      run: |
+     - name: Install Python dependencies
+       run: |
         python -m pip install --upgrade pip
         pip cache purge
         pip install --no-cache-dir numpy==1.24.3
@@ -39,11 +39,10 @@ jobs:
           pip install openpyxl==3.1.2 xlsxwriter==3.1.7 python-dateutil==2.8.2 pytz==2023.3
           pip install beautifulsoup4==4.12.2 lxml==4.9.3
           pip install selenium==4.15.0 webdriver-manager==4.0.1
-          pip install plotly==5.17.0 xlrd==2.0.1 python-dotenv==1.0.0
+          pip install plotly==5.17.0 xlrd==1.2.0 python-dotenv==1.0.0
         fi
-        pip install autopep8
-
-    - name: Show lines around 581 for debugging
+        pip install autopep8    - name: Show lines around 581 for debugging
+        
       run: |
         echo "----- main.py lines 570..595 -----"
         nl -ba main.py | sed -n '570,595p' || true
@@ -126,10 +125,9 @@ jobs:
     - name: Byte-compile to catch syntax early
       run: python -m py_compile main.py
 
-    - name: Run invoice validation
-      run: python3 main.py run
-      env:
-        RMS_BASE_URL: https://rms.koenig-solutions.com
+    - name: Run invoice validation (xvfb)
+      run: xvfb-run -a python3 main.py run
+      env:        RMS_BASE_URL: https://rms.koenig-solutions.com
         DB_PATH: invoice_validation.db
         EXCEL_PATH: invoice_validation_report.xlsx
         RMS_USER: ${{ secrets.RMS_USER }}
