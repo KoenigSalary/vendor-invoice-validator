@@ -49,7 +49,7 @@ jobs:
         nl -ba main.py | sed -n '570,595p' || true
         echo "---------------------------------"
 
-    - name: Auto-fix accidental newline after print(f")
+    - name: "Auto-fix accidental newline after print(f\")"
       run: |
         perl -0777 -pe 's/print\(f"\s*\n\s*/print(f""/g' -i main.py
         perl -0777 -pe 's/[“”]/"/g; s/[‘’]/'\''/g' -i main.py
@@ -114,12 +114,12 @@ jobs:
           exit 1
         fi
 
-        - name: Patch broken single-line f-strings
-          run: |
-            # Fix any print(f"""...<text>") -> print(f"<text>")
-            perl -0777 -pe 's/print\(\s*f"""\s*\.\.\.\s*/print(f"/g' -i main.py
-            # Also normalize any leftover smart quotes & dashes
-            perl -0777 -pe 's/[“”]/"/g; s/[‘’]/'\''/g; s/[–—]/-/g; s/\x{85}/.../g; s/\x{feff}//g' -i main.py
+    - name: Patch broken single-line f-strings
+      run: |
+        # Fix any print(f"""...<text>") -> print(f"<text>")
+        perl -0777 -pe 's/print\(\s*f"""\s*\.\.\.\s*/print(f"/g' -i main.py
+        # Also normalize any leftover smart quotes & dashes
+        perl -0777 -pe 's/[“”]/"/g; s/[‘’]/'\''/g; s/[–—]/-/g; s/\x{85}/.../g; s/\x{feff}//g' -i main.py
 
     - name: Byte-compile to catch syntax early
       run: python -m py_compile main.py
