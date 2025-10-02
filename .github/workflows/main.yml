@@ -121,6 +121,35 @@ jobs:
             print(f"Normalized: {p}")
         PY
 
+      - name: Strip hidden characters from *.py
+      run: |
+        perl -CS -MFile::Find -e '
+          my @f; find { wanted => sub { push @f, $File::Find::name if /\.py$/ } }, ".";
+          for my $p (@f) {
+            local $/; open my $in, "<:raw", $p or die $!;
+            my $s = <$in>; close $in;
+            $s =~ s/\x{85}/.../g;     # U+0085
+            $s =~ s/\x{201[8,9]}/'/g; # smart single quotes
+            $s =~ s/\x{201[c,d]}/"/g; # smart double quotes
+            $s =~ s/\x{201[3,4]}/-/g; # en/em dash
+            $s =~ s/\x{feff}//g;      # BOM
+            open my $out, ">:encoding(UTF-8)", $p or die $!;
+            print $out "# -*- coding: utf-8 -*-\n" unless $s =~ /^\s*#\s*-\*-\s*coding:\s*utf-8\s*-\*-/;
+            print $out $s; close $out;
+            print "Cleaned $p\n";
+          }
+        '
+
+        - name: Fail if any split f-strings remain
+        run: |
+          if grep -nE 'print\(\s*f"\s*$' main.py; then
+            echo "Found a split f-string (print(f\" at end of line)). Fix it." >&2
+            exit 1
+          fi
+
+      - name: Byte-compile to catch syntax early
+        run: python -m py_compile main.py
+
     - name: Syntax check
       run: python -m py_compile main.py
 
