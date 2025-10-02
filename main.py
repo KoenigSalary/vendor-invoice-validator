@@ -494,9 +494,7 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     df_norm = df_norm.loc[:, ~df_norm.columns.duplicated(keep="first")]
     return df_norm
 
-
 main_norm = normalize_columns(df_raw)
-
 
 # If SOA is available, merge missing fields from it (fill-only, don’t overwrite good data)
 def merge_from_soa(main_df: pd.DataFrame, soa_df: pd.DataFrame) -> pd.DataFrame:
@@ -555,7 +553,7 @@ if os.path.exists(soa_path):
 
 def debug_available_columns(df):
     """Debug function to show all available columns"""
-    print(f"
+    print(f"✅
 🔍 DEBUGGING AVAILABLE COLUMNS:")
     print(f"📊 Total columns: {len(df.columns)}")
 
