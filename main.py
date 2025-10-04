@@ -908,7 +908,7 @@ def generate_email_summary_statistics(detailed_df, cumulative_start, cumulative_
             </h2>
 
             <div style="background-color: #ecf0f1; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                <h3 style="color: #34495e; margin-top: 0;">🗓 Validation Period</h3>
+                <h3 style="color: #34495e; margin-top: 0;">&#x1F5D3; Validation Period</h3>
                 <p><strong>Current Batch:</strong> {current_batch_start} to {current_batch_end}</p>
                 <p><strong>Cumulative Range:</strong> {cumulative_start} to {cumulative_end}</p>
                 <p><strong>Total Coverage:</strong> {(datetime.strptime(cumulative_end, '%Y-%m-%d') - datetime.strptime(cumulative_start, '%Y-%m-%d')).days + 1} days</p>
