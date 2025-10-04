@@ -916,7 +916,7 @@ def generate_email_summary_statistics(detailed_df, cumulative_start, cumulative_
 
             <div style="display: flex; flex-wrap: wrap; gap: 15px; margin: 20px 0;">
                 <div style="background-color: #d5f4e6; padding: 15px; border-radius: 5px; flex: 1; min-width: 200px; border-left: 4px solid #27ae60;">
-                    <h4 style="color: #27ae60; margin: 0 0 10px 0;">✅ Total Invoices</h4>
+                    <h4 style="color: #27ae60; margin: 0 0 10px 0;">&#x2705; Total Invoices</h4>
                     <p style="font-size: 24px; font-weight: bold; margin: 0; color: #27ae60;">{total_invoices:,}</p>
                 </div>
 
