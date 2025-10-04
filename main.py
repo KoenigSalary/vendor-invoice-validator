@@ -921,12 +921,12 @@ def generate_email_summary_statistics(detailed_df, cumulative_start, cumulative_
                 </div>
 
                 <div style="background-color: #d5f4e6; padding: 15px; border-radius: 5px; flex: 1; min-width: 200px; border-left: 4px solid #27ae60;">
-                    <h4 style="color: #27ae60; margin: 0 0 10px 0;">✅ Passed</h4>
+                    <h4 style="color: #27ae60; margin: 0 0 10px 0;">&#x2705; Passed</h4>
                     <p style="font-size: 24px; font-weight: bold; margin: 0; color: #27ae60;">{passed_invoices:,} ({pass_rate:.1f}%)</p>
                 </div>
 
                 <div style="background-color: #fef9e7; padding: 15px; border-radius: 5px; flex: 1; min-width: 200px; border-left: 4px solid #f39c12;">
-                    <h4 style="color: #f39c12; margin: 0 0 10px 0;">⚠️ Warnings</h4>
+                    <h4 style="color: #f39c12; margin: 0 0 10px 0;">&#x2705; Passed</h4>
                     <p style="font-size: 24px; font-weight: bold; margin: 0; color: #f39c12;">{warning_invoices:,}</p>
                 </div>
 
