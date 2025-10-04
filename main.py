@@ -922,19 +922,18 @@ def generate_email_summary_statistics(detailed_df, cumulative_start, cumulative_
 
                 <div style="background-color: #d5f4e6; padding: 15px; border-radius: 5px; flex: 1; min-width: 200px; border-left: 4px solid #27ae60;">
                     <h4 style="color: #27ae60; margin: 0 0 10px 0;">&#x2705; Passed</h4>
-                    <p style="font-size: 24px; font-weight: bold; margin: 0; color: #27ae60;">{passed_invoices:,} ({pass_rate:.1f}%)</p>
+                    <p style="font-size: 24px; font-weight: bold; margin: 0; color: #27ae60;">{passed_invoices:,} ({pass_rate:,.1f}%)</p>               
                 </div>
 
                 <div style="background-color: #fef9e7; padding: 15px; border-radius: 5px; flex: 1; min-width: 200px; border-left: 4px solid #f39c12;">
-                    <h4 style="color: #f39c12; margin: 0 0 10px 0;">&#x2705; Passed</h4>
+                    <h4 style="color: #f39c12; margin: 0 0 10px 0;">⚠️ Warnings</h4>
                     <p style="font-size: 24px; font-weight: bold; margin: 0; color: #f39c12;">{warning_invoices:,}</p>
                 </div>
-
-                <div style="background-color: #fadbd8; padding: 15px; border-radius: 5px; flex: 1; min-width: 200px; border-left: 4px solid #e74c3c;">
-                    <h4 style="color: #e74c3c; margin: 0 0 10px 0;">❌ Failed</h4>
-                    <p style="font-size: 24px; font-weight: bold; margin: 0; color: #e74c3c;">{failed_invoices:,}</p>
-                </div>
             </div>
+
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                    <h3 style="color: #34495e; margin-top: 0;">🔍 Top Validation Issues</h3>
+                    <ol style="margin: 0; padding-left: 20px;">
 
             <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
                 <h3 style="color: #34495e; margin-top: 0;">🔍 Top Validation Issues</h3>
