@@ -1,0 +1,4 @@
+Invoice_Number,Vendor_Name,Amount
+INV-001,Test Vendor 1,1000.5
+INV-002,Test Vendor 2,2500.75
+INV-003,Test Vendor 3,750.25

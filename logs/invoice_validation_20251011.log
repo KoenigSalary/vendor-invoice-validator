@@ -1,0 +1,60 @@
+2025-10-11 16:56:25,129 - __main__ - INFO - setup_logging:195 - Production logging system initialized
+2025-10-11 16:56:25,129 - __main__ - INFO - main:1910 - === Production Invoice Validation System Starting ===
+2025-10-11 16:56:25,129 - __main__ - INFO - main:1911 - Python version: 3.13.5 | packaged by Anaconda, Inc. | (main, Jun 12 2025, 11:23:37) [Clang 14.0.6 ]
+2025-10-11 16:56:25,129 - __main__ - INFO - main:1912 - GitHub Actions mode: False
+2025-10-11 16:56:25,129 - __main__ - INFO - main:1913 - Selenium available: True
+2025-10-11 16:56:25,129 - __main__ - INFO - main:1914 - Current working directory: /Users/praveenchaudhary/Downloads/Invoice-Validator
+2025-10-11 16:56:25,129 - __main__ - INFO - main:1915 - Environment configuration: Local Development
+2025-10-11 16:56:25,133 - __main__ - INFO - init_database:320 - Enhanced production database initialized successfully
+2025-10-11 16:56:25,133 - __main__ - WARNING - __init__:616 - Email not fully configured - notifications will be logged only
+2025-10-11 16:56:25,133 - __main__ - WARNING - __init__:765 - RMS integration disabled - missing credentials or Selenium
+2025-10-11 16:56:25,133 - __main__ - INFO - __init__:782 - Production Invoice Validation System initialized - Session: prod_session_1760181985
+2025-10-11 16:56:25,133 - __main__ - INFO - run_validation_process:1803 - Starting production invoice validation process - Session: prod_session_1760181985
+2025-10-11 16:56:25,133 - __main__ - INFO - setup_directories:795 - Production directory ready: downloads
+2025-10-11 16:56:25,133 - __main__ - INFO - setup_directories:795 - Production directory ready: archive
+2025-10-11 16:56:25,133 - __main__ - INFO - setup_directories:795 - Production directory ready: logs
+2025-10-11 16:56:25,134 - __main__ - INFO - setup_directories:795 - Production directory ready: snapshots
+2025-10-11 16:56:25,134 - __main__ - INFO - setup_directories:795 - Production directory ready: downloads
+2025-10-11 16:56:25,134 - __main__ - INFO - setup_directories:795 - Production directory ready: archive
+2025-10-11 16:56:25,134 - __main__ - INFO - setup_directories:795 - Production directory ready: logs
+2025-10-11 16:56:25,134 - __main__ - INFO - setup_directories:795 - Production directory ready: snapshots
+2025-10-11 16:56:25,134 - __main__ - INFO - backup_database:456 - Database backed up to backup_invoice_validation.db and backup_invoice_validation_20251011_165625.db
+2025-10-11 16:56:25,134 - __main__ - WARNING - validate_configuration:818 - RMS credentials not configured - RMS features will be skipped
+2025-10-11 16:56:25,134 - __main__ - WARNING - validate_configuration:824 - Email credentials not configured - email notifications disabled
+2025-10-11 16:56:25,134 - __main__ - WARNING - validate_configuration:829 - Email recipients not configured - email notifications disabled
+2025-10-11 16:56:25,134 - __main__ - INFO - validate_configuration:841 - Production configuration validation passed
+2025-10-11 16:56:25,134 - __main__ - INFO - run_validation_process:1832 - RMS disabled or FORCE_DEMO active; skipping RMS downloads.
+2025-10-11 16:56:25,135 - __main__ - INFO - create_demo_data_if_needed:861 - Data files already present → demo not created
+2025-10-11 16:56:25,135 - __main__ - INFO - create_demo_data_if_needed:861 - Data files already present → demo not created
+2025-10-11 16:56:25,135 - __main__ - INFO - process_local_files:952 - Found 2 files to process
+2025-10-11 16:56:25,135 - __main__ - INFO - process_local_files:956 - Processing production file: downloads/test_data.xlsx
+2025-10-11 16:56:25,240 - __main__ - INFO - clean_dataframe:1062 - DataFrame cleaned: (3, 3) -> (3, 3)
+2025-10-11 16:56:25,241 - __main__ - INFO - validate_invoice_data:1115 - Production validation completed: {'total_rows': 3, 'total_columns': 3, 'found_columns': {'invoice_number': 'invoice_number', 'vendor': 'vendor_name', 'amount': 'amount'}, 'memory_usage': 510, 'file_size_estimate': '0.50 KB'}
+2025-10-11 16:56:25,242 - __main__ - INFO - map_dataframe_columns:1515 - Production column mapping: {'invoice_number': 'invoice_number', 'vendor': 'vendor_name', 'amount': 'amount'}
+2025-10-11 16:56:25,245 - __main__ - INFO - process_local_files:987 - Successfully processed 3 invoices from test_data.xlsx
+2025-10-11 16:56:25,246 - __main__ - INFO - process_local_files:956 - Processing production file: downloads/test_data.csv
+2025-10-11 16:56:25,249 - __main__ - INFO - clean_dataframe:1062 - DataFrame cleaned: (3, 3) -> (3, 3)
+2025-10-11 16:56:25,249 - __main__ - INFO - validate_invoice_data:1115 - Production validation completed: {'total_rows': 3, 'total_columns': 3, 'found_columns': {'invoice_number': 'invoice_number', 'vendor': 'vendor_name', 'amount': 'amount'}, 'memory_usage': 510, 'file_size_estimate': '0.50 KB'}
+2025-10-11 16:56:25,249 - __main__ - INFO - map_dataframe_columns:1515 - Production column mapping: {'invoice_number': 'invoice_number', 'vendor': 'vendor_name', 'amount': 'amount'}
+2025-10-11 16:56:25,252 - __main__ - INFO - process_local_files:987 - Successfully processed 3 invoices from test_data.csv
+2025-10-11 16:56:25,256 - __main__ - INFO - write_validation_csvs:1755 - Wrote CSVs: validation_report.csv, discrepancy_report.csv
+2025-10-11 16:56:25,265 - __main__ - INFO - generate_summary_report:1792 - Excel report generated: downloads/production_summary_20251011_165625.xlsx
+2025-10-11 16:56:25,266 - __main__ - INFO - send_processing_summary:621 - Email not configured - logging summary instead
+2025-10-11 16:56:25,266 - __main__ - INFO - send_processing_summary:622 - Processing Summary: {
+  "total_processed": 6,
+  "successful": 2,
+  "failed": 0,
+  "discrepancies": 0,
+  "errors": [],
+  "warnings": [],
+  "attachment_files": [
+    "downloads/production_summary_20251011_165625.xlsx",
+    "logs/errors_20251011.log"
+  ],
+  "overall_status": "success",
+  "session_id": "prod_session_1760181985",
+  "start_time": "2025-10-11T16:56:25.133853",
+  "environment": "Local"
+}
+2025-10-11 16:56:25,266 - __main__ - INFO - run_validation_process:1893 - Production validation process finished successfully - Processed: 2
+2025-10-11 16:56:25,266 - __main__ - INFO - main:1923 - === Production Invoice Validation System Completed Successfully ===

@@ -1,0 +1,1 @@
+id,invoice_number,vendor_name,amount,validation_date,status,rms_status,discrepancies,notes,file_path,hash_value,processed_by,created_at,updated_at,gst_no,inv_date,inv_entry_date,inv_mod_date,due_date,scid_number,remarks,mop,account_head,inv_currency,location,vendor_advance,marked_feedback_issue,tp_feedback_by_fm,ms_feedback_by_fm,fl_feedback,inv_created_by
