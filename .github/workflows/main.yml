@@ -25,9 +25,20 @@ jobs:
         pip install -r requirements.txt
     
     - name: Run invoice validation
+      env:
+        RMS_USERNAME: ${{ secrets.RMS_USERNAME }}
+        RMS_PASSWORD: ${{ secrets.RMS_PASSWORD }}
+        RMS_URL: ${{ secrets.RMS_URL }}
+        EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        FORCE_RMS: "true"
+        FORCE_EMAIL: "true"
       run: |
         python main.py
-        echo "Invoice validation completed successfully!"
+        echo "Invoice validation with RMS integration completed!"
     
     - name: Upload results
       uses: actions/upload-artifact@v4
