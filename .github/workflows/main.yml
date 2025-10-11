@@ -26,23 +26,32 @@ jobs:
     
     - name: Run invoice validation
       env:
-        RMS_USERNAME: ${{ secrets.RMS_USERNAME }}
-        RMS_PASSWORD: ${{ secrets.RMS_PASSWORD }}
-        RMS_URL: ${{ secrets.RMS_URL }}
-        EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
-        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        EMAIL_TO: ${{ secrets.EMAIL_TO }}
-        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        # RMS Configuration
+        RMS_USERNAME: ${{ secrets.RMS_USER }}
+        RMS_PASSWORD: ${{ secrets.RMS_PASS }}
+        
+        # Email Configuration  
+        EMAIL_USERNAME: ${{ secrets.SMTP_USER }}
+        EMAIL_PASSWORD: ${{ secrets.SMTP_PASS }}
+        EMAIL_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
+        EMAIL_TO: ${{ secrets.AP_TEAM_EMAIL_LIST }}
+        SMTP_SERVER: ${{ secrets.SMTP_HOST }}
         SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
+        
+        # Force real processing (not demo mode)
         FORCE_RMS: "true"
         FORCE_EMAIL: "true"
+        DISABLE_DEMO: "true"
+        
+        # GitHub token for additional integrations if needed
+        GITHUB_TOKEN: ${{ secrets.INVOICE_VALIDATOR_TOKEN }}
       run: |
         python main.py
-        echo "Invoice validation with RMS integration completed!"
+        echo "Invoice validation with RMS and email integration completed!"
     
     - name: Upload results
       uses: actions/upload-artifact@v4
-
       if: always()
       with:
         name: validation-results
@@ -50,4 +59,6 @@ jobs:
           *.csv
           *.xlsx
           *.db
+          downloads/*.pdf
+          downloads/*.zip
         retention-days: 30
