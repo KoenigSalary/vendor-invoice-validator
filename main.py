@@ -558,14 +558,19 @@ class ProductionSeleniumManager:
             options.add_argument("--headless=new")
             options.add_argument("--remote-debugging-port=9222")
 
-        # Downloads
         download_dir = os.path.abspath(getattr(config, "DOWNLOADS_DIR", "downloads"))
         os.makedirs(download_dir, exist_ok=True)
+
         prefs = {
             "download.default_directory": download_dir,
             "download.prompt_for_download": False,
             "download.directory_upgrade": True,
             "safebrowsing.enabled": True,
+
+            # IMPORTANT: make PDFs download instead of opening in the viewer
+            "plugins.always_open_pdf_externally": True,
+
+            # keep noise down
             "profile.default_content_settings.popups": 0,
             "profile.default_content_setting_values.notifications": 2,
         }
@@ -573,8 +578,11 @@ class ProductionSeleniumManager:
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
         options.add_experimental_option("useAutomationExtension", False)
 
-        self.options = options
-        self.logger.info("Production Chrome options configured")
+        # Strongly recommended for CI:
+        options.add_argument("--headless=new")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--window-size=1920,1080")
 
     def get_driver(self):
         """Create (or return cached) driver."""
@@ -1571,43 +1579,52 @@ class ProductionInvoiceValidationSystem:
         download_dir = Path(getattr(config, "DOWNLOADS_DIR", "downloads"))
         download_dir.mkdir(parents=True, exist_ok=True)
 
-        def _enable_downloads(drv):
-            payload = {"behavior": "allow", "downloadPath": str(download_dir)}
+        def _enable_downloads(driver, download_dir: str):
+            """Allow downloads in headless Chrome via CDP; force PDFs to download."""
             try:
-                drv.execute_cdp_cmd("Page.setDownloadBehavior", payload)
+                driver.execute_cdp_cmd(
+                    "Page.setDownloadBehavior",
+                    {"behavior": "allow", "downloadPath": os.path.abspath(download_dir)}
+                )
             except Exception:
-                try:
-                    drv.execute_cdp("Page.setDownloadBehavior", payload)  # alt API
-                except Exception as e:
-                    self.logger.warning(f"CDP downloads not enabled: {e}")
+                pass  # non-fatal
 
-        def _snapshot() -> set:
-            return {p.name for p in download_dir.glob("*")}
+        def _snapshot(download_dir: Path) -> set:
+            return {p.resolve() for p in download_dir.glob("*") if p.is_file()}
 
-        def _new_completed_files(before: set) -> List[Path]:
-            wanted = (".csv", ".xlsx", ".xls", ".pdf", ".jpg", ".jpeg")
-            out: List[Path] = []
-            for p in download_dir.glob("*"):
-                if p.name in before:
-                    continue
-                if p.suffix.lower() in wanted and not p.name.endswith((".crdownload", ".tmp")):
-                    out.append(p)
-            return out
+        def _new_completed_files(download_dir: Path, before: set) -> list[Path]:
+            cur = {p.resolve() for p in download_dir.glob("*") if p.is_file()}
+            done = [p for p in (cur - before) if not str(p).endswith((".crdownload",".tmp",".part"))]
+            return done
 
-        def _wait_for_downloads(before: set, timeout: int = 180) -> List[Path]:
-            end = time.time() + timeout
-            while time.time() < end:
-                partials = list(download_dir.glob("*.crdownload")) + list(download_dir.glob("*.tmp"))
-                news = _new_completed_files(before)
-                if not partials and news:
-                    return news
+        def _wait_for_downloads(download_dir: Path, before: set, timeout: int = 240) -> list[Path]:
+            """Wait until no partials remain and size is stable twice."""
+            deadline = time.time() + timeout
+            last_size = -1
+            stable = 0
+            while time.time() < deadline:
+                partials = list(download_dir.glob("*.crdownload")) + list(download_dir.glob("*.tmp")) + list(download_dir.glob("*.part"))
+                new_done = _new_completed_files(download_dir, before)
+                total = sum(p.stat().st_size for p in download_dir.glob("*") if p.is_file())
+                if not partials and new_done:
+                    if total == last_size:
+                        stable += 1
+                        if stable >= 2:
+                            return new_done
+                    else:
+                        stable = 0
+                        last_size = total
                 time.sleep(1)
-            return _new_completed_files(before)
+            return _new_completed_files(download_dir, before)
+
+        # assume download_dir is a Path object to your configured downloads folder
+        download_dir = Path(getattr(config, "DOWNLOADS_DIR", "downloads")).resolve()
+        download_dir.mkdir(parents=True, exist_ok=True)
 
         try:
             drv = self.selenium_manager.get_driver()
             wait = WebDriverWait(drv, config.SELENIUM_TIMEOUT)
-            _enable_downloads(drv)
+            _enable_downloads(drv, str(download_dir))
 
             # 1) Login
             if not getattr(config, "RMS_LOGIN_URL", None):
@@ -1615,17 +1632,18 @@ class ProductionInvoiceValidationSystem:
                 return files
             drv.get(config.RMS_LOGIN_URL)
 
-            user = wait.until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, "#username, input[name='username'], input[type='email']"))
-            )
-            pwd = wait.until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, "#password, input[name='password'], input[type='password']"))
-            )
+            user = wait.until(EC.visibility_of_element_located(
+                (By.CSS_SELECTOR, "#username, input[name='username'], input[type='email']")))
+            pwd = wait.until(EC.visibility_of_element_located(
+                (By.CSS_SELECTOR, "#password, input[name='password'], input[type='password']")))
             user.clear(); user.send_keys(os.getenv("RMS_USERNAME", ""))
             pwd.clear();  pwd.send_keys(os.getenv("RMS_PASSWORD", ""))
 
             try:
-                btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[type='submit'], input[type='submit']")))
+                btn = wait.until(EC.element_to_be_clickable(
+                    (By.CSS_SELECTOR, "button[type='submit'], input[type='submit']")))
+                # prevent new tab behaviors
+                drv.execute_script("arguments[0].removeAttribute('target');", btn)
                 btn.click()
             except Exception:
                 drv.find_element(By.XPATH, "//form").submit()
@@ -1641,31 +1659,40 @@ class ProductionInvoiceValidationSystem:
             # 3) Date filters
             try:
                 if start_date:
-                    el = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input[name='startDate'], #startDate, input[data-testid='startDate']")))
+                    el = wait.until(EC.element_to_be_clickable(
+                        (By.CSS_SELECTOR, "input[name='startDate'], #startDate, input[data-testid='startDate']")))
                     el.clear(); el.send_keys(start_date); el.send_keys(Keys.ENTER)
                 if end_date:
-                    el = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input[name='endDate'], #endDate, input[data-testid='endDate']")))
+                    el = wait.until(EC.element_to_be_clickable(
+                        (By.CSS_SELECTOR, "input[name='endDate'], #endDate, input[data-testid='endDate']")))
                     el.clear(); el.send_keys(end_date); el.send_keys(Keys.ENTER)
             except Exception as e:
                 self.logger.warning(f"Could not set date filters: {e}")
 
             # 4) Export grid (CSV/XLS)
             try:
-                export_btn = wait.until(
-                    EC.element_to_be_clickable((By.XPATH, "//button[contains(.,'Export') or contains(.,'CSV') or contains(.,'Excel')]"))
-                )
-                before = _snapshot()
+                export_btn = wait.until(EC.element_to_be_clickable((
+                    By.XPATH, "//button[contains(.,'Export') or contains(.,'CSV') or contains(.,'Excel')]"
+                )))
+                drv.execute_script("arguments[0].removeAttribute('target');", export_btn)
+                before = _snapshot(download_dir)
                 export_btn.click()
-                for p in _wait_for_downloads(before, timeout=180):
+                for p in _wait_for_downloads(download_dir, before, timeout=240):
                     if p.suffix.lower() in (".csv", ".xlsx", ".xls"):
-                        files.append(str(p))
+                        # normalize names so later steps can find them reliably
+                        target = download_dir / ("invoice_download" + p.suffix.lower())
+                        try:
+                            if target.exists(): target.unlink()
+                            p.rename(target)
+                            files.append(str(target))
+                        except Exception:
+                            files.append(str(p))  # keep original if rename fails
             except Exception as e:
                 self.logger.error(f"Export click failed: {e}")
 
             # 5) Invoice PDFs/JPGs
             try:
-                links = drv.find_elements(
-                    By.XPATH,
+                links = drv.find_elements(By.XPATH,
                     "//a[contains(translate(@href,'PDFJGP','pdfjgp'),'.pdf') or "
                     "     contains(translate(@href,'PDFJGP','pdfjgp'),'.jpg') or "
                     "     contains(translate(.,'DOWNLOAD','download'),'download') or "
@@ -1673,23 +1700,40 @@ class ProductionInvoiceValidationSystem:
                 )[:200]
 
                 if links:
-                    before = _snapshot()
+                    before = _snapshot(download_dir)
                     for a in links:
                         try:
+                            drv.execute_script("arguments[0].removeAttribute('target');", a)
                             drv.execute_script("arguments[0].scrollIntoView({block:'center'})", a)
-                            ActionChains(drv).key_down(Keys.CONTROL).click(a).key_up(Keys.CONTROL).perform()
+                            a.click()
                         except Exception:
                             try:
-                                a.click()
+                                ActionChains(drv).key_down(Keys.CONTROL).click(a).key_up(Keys.CONTROL).perform()
                             except Exception:
                                 pass
-                    for p in _wait_for_downloads(before, timeout=180):
+
+                    new_files = _wait_for_downloads(download_dir, before, timeout=240)
+                    for p in new_files:
                         if p.suffix.lower() in (".pdf", ".jpg", ".jpeg"):
                             files.append(str(p))
                 else:
                     self.logger.info("No invoice document links detected on the page.")
             except Exception as e:
                 self.logger.warning(f"Invoice document scrape skipped: {e}")
+
+            # 6) Bundle all invoice docs into a single ZIP for emailing
+            try:
+                bundle = download_dir / "invoices_bundle.zip"
+                import zipfile
+                with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+                    for p in sorted(download_dir.glob("*")):
+                        if p.suffix.lower() in (".pdf", ".jpg", ".jpeg"):
+                            zf.write(p, arcname=p.name)
+                if bundle.exists():
+                    files.append(str(bundle))
+                    self.logger.info(f"Created bundle: {bundle}")
+            except Exception as e:
+                 self.logger.warning(f"Could not create invoices bundle: {e}")
 
             self.logger.info(f"RMS downloaded: {len(files)} file(s)")
             return files
