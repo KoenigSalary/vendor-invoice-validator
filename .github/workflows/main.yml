@@ -30,6 +30,11 @@ jobs:
         RMS_USERNAME: ${{ secrets.RMS_USER }}
         RMS_PASSWORD: ${{ secrets.RMS_PASS }}
         
+        # RMS Configuration
+        RMS_USERNAME: ${{ secrets.RMS_USER }}
+        RMS_PASSWORD: ${{ secrets.RMS_PASS }}
+        RMS_URL: ${{ secrets.RMS_URL }}  # Add this line
+        
         # Email Configuration  
         EMAIL_USERNAME: ${{ secrets.SMTP_USER }}
         EMAIL_PASSWORD: ${{ secrets.SMTP_PASS }}
@@ -38,6 +43,13 @@ jobs:
         SMTP_SERVER: ${{ secrets.SMTP_HOST }}
         SMTP_PORT: ${{ secrets.SMTP_PORT }}
         SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
+        
+        # Force real processing
+        FORCE_RMS: "true"
+        FORCE_EMAIL: "true"
+        DISABLE_DEMO: "true"
+        
+        GITHUB_TOKEN: ${{ secrets.INVOICE_VALIDATOR_TOKEN }}
         
         # Force real processing (not demo mode)
         FORCE_RMS: "true"
