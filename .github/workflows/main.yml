@@ -73,6 +73,25 @@ jobs:
           echo "HEADLESS_MODE=true" >> "$GITHUB_ENV"
           echo "GITHUB_ACTIONS=true" >> "$GITHUB_ENV"
 
+      - name: DNS & HTTP probe for RMS
+        run: |
+          set -e
+          RMS_LOGIN_URL="${{ secrets.RMS_LOGIN_URL }}"
+           if [ -z "$RMS_LOGIN_URL" ]; then
+            echo "RMS_LOGIN_URL secret not set"; exit 1
+           fi
+           HOST=$(echo "$RMS_LOGIN_URL" | awk -F[/:] '{print $4}')
+           echo "Testing DNS for: $HOST"
+           if nslookup "$HOST"; then
+            echo "✅ DNS resolves"
+          else
+            echo "❌ DNS does NOT resolve from GitHub runner"
+            echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+           echo "Testing HTTPS reachability..."
+           curl -I --max-time 15 "$RMS_LOGIN_URL" || true
+
       - name: Fail fast if RMS host not resolvable (use self-hosted if internal)
         shell: bash
         run: |
