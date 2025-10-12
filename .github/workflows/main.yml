@@ -13,8 +13,8 @@ on:
 
 jobs:
   validate-invoices:
-    # If you store secrets under an Environment (e.g., "prod"), leave this.
-    # Otherwise, remove the next two lines.
+    # If you keep env-scoped secrets (e.g., "prod"), keep the next line.
+    # Remove it if you don't use Environments.
     environment: prod
 
     runs-on: ubuntu-latest
@@ -25,8 +25,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Clear old local test files (optional)
-        run: |
-          rm -f downloads/test_data.* downloads/production_summary_*.xlsx || true
+        run: rm -f downloads/test_data.* downloads/production_summary_*.xlsx || true
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -54,23 +53,25 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install chardet  # belt-and-suspenders
+          pip install chardet
 
-      - name: Map secrets to env
+      - name: Map secrets to env (including legacy names)
         shell: bash
         run: |
-          # RMS credentials
+          # RMS creds (both new + legacy for your scripts)
           echo "RMS_USERNAME=${{ secrets.RMS_USER }}" >> "$GITHUB_ENV"
           echo "RMS_PASSWORD=${{ secrets.RMS_PASS }}" >> "$GITHUB_ENV"
+          echo "RMS_USER=${{ secrets.RMS_USER }}" >> "$GITHUB_ENV"
+          echo "RMS_PASS=${{ secrets.RMS_PASS }}" >> "$GITHUB_ENV"
 
-          # Prefer RMS_BASE_URL; fallback to RMS_URL if you stored it that way
+          # BASE URL preferred; fallback to RMS_URL
           if [ -n "${{ secrets.RMS_BASE_URL }}" ]; then
             echo "RMS_BASE_URL=${{ secrets.RMS_BASE_URL }}" >> "$GITHUB_ENV"
           elif [ -n "${{ secrets.RMS_URL }}" ]; then
             echo "RMS_BASE_URL=${{ secrets.RMS_URL }}" >> "$GITHUB_ENV"
           fi
 
-          # Optional dedicated endpoints
+          # Optional endpoints
           [ -n "${{ secrets.RMS_LOGIN_URL }}" ] && echo "RMS_LOGIN_URL=${{ secrets.RMS_LOGIN_URL }}" >> "$GITHUB_ENV"
           [ -n "${{ secrets.RMS_REPORTS_URL }}" ] && echo "RMS_REPORTS_URL=${{ secrets.RMS_REPORTS_URL }}" >> "$GITHUB_ENV"
 
@@ -83,18 +84,19 @@ jobs:
           EMAIL_TO=$(printf '%s' "${{ secrets.AP_TEAM_EMAIL_LIST }}" | sed 's/[; ]\+/,/g')
           echo "EMAIL_TO=$EMAIL_TO" >> "$GITHUB_ENV"
 
-          # App flags
           echo "HEADLESS_MODE=true" >> "$GITHUB_ENV"
           echo "GITHUB_ACTIONS=true" >> "$GITHUB_ENV"
 
-      - name: Normalize obvious RMS URL typos (https// -> https://)
+      - name: Normalize obvious RMS URL typos (https// → https://) right after mapping
         shell: bash
         run: |
           for v in RMS_BASE_URL RMS_LOGIN_URL RMS_REPORTS_URL; do
             val="${!v}"
-            if [ -n "$val" ] && echo "$val" | grep -q '^https//'; then
-              fixed="$(echo "$val" | sed 's|^https//|https://|')"
-              echo "Fixing $v -> $fixed"
+            if [ -n "$val" ]; then
+              fixed="$(printf '%s' "$val" | sed -E 's|^https//|https://|; s|^http//|http://|')"
+              if [ "$fixed" != "$val" ]; then
+                echo "Fixing $v -> $fixed"
+              fi
               echo "$v=$fixed" >> "$GITHUB_ENV"
             fi
           done
@@ -110,13 +112,16 @@ jobs:
             fi
           fi
 
-      - name: DNS & HTTPS probe for RMS (graceful)
+      - name: DNS & HTTPS probe for RMS (graceful + normalize again)
         shell: bash
         run: |
           set -e
 
           # Pick the first non-empty URL among BASE, LOGIN, REPORTS
           URL_FOR_HOST="${RMS_BASE_URL:-${RMS_LOGIN_URL:-${RMS_REPORTS_URL:-}}}"
+
+          # Normalize common mistakes again (defensive)
+          URL_FOR_HOST="$(printf '%s' "$URL_FOR_HOST" | sed -E 's|^https//|https://|; s|^http//|http://|')"
 
           if [ -z "$URL_FOR_HOST" ]; then
             echo "⚠️ No RMS URL found (RMS_BASE_URL/RMS_LOGIN_URL/RMS_REPORTS_URL). Enabling demo mode."
@@ -129,12 +134,12 @@ jobs:
             URL_FOR_HOST="https://$URL_FOR_HOST"
           fi
 
-          # Extract hostname (robust; no heredoc)
+          # Extract hostname safely (no heredoc)
           export URL_FOR_HOST
           HOST="$(python -c 'import os, urllib.parse as u; x=u.urlparse(os.environ.get("URL_FOR_HOST","")); print(x.hostname or "")')"
 
           if [ -z "$HOST" ]; then
-            echo "❌ Could not parse host from URL. Enabling demo mode."
+            echo "❌ Could not parse host from URL ($URL_FOR_HOST). Enabling demo mode."
             echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
             exit 0
           fi
