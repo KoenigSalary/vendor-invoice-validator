@@ -44,13 +44,19 @@ jobs:
         FORCE_RMS: "true"
         FORCE_EMAIL: "true"
         DISABLE_DEMO: "true"
+        DEBUG_RMS: "true"
         
         # GitHub Token
         GITHUB_TOKEN: ${{ secrets.INVOICE_VALIDATOR_TOKEN }}
       run: |
+        echo "=== RMS Configuration Debug ==="
+        echo "RMS_URL is set: $([ -n "$RMS_URL" ] && echo "YES" || echo "NO")"
+        echo "RMS_USERNAME is set: $([ -n "$RMS_USERNAME" ] && echo "YES" || echo "NO")"
+        echo "RMS_PASSWORD is set: $([ -n "$RMS_PASSWORD" ] && echo "YES" || echo "NO")"
+        echo "================================"
         python main.py
-        echo "Invoice validation with RMS and email integration completed!"
-    
+        echo "Invoice validation completed!"
+        
     - name: Upload results
       uses: actions/upload-artifact@v4
       if: always()
