@@ -1569,7 +1569,12 @@ class ProductionInvoiceValidationSystem:
     # ------------------------------- RMS downloading -------------------------------
 
     def download_rms_exports(self, start_date: Optional[str], end_date: Optional[str]) -> List[str]:
-        """Log in to RMS and download CSV/XLS and invoice PDFs/JPGs into downloads/."""
+        """
+        Log in to RMS and download:
+          1) the grid export (Excel/XLS)
+          2) invoice documents (PDF/JPG) after selecting header checkbox.
+        Uses the exact element IDs you provided.
+        """
         files: List[str] = []
         if not getattr(self, "rms_enabled", False):
             self.logger.info("RMS disabled → skipping RMS downloads")
@@ -1578,147 +1583,206 @@ class ProductionInvoiceValidationSystem:
         download_dir = Path(getattr(config, "DOWNLOADS_DIR", "downloads"))
         download_dir.mkdir(parents=True, exist_ok=True)
 
-        def _enable_downloads(driver, download_dir: str):
-            """Allow downloads in headless Chrome via CDP; force PDFs to download."""
+        def _enable_downloads(drv):
+            payload = {"behavior": "allow", "downloadPath": str(download_dir)}
             try:
-                driver.execute_cdp_cmd(
-                    "Page.setDownloadBehavior",
-                    {"behavior": "allow", "downloadPath": os.path.abspath(download_dir)}
-                )
+                drv.execute_cdp_cmd("Page.setDownloadBehavior", payload)
             except Exception:
-                pass  # non-fatal
+                try:
+                    drv.execute_cdp("Page.setDownloadBehavior", payload)  # alt API
+                except Exception as e:
+                    self.logger.warning(f"CDP downloads not enabled: {e}")
 
-        def _snapshot(download_dir: Path) -> set:
-            return {p.resolve() for p in download_dir.glob("*") if p.is_file()}
+        def _snapshot() -> set:
+            return {p.name for p in download_dir.glob("*")}
+            
+        def _new_completed_files(before: set) -> List[Path]:
+            wanted = (".csv", ".xlsx", ".xls", ".pdf", ".jpg", ".jpeg")
+            out: List[Path] = []
+            for p in download_dir.glob("*"):
+                if p.name in before:
+                    continue
+                if p.suffix.lower() in wanted and not p.name.endswith((".crdownload", ".tmp")):
+                    out.append(p)
+            return out
 
-        def _new_completed_files(download_dir: Path, before: set) -> list[Path]:
-            cur = {p.resolve() for p in download_dir.glob("*") if p.is_file()}
-            done = [p for p in (cur - before) if not str(p).endswith((".crdownload",".tmp",".part"))]
-            return done
-
-        def _wait_for_downloads(download_dir: Path, before: set, timeout: int = 240) -> list[Path]:
-            """Wait until no partials remain and size is stable twice."""
-            deadline = time.time() + timeout
-            last_size = -1
-            stable = 0
-            while time.time() < deadline:
-                partials = list(download_dir.glob("*.crdownload")) + list(download_dir.glob("*.tmp")) + list(download_dir.glob("*.part"))
-                new_done = _new_completed_files(download_dir, before)
-                total = sum(p.stat().st_size for p in download_dir.glob("*") if p.is_file())
-                if not partials and new_done:
-                    if total == last_size:
-                        stable += 1
-                        if stable >= 2:
-                            return new_done
-                    else:
-                        stable = 0
-                        last_size = total
+        def _wait_for_downloads(before: set, timeout: int = 180) -> List[Path]:
+            end = time.time() + timeout
+            while time.time() < end:
+                partials = list(download_dir.glob("*.crdownload")) + list(download_dir.glob("*.tmp"))
+                news = _new_completed_files(before)
+                if not partials and news:
+                    return news
                 time.sleep(1)
-            return _new_completed_files(download_dir, before)
+            return _new_completed_files(before)
 
-        # assume download_dir is a Path object to your configured downloads folder
-        download_dir = Path(getattr(config, "DOWNLOADS_DIR", "downloads")).resolve()
-        download_dir.mkdir(parents=True, exist_ok=True)
+        # Locators (from your HTML)
+        LOGIN_USER      = (By.ID, "txtUser")
+        LOGIN_PWD       = (By.ID, "txtPwd")
+        LOGIN_BTN       = (By.ID, "btnSubmit")
+
+        DATE_FROM       = (By.ID, "cphMainContent_mainContent_txtDateFrom")
+        DATE_TO         = (By.ID, "cphMainContent_mainContent_txtDateTo")
+        COMBINE_RADIO   = (By.ID, "cphMainContent_mainContent_rbPaidUnPaid_2")
+        SEARCH_BTN      = (By.ID, "cphMainContent_mainContent_btnSearch")
+        EXPORT_LINK     = (By.ID, "cphMainContent_mainContent_ExportToExcel")
+        HEADER_CHECKBOX = (By.ID, "cphMainContent_mainContent_rptShowAss_chkHeader")
 
         try:
             drv = self.selenium_manager.get_driver()
-            wait = WebDriverWait(drv, config.SELENIUM_TIMEOUT)
-            _enable_downloads(drv, str(download_dir))
+            wait = WebDriverWait(drv, int(getattr(config, "SELENIUM_TIMEOUT", 30)))
+            _enable_downloads(drv)
 
-            # 1) Login
-            if not getattr(config, "RMS_LOGIN_URL", None):
-                self.logger.error("RMS_LOGIN_URL not configured")
+            login_url   = os.getenv("RMS_LOGIN_URL")   or getattr(config, "RMS_LOGIN_URL", None)
+            reports_url = os.getenv("RMS_REPORTS_URL") or getattr(config, "RMS_REPORTS_URL", None)
+            if not login_url and not reports_url:
+                self.logger.error("No RMS URLs configured (RMS_LOGIN_URL / RMS_REPORTS_URL).")
                 return files
-            drv.get(config.RMS_LOGIN_URL)
 
-            user = wait.until(EC.visibility_of_element_located(
-                (By.CSS_SELECTOR, "#username, input[name='username'], input[type='email']")))
-            pwd = wait.until(EC.visibility_of_element_located(
-                (By.CSS_SELECTOR, "#password, input[name='password'], input[type='password']")))
+            # If only one is set, use it and allow server to redirect between pages.
+            target_login   = login_url   or reports_url
+            target_reports = reports_url or login_url
+
+            # --- 1) Login ---
+            self.logger.info(f"Navigating to login: {target_login}")
+            drv.get(target_login)
+
+            user = wait.until(EC.visibility_of_element_located(LOGIN_USER))
+            pwd  = wait.until(EC.visibility_of_element_located(LOGIN_PWD))
             user.clear(); user.send_keys(os.getenv("RMS_USERNAME", ""))
             pwd.clear();  pwd.send_keys(os.getenv("RMS_PASSWORD", ""))
 
             try:
-                btn = wait.until(EC.element_to_be_clickable(
-                    (By.CSS_SELECTOR, "button[type='submit'], input[type='submit']")))
-                # prevent new tab behaviors
-                drv.execute_script("arguments[0].removeAttribute('target');", btn)
-                btn.click()
+                wait.until(EC.element_to_be_clickable(LOGIN_BTN)).click()
             except Exception:
-                drv.find_element(By.XPATH, "//form").submit()
-
+                drv.find_element(By.ID, "btnSubmit").submit()
             wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
 
-            # 2) Report/Search page
-            if not getattr(config, "RMS_REPORTS_URL", None):
-                self.logger.error("RMS_REPORTS_URL not configured")
-                return files
-            drv.get(config.RMS_REPORTS_URL)
+            # --- 2) Invoice list page ---
+            if target_reports:
+                self.logger.info(f"Navigating to invoice list: {target_reports}")
+                drv.get(target_reports)
 
-            # 3) Date filters
+            # --- 3) Filters: from/to + combine + search ---
+            def _set_input(locator, value: str):
+                el = wait.until(EC.element_to_be_clickable(locator))
+                drv.execute_script("arguments[0].focus();", el)
+                el.clear()
+                el.send_keys(value)
+                el.send_keys(Keys.ENTER)
+
+            if start_date:
+                try:
+                    _set_input(DATE_FROM, start_date)
+                except Exception as e:
+                    self.logger.warning(f"Could not set From date: {e}")
+            if end_date:
+                try:
+                    _set_input(DATE_TO, end_date)
+                except Exception as e:
+                    self.logger.warning(f"Could not set To date: {e}")
+
+            # Combine radio
             try:
-                if start_date:
-                    el = wait.until(EC.element_to_be_clickable(
-                        (By.CSS_SELECTOR, "input[name='startDate'], #startDate, input[data-testid='startDate']")))
-                    el.clear(); el.send_keys(start_date); el.send_keys(Keys.ENTER)
-                if end_date:
-                    el = wait.until(EC.element_to_be_clickable(
-                        (By.CSS_SELECTOR, "input[name='endDate'], #endDate, input[data-testid='endDate']")))
-                    el.clear(); el.send_keys(end_date); el.send_keys(Keys.ENTER)
+                r = wait.until(EC.element_to_be_clickable(COMBINE_RADIO))
+                if not r.is_selected():
+                    r.click()
             except Exception as e:
-                self.logger.warning(f"Could not set date filters: {e}")
+                self.logger.info(f"Combine radio not set: {e}")
 
-            # 4) Export grid (CSV/XLS)
+            # Search
             try:
-                export_btn = wait.until(EC.element_to_be_clickable((
-                    By.XPATH, "//button[contains(.,'Export') or contains(.,'CSV') or contains(.,'Excel')]"
-                )))
-                drv.execute_script("arguments[0].removeAttribute('target');", export_btn)
-                before = _snapshot(download_dir)
-                export_btn.click()
-                for p in _wait_for_downloads(download_dir, before, timeout=240):
+                wait.until(EC.element_to_be_clickable(SEARCH_BTN)).click()
+            except Exception as e:
+                self.logger.error(f"Search click failed: {e}")
+
+            # Wait for results: header checkbox (or any table rows)
+            try:
+                wait.until(EC.presence_of_element_located(HEADER_CHECKBOX))
+            except Exception:
+                # as a fallback, wait for any grid rows under main content
+                wait.until(EC.presence_of_element_located((By.XPATH, "//table//tr")))
+
+            # --- 4) Export to Excel ---
+            try:
+                export_el = wait.until(EC.element_to_be_clickable(EXPORT_LINK))
+                before = _snapshot()
+                drv.execute_script("arguments[0].click();", export_el)  # anchor does __doPostBack
+                for p in _wait_for_downloads(before, timeout=180):
                     if p.suffix.lower() in (".csv", ".xlsx", ".xls"):
-                        # normalize names so later steps can find them reliably
-                        target = download_dir / ("invoice_download" + p.suffix.lower())
-                        try:
-                            if target.exists(): target.unlink()
-                            p.rename(target)
-                            files.append(str(target))
-                        except Exception:
-                            files.append(str(p))  # keep original if rename fails
+                        files.append(str(p))
+                        self.logger.info(f"Downloaded export: {p.name}")
             except Exception as e:
-                self.logger.error(f"Export click failed: {e}")
+                self.logger.error(f"Export to Excel failed: {e}")
 
-            # 5) Invoice PDFs/JPGs
+            # --- 5) Select all invoices and try bulk download of PDFs/JPGs ---
             try:
-                links = drv.find_elements(By.XPATH,
-                    "//a[contains(translate(@href,'PDFJGP','pdfjgp'),'.pdf') or "
-                    "     contains(translate(@href,'PDFJGP','pdfjgp'),'.jpg') or "
-                    "     contains(translate(.,'DOWNLOAD','download'),'download') or "
-                    "     contains(translate(.,'INVOICE','invoice'),'invoice')]"
-                )[:200]
+                # select the header checkbox
+                try:
+                    hdr = wait.until(EC.element_to_be_clickable(HEADER_CHECKBOX))
+                    if not hdr.is_selected():
+                        hdr.click()
+                    time.sleep(0.5)
+                except Exception as e:
+                    self.logger.info(f"Header checkbox not available: {e}")
 
-                if links:
-                    before = _snapshot(download_dir)
-                    for a in links:
-                        try:
-                            drv.execute_script("arguments[0].removeAttribute('target');", a)
-                            drv.execute_script("arguments[0].scrollIntoView({block:'center'})", a)
-                            a.click()
-                        except Exception:
+                # Try common “Download” triggers (buttons/links)
+                candidates = [
+                    (By.XPATH, "//a[contains(.,'Download') or contains(.,'download') or contains(.,'ZIP') or contains(.,'Zip')]"),
+                    (By.XPATH, "//input[@type='button' and (contains(@value,'Download') or contains(@value,'ZIP') or contains(@value,'Zip'))]"),
+                    (By.XPATH, "//button[contains(.,'Download') or contains(.,'ZIP') or contains(.,'Zip')]"),
+                ]
+                clicked_any = False
+                for loc in candidates:
+                    try:
+                        btns = drv.find_elements(*loc)
+                        for b in btns[:2]:
+                            drv.execute_script("arguments[0].scrollIntoView({block:'center'});", b)
+                            before = _snapshot()
                             try:
+                                drv.execute_script("arguments[0].click();", b)
+                            except Exception:
+                                b.click()
+                            # collect any docs
+                            for p in _wait_for_downloads(before, timeout=120):
+                                if p.suffix.lower() in (".pdf", ".jpg", ".jpeg"):
+                                    files.append(str(p))
+                                    clicked_any = True
+                        if clicked_any:
+                            break
+                    except Exception:
+                        pass
+
+                if not clicked_any:
+                    self.logger.info("No obvious bulk download control found. Attempting to click visible invoice document links.")
+                    # Fallback: click links that look like invoice documents
+                    links = drv.find_elements(
+                        By.XPATH,
+                        "//a[contains(translate(@href,'PDFJGP','pdfjgp'),'.pdf') or "
+                        "     contains(translate(@href,'PDFJGP','pdfjgp'),'.jpg')]"
+                    )[:100]
+                    if links:
+                        before = _snapshot()
+                        for a in links:
+                            try:
+                                drv.execute_script("arguments[0].scrollIntoView({block:'center'})", a)
                                 ActionChains(drv).key_down(Keys.CONTROL).click(a).key_up(Keys.CONTROL).perform()
                             except Exception:
-                                pass
+                                try: a.click()
+                                except Exception: pass
+                        for p in _wait_for_downloads(before, timeout=180):
+                            if p.suffix.lower() in (".pdf", ".jpg", ".jpeg"):
+                                files.append(str(p))
 
-                    new_files = _wait_for_downloads(download_dir, before, timeout=240)
-                    for p in new_files:
-                        if p.suffix.lower() in (".pdf", ".jpg", ".jpeg"):
-                            files.append(str(p))
-                else:
-                    self.logger.info("No invoice document links detected on the page.")
             except Exception as e:
-                self.logger.warning(f"Invoice document scrape skipped: {e}")
+                self.logger.warning(f"Invoice document download step skipped: {e}")
+
+            self.logger.info(f"RMS downloaded: {len(files)} file(s)")
+            return files
+
+        except Exception as e:
+            self.logger.error(f"RMS download failed: {e}")
+            return files
 
             # 6) Bundle all invoice docs into a single ZIP for emailing
             try:
