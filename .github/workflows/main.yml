@@ -9,13 +9,9 @@ on:
     paths:
       - 'main.py'
       - 'requirements.txt'
-      - '.github/workflows/**'      
+      - '.github/workflows/**'
 
 jobs:
-      - name: Clear old local test files (optional)
-      run: |
-        rm -f downloads/test_data.* downloads/production_summary_*.xlsx || true
-
   validate-invoices:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -23,6 +19,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Clear old local test files (optional)
+        run: |
+          rm -f downloads/test_data.* downloads/production_summary_*.xlsx || true
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -57,12 +57,16 @@ jobs:
         run: |
           echo "RMS_USERNAME=${{ secrets.RMS_USER }}" >> "$GITHUB_ENV"
           echo "RMS_PASSWORD=${{ secrets.RMS_PASS }}" >> "$GITHUB_ENV"
-          # Prefer BASE_URL secret if present, else map legacy RMS_URL
-          if [ -n "" ]; then
-            echo "RMS_BASE_URL=" >> "$GITHUB_ENV"
+
+          # Prefer BASE_URL; else use legacy RMS_URL; else blank for now
+          if [ -n "${{ secrets.RMS_BASE_URL }}" ]; then
+            echo "RMS_BASE_URL=${{ secrets.RMS_BASE_URL }}" >> "$GITHUB_ENV"
+          elif [ -n "${{ secrets.RMS_URL }}" ]; then
+            echo "RMS_BASE_URL=${{ secrets.RMS_URL }}" >> "$GITHUB_ENV"
           else
             echo "RMS_BASE_URL=" >> "$GITHUB_ENV"
           fi
+
           echo "RMS_LOGIN_URL=${{ secrets.RMS_LOGIN_URL }}" >> "$GITHUB_ENV"
           echo "RMS_REPORTS_URL=${{ secrets.RMS_REPORTS_URL }}" >> "$GITHUB_ENV"
 
@@ -79,31 +83,45 @@ jobs:
           echo "HEADLESS_MODE=true" >> "$GITHUB_ENV"
           echo "GITHUB_ACTIONS=true" >> "$GITHUB_ENV"
 
+      - name: Derive RMS_BASE_URL from RMS_LOGIN_URL (fallback)
+        shell: bash
+        run: |
+          if [ -z "${{ env.RMS_BASE_URL }}" ] && [ -n "${{ env.RMS_LOGIN_URL }}" ]; then
+            ROOT="$(echo "${{ env.RMS_LOGIN_URL }}" | awk -F[/:] '{print $1"//"$4}')"
+            if [ -n "$ROOT" ]; then
+              echo "RMS_BASE_URL=$ROOT" >> "$GITHUB_ENV"
+              echo "Derived RMS_BASE_URL=$ROOT"
+            fi
+          fi
+
       - name: DNS & HTTPS probe for RMS (graceful)
         shell: bash
         run: |
           set -e
-          RMS_LOGIN_URL="${{ secrets.RMS_LOGIN_URL }}"
-          RMS_BASE_URL="${{ env.RMS_BASE_URL }}"
-          if [ -z "$RMS_BASE_URL" ]; then
-            RMS_BASE_URL="${{ secrets.RMS_BASE_URL }}"
-            [ -z "$RMS_BASE_URL" ] && RMS_BASE_URL="${{ secrets.RMS_URL }}"
+          URL_FOR_HOST="${{ env.RMS_BASE_URL }}"
+          if [ -z "$URL_FOR_HOST" ]; then
+            URL_FOR_HOST="${{ env.RMS_LOGIN_URL }}"
           fi
-          if [ -z "$RMS_LOGIN_URL" ] || [ -z "$RMS_BASE_URL" ]; then
-            echo "⚠️ RMS URLs not configured. Enabling demo mode."
+          if [ -z "$URL_FOR_HOST" ]; then
+            URL_FOR_HOST="${{ env.RMS_REPORTS_URL }}"
+          fi
+
+          if [ -z "$URL_FOR_HOST" ]; then
+            echo "⚠️ No RMS URL found (RMS_BASE_URL/RMS_LOGIN_URL/RMS_REPORTS_URL). Enabling demo mode."
             echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
             exit 0
           fi
-          HOST=$(echo "$RMS_BASE_URL" | awk -F[/:] '{print $4}')
+
+          HOST=$(echo "$URL_FOR_HOST" | awk -F[/:] '{print $4}')
           echo "Resolving $HOST ..."
           if ! nslookup "$HOST" >/dev/null 2>&1; then
-            echo "❌ DNS resolution failed for $HOST. Enabling demo mode."
+            echo "❌ DNS resolution failed for $HOST. Enabling demo mode (internal host likely)."
             echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
             exit 0
           fi
+
           echo "✅ DNS OK"
-          echo "Testing HTTPS..."
-          curl -I --max-time 15 "$RMS_LOGIN_URL" || true
+          curl -I --max-time 15 "${{ env.RMS_LOGIN_URL }}" || true
 
       - name: Environment check
         run: |
