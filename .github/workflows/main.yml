@@ -24,6 +24,40 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
+    - name: Debug Environment Variables
+      env:
+        RMS_URL: ${{ secrets.RMS_URL }}
+        RMS_USERNAME: ${{ secrets.RMS_USER }}
+        RMS_PASSWORD: ${{ secrets.RMS_PASS }}
+      run: |
+        echo "=== Environment Debug ==="
+        echo "RMS_URL set: $([ -n "$RMS_URL" ] && echo 'YES' || echo 'NO - MISSING!')"
+        echo "RMS_USERNAME set: $([ -n "$RMS_USERNAME" ] && echo 'YES' || echo 'NO')"
+        echo "RMS_PASSWORD set: $([ -n "$RMS_PASSWORD" ] && echo 'YES' || echo 'NO')"
+        if [ -n "$RMS_URL" ]; then
+          echo "RMS_URL starts with: $(echo $RMS_URL | cut -c1-10)..."
+        fi
+        echo "=========================="
+    
+    - name: Test RMS Connectivity
+      env:
+        RMS_URL: ${{ secrets.RMS_URL }}
+      run: |
+        echo "=== Network Connectivity Test ==="
+        if [ -n "$RMS_URL" ]; then
+          echo "Testing connectivity to RMS..."
+          # Extract hostname from URL
+          HOSTNAME=$(echo $RMS_URL | sed -e 's|^[^/]*//||' -e 's|/.*$||' -e 's|:.*$||')
+          echo "Extracted hostname: $HOSTNAME"
+          echo "Testing DNS resolution..."
+          nslookup $HOSTNAME || echo "DNS resolution failed!"
+          echo "Testing ping..."
+          ping -c 3 $HOSTNAME || echo "Ping failed!"
+        else
+          echo "RMS_URL not set - skipping connectivity test"
+        fi
+        echo "================================"
+    
     - name: Run invoice validation
       env:
         # RMS Configuration
@@ -49,14 +83,9 @@ jobs:
         # GitHub Token
         GITHUB_TOKEN: ${{ secrets.INVOICE_VALIDATOR_TOKEN }}
       run: |
-        echo "=== RMS Configuration Debug ==="
-        echo "RMS_URL is set: $([ -n "$RMS_URL" ] && echo "YES" || echo "NO")"
-        echo "RMS_USERNAME is set: $([ -n "$RMS_USERNAME" ] && echo "YES" || echo "NO")"
-        echo "RMS_PASSWORD is set: $([ -n "$RMS_PASSWORD" ] && echo "YES" || echo "NO")"
-        echo "================================"
         python main.py
         echo "Invoice validation completed!"
-        
+    
     - name: Upload results
       uses: actions/upload-artifact@v4
       if: always()
