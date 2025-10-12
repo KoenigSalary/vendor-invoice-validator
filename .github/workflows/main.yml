@@ -24,46 +24,41 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
-    - name: Debug Environment Variables
-      env:
-        RMS_URL: ${{ secrets.RMS_URL }}
-        RMS_USERNAME: ${{ secrets.RMS_USER }}
-        RMS_PASSWORD: ${{ secrets.RMS_PASS }}
-      run: |
-        echo "=== Environment Debug ==="
-        echo "RMS_URL set: $([ -n "$RMS_URL" ] && echo 'YES' || echo 'NO - MISSING!')"
-        echo "RMS_USERNAME set: $([ -n "$RMS_USERNAME" ] && echo 'YES' || echo 'NO')"
-        echo "RMS_PASSWORD set: $([ -n "$RMS_PASSWORD" ] && echo 'YES' || echo 'NO')"
-        if [ -n "$RMS_URL" ]; then
-          echo "RMS_URL starts with: $(echo $RMS_URL | cut -c1-10)..."
-        fi
-        echo "=========================="
-    
-    - name: Test RMS Connectivity
+    - name: Enhanced RMS Debug
       env:
         RMS_URL: ${{ secrets.RMS_URL }}
       run: |
-        echo "=== Network Connectivity Test ==="
-        if [ -n "$RMS_URL" ]; then
-          echo "Testing connectivity to RMS..."
-          # Extract hostname from URL
-          HOSTNAME=$(echo $RMS_URL | sed -e 's|^[^/]*//||' -e 's|/.*$||' -e 's|:.*$||')
-          echo "Extracted hostname: $HOSTNAME"
-          echo "Testing DNS resolution..."
-          nslookup $HOSTNAME || echo "DNS resolution failed!"
-          echo "Testing ping..."
-          ping -c 3 $HOSTNAME || echo "Ping failed!"
-        else
-          echo "RMS_URL not set - skipping connectivity test"
-        fi
+        echo "=== Enhanced RMS Connectivity Test ==="
+        echo "Testing with curl..."
+        curl -v -L --max-time 30 https://rms.koenig-solutions.com/Login.aspx 2>&1 | head -20
+        echo ""
+        echo "Testing Chrome headless access..."
+        google-chrome --version
+        echo "Testing basic page load..."
+        timeout 30 google-chrome --headless --disable-gpu --no-sandbox --virtual-time-budget=5000 --dump-dom https://rms.koenig-solutions.com/Login.aspx > /tmp/rms_page.html 2>&1 || echo "Chrome failed"
+        echo "Page size: $(wc -c < /tmp/rms_page.html 2>/dev/null || echo '0') bytes"
+        echo "Contains login form: $(grep -c 'txtUser\|txtPwd' /tmp/rms_page.html 2>/dev/null || echo '0')"
         echo "================================"
     
-    - name: Run invoice validation
+    - name: Run invoice validation with enhanced RMS
       env:
         # RMS Configuration
         RMS_USERNAME: ${{ secrets.RMS_USER }}
         RMS_PASSWORD: ${{ secrets.RMS_PASS }}
         RMS_URL: ${{ secrets.RMS_URL }}
+        
+        # RMS Element Configuration (New)
+        RMS_USERNAME_FIELD: "txtUser"
+        RMS_PASSWORD_FIELD: "txtPwd"  
+        RMS_LOGIN_BUTTON: "btnSubmit"
+        RMS_DATE_FROM_FIELD: "cphMainContent_mainContent_txtDateFrom"
+        RMS_DATE_TO_FIELD: "cphMainContent_mainContent_txtDateTo"
+        RMS_SEARCH_BUTTON: "cphMainContent_mainContent_btnSearch"
+        RMS_EXPORT_LINK: "cphMainContent_mainContent_ExportToExcel"
+        RMS_INVOICE_LIST_URL: "https://rms.koenig-solutions.com/Accounts/InvoiceList.aspx"
+        
+        # Chrome Options for RMS
+        RMS_CHROME_OPTIONS: "--no-sandbox --disable-dev-shm-usage --disable-gpu --window-size=1920,1080 --user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         
         # Email Configuration  
         EMAIL_USERNAME: ${{ secrets.SMTP_USER }}
@@ -79,6 +74,7 @@ jobs:
         FORCE_EMAIL: "true"
         DISABLE_DEMO: "true"
         DEBUG_RMS: "true"
+        RMS_WAIT_TIMEOUT: "30"
         
         # GitHub Token
         GITHUB_TOKEN: ${{ secrets.INVOICE_VALIDATOR_TOKEN }}
@@ -97,4 +93,6 @@ jobs:
           *.db
           downloads/*.pdf
           downloads/*.zip
+          downloads/*.xlsx
+          downloads/*.csv
         retention-days: 30
