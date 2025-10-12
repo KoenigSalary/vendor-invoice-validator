@@ -73,10 +73,10 @@ class Config:
     LOGS_DIR: str = "logs"
     SNAPSHOTS_DIR: str = "snapshots"
 
-    # RMS settings - Update these with your actual RMS URLs
-    RMS_BASE_URL: str = "https://your-rms-system.com"
-    RMS_LOGIN_URL: str = "https://your-rms-system.com/login"
-    RMS_REPORTS_URL: str = "https://your-rms-system.com/reports"
+    # AFTER (read from env, fall back to placeholders)
+    RMS_BASE_URL: str = os.getenv("RMS_BASE_URL", "")
+    RMS_LOGIN_URL: str = os.getenv("RMS_LOGIN_URL", "")
+    RMS_REPORTS_URL: str = os.getenv("RMS_REPORTS_URL", "")
 
     # Selenium settings
     SELENIUM_TIMEOUT: int = 30
@@ -538,10 +538,8 @@ class ProductionSeleniumManager:
         self.setup_chrome_options()
 
     def setup_chrome_options(self) -> None:
-        """Setup Chrome options for production environment."""
         options = Options()
-
-        # Common hardening flags
+        # Hardened flags
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
@@ -552,25 +550,21 @@ class ProductionSeleniumManager:
         options.add_argument("--disable-renderer-backgrounding")
         options.add_argument("--disable-backgrounding-occluded-windows")
         options.add_argument("--window-size=1920,1080")
-
-        # Headless in CI or when requested  
+        
+        # Headless for CI
         if getattr(config, "IS_GITHUB_ACTIONS", False) or getattr(config, "HEADLESS_MODE", False):
             options.add_argument("--headless=new")
             options.add_argument("--remote-debugging-port=9222")
 
+        # Downloads
         download_dir = os.path.abspath(getattr(config, "DOWNLOADS_DIR", "downloads"))
         os.makedirs(download_dir, exist_ok=True)
-
         prefs = {
             "download.default_directory": download_dir,
             "download.prompt_for_download": False,
             "download.directory_upgrade": True,
             "safebrowsing.enabled": True,
-
-            # IMPORTANT: make PDFs download instead of opening in the viewer
-            "plugins.always_open_pdf_externally": True,
-
-            # keep noise down
+            "plugins.always_open_pdf_externally": True,  # force PDF download, not viewer
             "profile.default_content_settings.popups": 0,
             "profile.default_content_setting_values.notifications": 2,
         }
@@ -578,6 +572,9 @@ class ProductionSeleniumManager:
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
         options.add_experimental_option("useAutomationExtension", False)
 
+        # 👈 This line was missing
+        self.options = options
+        
         # Strongly recommended for CI:
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
@@ -585,19 +582,21 @@ class ProductionSeleniumManager:
         options.add_argument("--window-size=1920,1080")
 
     def get_driver(self):
-        """Create (or return cached) driver."""
+        """Create (or return cached) driver (uses Selenium Manager)."""
         if self.driver is not None:
             return self.driver
 
-        service = Service(executable_path=shutil.which("chromedriver") or "/usr/local/bin/chromedriver")
-        self.driver = webdriver.Chrome(service=service, options=self.options)
+        # Let Selenium Manager pick a compatible driver for the installed Chrome.
+        # (No Service / chromedriver path required.)
+        self.driver = webdriver.Chrome(options=self.options)
+
         try:
             timeout = int(getattr(config, "SELENIUM_TIMEOUT", 30))
             self.driver.set_page_load_timeout(timeout)
         except Exception:
             pass
         return self.driver
-
+        
     def quit(self) -> None:
         """Close the browser cleanly."""
         try:
