@@ -111,11 +111,11 @@ jobs:
 
           # extract hostname robustly (no leakage)
           HOST="$(python - <<'PY' "$URL_FOR_HOST"
-      import sys, urllib.parse
-      u = urllib.parse.urlparse(sys.argv[1])
-      print(u.hostname or "")
-      PY
-      )"
+            import sys, urllib.parse
+            u = urllib.parse.urlparse(sys.argv[1])
+            print(u.hostname or "")
+            PY
+            )"
           if [ -z "$HOST" ]; then
             echo "❌ Could not parse host from URL. Enabling demo mode."
             echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
