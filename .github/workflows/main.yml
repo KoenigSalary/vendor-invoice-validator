@@ -1,98 +1,119 @@
 name: Invoice Validation System
 
 on:
+  schedule:
+    - cron: '0 9 */4 * *'     # every 4 days @ 09:00 UTC
+  workflow_dispatch:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:
+    paths:
+      - 'main.py'
+      - 'requirements.txt'
+      - '.github/workflows/**'
 
 jobs:
   validate-invoices:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 45
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Enhanced RMS Debug
-      env:
-        RMS_URL: ${{ secrets.RMS_URL }}
-      run: |
-        echo "=== Enhanced RMS Connectivity Test ==="
-        echo "Testing with curl..."
-        curl -v -L --max-time 30 https://rms.koenig-solutions.com/Login.aspx 2>&1 | head -20
-        echo ""
-        echo "Testing Chrome headless access..."
-        google-chrome --version
-        echo "Testing basic page load..."
-        timeout 30 google-chrome --headless --disable-gpu --no-sandbox --virtual-time-budget=5000 --dump-dom https://rms.koenig-solutions.com/Login.aspx > /tmp/rms_page.html 2>&1 || echo "Chrome failed"
-        echo "Page size: $(wc -c < /tmp/rms_page.html 2>/dev/null || echo '0') bytes"
-        echo "Contains login form: $(grep -c 'txtUser\|txtPwd' /tmp/rms_page.html 2>/dev/null || echo '0')"
-        echo "================================"
-    
-    - name: Run invoice validation with enhanced RMS
-      env:
-        # RMS Configuration
-        RMS_USERNAME: ${{ secrets.RMS_USER }}
-        RMS_PASSWORD: ${{ secrets.RMS_PASS }}
-        RMS_URL: ${{ secrets.RMS_URL }}
-        
-        # RMS Element Configuration (New)
-        RMS_USERNAME_FIELD: "txtUser"
-        RMS_PASSWORD_FIELD: "txtPwd"  
-        RMS_LOGIN_BUTTON: "btnSubmit"
-        RMS_DATE_FROM_FIELD: "cphMainContent_mainContent_txtDateFrom"
-        RMS_DATE_TO_FIELD: "cphMainContent_mainContent_txtDateTo"
-        RMS_SEARCH_BUTTON: "cphMainContent_mainContent_btnSearch"
-        RMS_EXPORT_LINK: "cphMainContent_mainContent_ExportToExcel"
-        RMS_INVOICE_LIST_URL: "https://rms.koenig-solutions.com/Accounts/InvoiceList.aspx"
-        
-        # Chrome Options for RMS
-        RMS_CHROME_OPTIONS: "--no-sandbox --disable-dev-shm-usage --disable-gpu --window-size=1920,1080 --user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        
-        # Email Configuration  
-        EMAIL_USERNAME: ${{ secrets.SMTP_USER }}
-        EMAIL_PASSWORD: ${{ secrets.SMTP_PASS }}
-        EMAIL_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
-        EMAIL_TO: ${{ secrets.AP_TEAM_EMAIL_LIST }}
-        SMTP_SERVER: ${{ secrets.SMTP_HOST }}
-        SMTP_PORT: ${{ secrets.SMTP_PORT }}
-        SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
-        
-        # Processing Configuration
-        FORCE_RMS: "true"
-        FORCE_EMAIL: "true"
-        DISABLE_DEMO: "true"
-        DEBUG_RMS: "true"
-        RMS_WAIT_TIMEOUT: "30"
-        
-        # GitHub Token
-        GITHUB_TOKEN: ${{ secrets.INVOICE_VALIDATOR_TOKEN }}
-      run: |
-        python main.py
-        echo "Invoice validation completed!"
-    
-    - name: Upload results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: validation-results
-        path: |
-          *.csv
-          *.xlsx
-          *.db
-          downloads/*.pdf
-          downloads/*.zip
-          downloads/*.xlsx
-          downloads/*.csv
-        retention-days: 30
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system deps (Xvfb, etc.)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb unzip curl dnsutils
+
+      - name: Install Chrome (stable)
+        run: |
+          wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i google-chrome-stable_current_amd64.deb || true
+          sudo apt-get -f install -y
+          google-chrome --version
+
+      - name: Start Xvfb
+        run: |
+          sudo Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          # in case requirements.txt missed it earlier
+          pip install chardet
+
+      - name: Map secrets to env
+        shell: bash
+        run: |
+          echo "RMS_USERNAME=${{ secrets.RMS_USER }}" >> "$GITHUB_ENV"
+          echo "RMS_PASSWORD=${{ secrets.RMS_PASS }}" >> "$GITHUB_ENV"
+          echo "RMS_BASE_URL=${{ secrets.RMS_URL }}" >> "$GITHUB_ENV"
+          # Optional: specific endpoints if your code uses them
+          echo "RMS_LOGIN_URL=${{ secrets.RMS_LOGIN_URL }}" >> "$GITHUB_ENV"
+          echo "RMS_REPORTS_URL=${{ secrets.RMS_REPORTS_URL }}" >> "$GITHUB_ENV"
+
+          # SMTP/Email
+          echo "EMAIL_SMTP_SERVER=${{ secrets.SMTP_HOST }}" >> "$GITHUB_ENV"
+          echo "EMAIL_SMTP_PORT=${{ secrets.SMTP_PORT }}" >> "$GITHUB_ENV"
+          echo "EMAIL_USERNAME=${{ secrets.SMTP_USER }}" >> "$GITHUB_ENV"
+          echo "EMAIL_PASSWORD=${{ secrets.SMTP_PASS }}" >> "$GITHUB_ENV"
+          echo "EMAIL_FROM=${{ secrets.SMTP_USER }}" >> "$GITHUB_ENV"
+          # normalize list to commas
+          EMAIL_TO=$(printf '%s' "${{ secrets.AP_TEAM_EMAIL_LIST }}" | sed 's/[; ]\+/,/g')
+          echo "EMAIL_TO=$EMAIL_TO" >> "$GITHUB_ENV"
+
+          # App flags
+          echo "HEADLESS_MODE=true" >> "$GITHUB_ENV"
+          echo "GITHUB_ACTIONS=true" >> "$GITHUB_ENV"
+
+      - name: Fail fast if RMS host not resolvable (use self-hosted if internal)
+        shell: bash
+        run: |
+          if [ -z "$RMS_BASE_URL" ]; then
+            echo "❌ RMS_BASE_URL secret not set"; exit 1
+          fi
+          RMS_HOST=$(echo "$RMS_BASE_URL" | awk -F[/:] '{print $4}')
+          echo "Resolving $RMS_HOST ..."
+          if ! nslookup "$RMS_HOST" > /dev/null 2>&1; then
+            echo "❌ DNS resolution failed for $RMS_HOST. If RMS is internal, use a self-hosted runner."; exit 1
+          fi
+          echo "✅ DNS OK"
+
+      - name: Environment check
+        run: |
+          echo "Python: $(python --version)"
+          echo "Chrome: $(google-chrome --version)"
+          echo "Display: $DISPLAY"
+
+      - name: Run validation
+        env:
+          # Optional window (your main.py can compute its own)
+          PROCESSING_START_DATE: ${{ env.PROCESSING_START_DATE }}
+          PROCESSING_END_DATE:   ${{ env.PROCESSING_END_DATE }}
+        run: |
+          echo "=== Start Invoice Validation ==="
+          python main.py
+          echo "=== Done ==="
+
+      - name: Upload outputs (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-results-${{ github.run_number }}
+          path: |
+            *.xlsx
+            *.csv
+            *.json
+            downloads/**
+            reports/**
+            snapshots/**
+            logs/**
+          if-no-files-found: warn
+          retention-days: 30
