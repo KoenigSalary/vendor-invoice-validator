@@ -2,7 +2,7 @@ name: Invoice Validation System
 
 on:
   schedule:
-    - cron: '0 9 */4 * *'     # every 4 days @ 09:00 UTC
+    - cron: '0 9 */4 * *'   # every 4 days @ 09:00 UTC
   workflow_dispatch:
   push:
     branches: [ main ]
@@ -13,6 +13,10 @@ on:
 
 jobs:
   validate-invoices:
+    # If you store secrets under an Environment (e.g., "prod"), leave this.
+    # Otherwise, remove the next two lines.
+    environment: prod
+
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -29,7 +33,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install system deps (Xvfb, etc.)
+      - name: Install system deps (Xvfb, curl, DNS utils)
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb unzip curl dnsutils
@@ -50,24 +54,27 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install chardet  # ensure available
+          pip install chardet  # belt-and-suspenders
 
       - name: Map secrets to env
         shell: bash
         run: |
+          # RMS credentials
           echo "RMS_USERNAME=${{ secrets.RMS_USER }}" >> "$GITHUB_ENV"
           echo "RMS_PASSWORD=${{ secrets.RMS_PASS }}" >> "$GITHUB_ENV"
 
-          # Prefer RMS_BASE_URL; fallback to RMS_URL if that’s how you stored it
+          # Prefer RMS_BASE_URL; fallback to RMS_URL if you stored it that way
           if [ -n "${{ secrets.RMS_BASE_URL }}" ]; then
             echo "RMS_BASE_URL=${{ secrets.RMS_BASE_URL }}" >> "$GITHUB_ENV"
           elif [ -n "${{ secrets.RMS_URL }}" ]; then
             echo "RMS_BASE_URL=${{ secrets.RMS_URL }}" >> "$GITHUB_ENV"
           fi
 
+          # Optional dedicated endpoints
           [ -n "${{ secrets.RMS_LOGIN_URL }}" ] && echo "RMS_LOGIN_URL=${{ secrets.RMS_LOGIN_URL }}" >> "$GITHUB_ENV"
           [ -n "${{ secrets.RMS_REPORTS_URL }}" ] && echo "RMS_REPORTS_URL=${{ secrets.RMS_REPORTS_URL }}" >> "$GITHUB_ENV"
 
+          # SMTP/Email
           echo "EMAIL_SMTP_SERVER=${{ secrets.SMTP_HOST }}" >> "$GITHUB_ENV"
           echo "EMAIL_SMTP_PORT=${{ secrets.SMTP_PORT }}" >> "$GITHUB_ENV"
           echo "EMAIL_USERNAME=${{ secrets.SMTP_USER }}" >> "$GITHUB_ENV"
@@ -76,8 +83,21 @@ jobs:
           EMAIL_TO=$(printf '%s' "${{ secrets.AP_TEAM_EMAIL_LIST }}" | sed 's/[; ]\+/,/g')
           echo "EMAIL_TO=$EMAIL_TO" >> "$GITHUB_ENV"
 
+          # App flags
           echo "HEADLESS_MODE=true" >> "$GITHUB_ENV"
           echo "GITHUB_ACTIONS=true" >> "$GITHUB_ENV"
+
+      - name: Normalize obvious RMS URL typos (https// -> https://)
+        shell: bash
+        run: |
+          for v in RMS_BASE_URL RMS_LOGIN_URL RMS_REPORTS_URL; do
+            val="${!v}"
+            if [ -n "$val" ] && echo "$val" | grep -q '^https//'; then
+              fixed="$(echo "$val" | sed 's|^https//|https://|')"
+              echo "Fixing $v -> $fixed"
+              echo "$v=$fixed" >> "$GITHUB_ENV"
+            fi
+          done
 
       - name: Derive RMS_BASE_URL from RMS_LOGIN_URL (fallback)
         shell: bash
@@ -94,8 +114,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          
-          # pick the first non-empty URL among BASE, LOGIN, REPORTS
+
+          # Pick the first non-empty URL among BASE, LOGIN, REPORTS
           URL_FOR_HOST="${RMS_BASE_URL:-${RMS_LOGIN_URL:-${RMS_REPORTS_URL:-}}}"
 
           if [ -z "$URL_FOR_HOST" ]; then
@@ -104,18 +124,15 @@ jobs:
             exit 0
           fi
 
-          # add scheme if missing
+          # Add scheme if missing
           if ! echo "$URL_FOR_HOST" | grep -Eq '^https?://'; then
             URL_FOR_HOST="https://$URL_FOR_HOST"
           fi
 
-          # extract hostname robustly (no leakage)
-          HOST="$(python - <<'PY' "$URL_FOR_HOST"
-            import sys, urllib.parse
-            u = urllib.parse.urlparse(sys.argv[1])
-            print(u.hostname or "")
-            PY
-            )"
+          # Extract hostname (robust; no heredoc)
+          export URL_FOR_HOST
+          HOST="$(python -c 'import os, urllib.parse as u; x=u.urlparse(os.environ.get("URL_FOR_HOST","")); print(x.hostname or "")')"
+
           if [ -z "$HOST" ]; then
             echo "❌ Could not parse host from URL. Enabling demo mode."
             echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
@@ -138,6 +155,10 @@ jobs:
           echo "Python: $(python --version)"
           echo "Chrome: $(google-chrome --version)"
           echo "Display: $DISPLAY"
+          echo "RMS_BASE_URL=${RMS_BASE_URL:-__empty__}"
+          echo "RMS_LOGIN_URL=${RMS_LOGIN_URL:-__empty__}"
+          echo "RMS_REPORTS_URL=${RMS_REPORTS_URL:-__empty__}"
+          echo "FORCE_DEMO=${FORCE_DEMO:-__empty__}"
 
       - name: Run validation
         run: |
