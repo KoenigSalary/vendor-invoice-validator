@@ -9,9 +9,13 @@ on:
     paths:
       - 'main.py'
       - 'requirements.txt'
-      - '.github/workflows/**'
+      - '.github/workflows/**'      
 
 jobs:
+      - name: Clear old local test files (optional)
+      run: |
+        rm -f downloads/test_data.* downloads/production_summary_*.xlsx || true
+
   validate-invoices:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -54,10 +58,10 @@ jobs:
           echo "RMS_USERNAME=${{ secrets.RMS_USER }}" >> "$GITHUB_ENV"
           echo "RMS_PASSWORD=${{ secrets.RMS_PASS }}" >> "$GITHUB_ENV"
           # Prefer BASE_URL secret if present, else map legacy RMS_URL
-          if [ -n "${{ secrets.RMS_BASE_URL }}" ]; then
-            echo "RMS_BASE_URL=${{ secrets.RMS_BASE_URL }}" >> "$GITHUB_ENV"
+          if [ -n "" ]; then
+            echo "RMS_BASE_URL=" >> "$GITHUB_ENV"
           else
-            echo "RMS_BASE_URL=${{ secrets.RMS_URL }}" >> "$GITHUB_ENV"
+            echo "RMS_BASE_URL=" >> "$GITHUB_ENV"
           fi
           echo "RMS_LOGIN_URL=${{ secrets.RMS_LOGIN_URL }}" >> "$GITHUB_ENV"
           echo "RMS_REPORTS_URL=${{ secrets.RMS_REPORTS_URL }}" >> "$GITHUB_ENV"
