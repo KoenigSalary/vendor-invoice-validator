@@ -19,33 +19,6 @@ on:
       - 'utils/**'
 
 jobs:
-  install-and-test:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.11
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install chardet
-
-    - name: Run the invoice validation script
-      run: |
-        echo "=== Start Invoice Validation ==="
-        python main.py
-        echo "=== Done ==="
-
-    - name: Check installed packages
-      run: pip freeze
-
   validate-invoices:
     environment: prod
     runs-on: ubuntu-latest
@@ -53,12 +26,9 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Clear old local test files (optional)
-        run: rm -f downloads/test_data.* downloads/production_summary_*.xlsx || true
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -69,11 +39,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install system deps (Xvfb, curl, DNS utils)
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb unzip curl dnsutils
@@ -85,77 +55,113 @@ jobs:
           sudo apt-get -f install -y
           google-chrome --version
 
-      # 🔧 Remove preinstalled chromedriver so Selenium Manager picks the right one for this Chrome version
-      - name: Remove preinstalled chromedriver (force Selenium Manager)
+      - name: Remove preinstalled chromedriver
         run: |
           sudo rm -f /usr/bin/chromedriver || true
-          which chromedriver || true
+          which chromedriver || echo "No chromedriver found (expected)"
 
       - name: Start Xvfb (headless display)
         run: |
           sudo Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
           echo "DISPLAY=:99" >> "$GITHUB_ENV"
 
-      - name: Install Python deps
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install chardet
 
-      # ✅ Simpler one-liner to avoid YAML heredoc pitfalls
       - name: Verify critical imports
-        run: python -c "import fitz, openpyxl; print('All critical imports OK')"
+        run: python -c "import fitz, openpyxl, selenium; print('All critical imports OK')"
 
-      - name: Map secrets to env (including legacy names)
+      - name: Setup environment variables
         shell: bash
         run: |
-          # RMS creds (both new + legacy for your scripts)
+          # RMS credentials
           echo "RMS_USERNAME=${{ secrets.RMS_USER }}" >> "$GITHUB_ENV"
           echo "RMS_PASSWORD=${{ secrets.RMS_PASS }}" >> "$GITHUB_ENV"
           echo "RMS_USER=${{ secrets.RMS_USER }}" >> "$GITHUB_ENV"
           echo "RMS_PASS=${{ secrets.RMS_PASS }}" >> "$GITHUB_ENV"
 
-          # BASE URL preferred; fallback to RMS_URL
+          # RMS URLs with fallback
           if [ -n "${{ secrets.RMS_BASE_URL }}" ]; then
             echo "RMS_BASE_URL=${{ secrets.RMS_BASE_URL }}" >> "$GITHUB_ENV"
           elif [ -n "${{ secrets.RMS_URL }}" ]; then
             echo "RMS_BASE_URL=${{ secrets.RMS_URL }}" >> "$GITHUB_ENV"
           fi
 
-          # Optional endpoints
-          [ -n "${{ secrets.RMS_LOGIN_URL }}" ] && echo "RMS_LOGIN_URL=${{ secrets.RMS_LOGIN_URL }}" >> "$GITHUB_ENV"
-          [ -n "${{ secrets.RMS_REPORTS_URL }}" ] && echo "RMS_REPORTS_URL=${{ secrets.RMS_REPORTS_URL }}" >> "$GITHUB_ENV"
+          # Optional RMS endpoints
+          [ -n "${{ secrets.RMS_LOGIN_URL }}" ] && echo "RMS_LOGIN_URL=${{ secrets.RMS_LOGIN_URL }}" >> "$GITHUB_ENV" || true
+          [ -n "${{ secrets.RMS_REPORTS_URL }}" ] && echo "RMS_REPORTS_URL=${{ secrets.RMS_REPORTS_URL }}" >> "$GITHUB_ENV" || true
 
-          # SMTP/Email
+          # Email/SMTP configuration
           echo "EMAIL_SMTP_SERVER=${{ secrets.SMTP_HOST }}" >> "$GITHUB_ENV"
           echo "EMAIL_SMTP_PORT=${{ secrets.SMTP_PORT }}" >> "$GITHUB_ENV"
           echo "EMAIL_USERNAME=${{ secrets.SMTP_USER }}" >> "$GITHUB_ENV"
           echo "EMAIL_PASSWORD=${{ secrets.SMTP_PASS }}" >> "$GITHUB_ENV"
           echo "EMAIL_FROM=${{ secrets.SMTP_USER }}" >> "$GITHUB_ENV"
+          
+          # Convert email list to comma-separated format
           EMAIL_TO=$(printf '%s' "${{ secrets.AP_TEAM_EMAIL_LIST }}" | sed 's/[; ]\+/,/g')
           echo "EMAIL_TO=$EMAIL_TO" >> "$GITHUB_ENV"
 
+          # Application settings
           echo "HEADLESS_MODE=true" >> "$GITHUB_ENV"
           echo "GITHUB_ACTIONS=true" >> "$GITHUB_ENV"
+          
+          # Optional: Force demo mode (uncomment to use demo data only)
+          # echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
 
-      - name: Run validation
+      - name: Create required directories
         run: |
-          echo "=== Start Invoice Validation ==="
-          python main.py
-          echo "=== Done ==="
+          mkdir -p downloads logs snapshots reports
 
-      - name: Upload outputs (always)
+      - name: Run invoice validation
+        run: |
+          echo "=== Starting Invoice Validation ==="
+          echo "Environment: GitHub Actions"
+          echo "Python version: $(python --version)"
+          echo "Chrome version: $(google-chrome --version)"
+          echo "Working directory: $(pwd)"
+          echo "=================================="
+          python main.py
+          echo "=== Validation Complete ==="
+
+      - name: Check validation results
+        if: always()
+        run: |
+          echo "=== Validation Results Summary ==="
+          echo "Downloads directory:"
+          ls -lh downloads/ || echo "No downloads directory"
+          echo ""
+          echo "Logs directory:"
+          ls -lh logs/ || echo "No logs directory"
+          echo ""
+          echo "Recent log entries:"
+          tail -20 logs/*.log 2>/dev/null || echo "No log files found"
+
+      - name: Upload validation results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: validation-results-${{ github.run_number }}
           path: |
+            downloads/**
+            logs/**
+            snapshots/**
+            reports/**
             *.xlsx
             *.csv
             *.json
-            downloads/**
-            reports/**
-            snapshots**
-            logs/**
           if-no-files-found: warn
           retention-days: 30
+
+      - name: Upload error logs separately (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-logs-${{ github.run_number }}
+          path: |
+            logs/errors_*.log
+            snapshots/**
+          if-no-files-found: ignore
+          retention-days: 7
