@@ -157,23 +157,16 @@ class Config:
 config = Config()
 
 class LogManager:
-    """Production logging manager with multiple output streams"""
-
-    def __init__(self, log_dir: str = "logs"):
-        self.log_dir = Path(log_dir)
-        self.log_dir.mkdir(exist_ok=True)
+    def __init__(self):
         self.setup_logging()
-
+    
     def setup_logging(self):
-        """Setup comprehensive logging configuration"""
-        # Create formatters
-        detailed_formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
-        )
-        simple_formatter = logging.Formatter(
-            '%(asctime)s - %(levelname)s - %(message)s'
-        )
-
+        # Set up logging for the application
+        console_handler = logging.StreamHandler(sys.stdout)  # sys is now available
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        console_handler.setFormatter(formatter)
+        logging.getLogger().addHandler(console_handler)
+        logging.getLogger().setLevel(logging.INFO)
         # Root logger
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG if config.IS_GITHUB_ACTIONS else logging.INFO)
