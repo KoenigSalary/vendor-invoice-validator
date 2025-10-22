@@ -11,4 +11,4 @@ requests>=2.32.0
 lxml>=5.2.0
 beautifulsoup4>=4.12.0
 plotly>=5.22.0     
-smart-read-table
+
