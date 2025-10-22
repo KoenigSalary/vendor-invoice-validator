@@ -158,18 +158,28 @@ config = Config()
 
 class LogManager:
     def __init__(self):
+        # Define log directory
+        self.log_dir = Path('logs')
+        self.log_dir.mkdir(exist_ok=True)
+        
         self.setup_logging()
     
     def setup_logging(self):
-        # Set up logging for the application
-        console_handler = logging.StreamHandler(sys.stdout)  # sys should be accessible now
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logging.getLogger().addHandler(console_handler)
-        logging.getLogger().setLevel(logging.INFO)
-
+        """Set up logging for the application"""
+        # Get root logger
+        root_logger = logging.getLogger()
+        
         # Clear existing handlers
         root_logger.handlers.clear()
+        
+        # Set root logger level
+        root_logger.setLevel(logging.DEBUG)
+        
+        # Define formatters
+        simple_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        detailed_formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
+        )
 
         # Console handler
         console_handler = logging.StreamHandler(sys.stdout)
@@ -191,13 +201,9 @@ class LogManager:
         error_handler.setFormatter(detailed_formatter)
         root_logger.addHandler(error_handler)
 
+        # Create instance logger
         self.logger = logging.getLogger(__name__)
         self.logger.info("Production logging system initialized")
-        
-        print(sys.path)
-        print(sys.version)
-        print([m.name for m in pkgutil.iter_modules(utils.__path__)])
-        print(hasattr(fr, "smart_read_table"))
 
 class DatabaseManager:
     """Production database manager with comprehensive error handling"""
