@@ -1939,15 +1939,8 @@ class ProductionInvoiceValidationSystem:
 
         except Exception as e:
             self.logger.error(f"RMS download failed: {e}")
-            try:
-                take_debug_screenshot(drv, "rms_fatal_error")
-            except:
-                pass
             return files
-        finally:
-            # Don't quit driver here - let it be reused or cleaned up later
-           pass
-
+            
     # --------------------------------- Packaging ------------------------------------
 
     def build_invoices_zip(self) -> Optional[str]:
