@@ -5,11 +5,10 @@ on:
     # Every 4 days @ 09:00 UTC (≈ 14:30 IST)
     - cron: '0 9 */4 * *'
   workflow_dispatch:
-  on:
-    push:
-      branches: 
-        -main
-      paths:
+  push:
+    branches:
+      - main
+    paths:
       - 'main.py'
       - 'streamlit_app.py'
       - 'requirements.txt'
@@ -18,14 +17,6 @@ on:
       - 'validator/**'
       - 'drivers/**'
       - 'utils/**'
-
-jobs:
-  name: Invoice Validation CI
-
-on:
-  push:
-    branches:
-      - main
 
 jobs:
   install-and-test:
@@ -60,8 +51,8 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -145,82 +136,6 @@ jobs:
 
           echo "HEADLESS_MODE=true" >> "$GITHUB_ENV"
           echo "GITHUB_ACTIONS=true" >> "$GITHUB_ENV"
-
-      - name: Normalize obvious RMS URL typos (https// → https://)
-        shell: bash
-        run: |
-          for v in RMS_BASE_URL RMS_LOGIN_URL RMS_REPORTS_URL; do
-            val="${!v}"
-            if [ -n "$val" ]; then
-              fixed="$(printf '%s' "$val" | sed -E 's|^https//|https://|; s|^http//|http://|')"
-              if [ "$fixed" != "$val" ]; then
-                echo "Fixing $v -> $fixed"
-              fi
-              echo "$v=$fixed" >> "$GITHUB_ENV"
-            fi
-          done
-
-      - name: Derive RMS_BASE_URL from RMS_LOGIN_URL (fallback)
-        shell: bash
-        run: |
-          if [ -z "${{ env.RMS_BASE_URL }}" ] && [ -n "${{ env.RMS_LOGIN_URL }}" ]; then
-            ROOT="$(echo "${{ env.RMS_LOGIN_URL }}" | awk -F[/:] '{print $1"//"$4}')"
-            if [ -n "$ROOT" ]; then
-              echo "RMS_BASE_URL=$ROOT" >> "$GITHUB_ENV"
-              echo "Derived RMS_BASE_URL=$ROOT"
-            fi
-          fi
-
-      - name: DNS & HTTPS probe for RMS (graceful)
-        shell: bash
-        run: |
-          set -e
-          URL_FOR_HOST="${RMS_BASE_URL:-${RMS_LOGIN_URL:-${RMS_REPORTS_URL:-}}}"
-          URL_FOR_HOST="$(printf '%s' "$URL_FOR_HOST" | sed -E 's|^https//|https://|; s|^http//|http://|')"
-
-          if [ -z "$URL_FOR_HOST" ]; then
-            echo "⚠️ No RMS URL found. Enabling demo mode."
-            echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
-            exit 0
-          fi
-          
-          # Ensure scheme
-          if ! echo "$URL_FOR_HOST" | grep -Eq '^https?://'; then
-            URL_FOR_HOST="https://$URL_FOR_HOST"
-          fi
-          
-          # Extract hostname in pure bash (no Python)
-          HOST="$URL_FOR_HOST"
-          HOST="${HOST#*://}"     # drop scheme
-          HOST="${HOST%%/*}"      # drop path
-          HOST="${HOST%%:*}"      # drop port
-          
-          if [ -z "$HOST" ]; then
-            echo "❌ Could not parse host from URL ($URL_FOR_HOST). Enabling demo mode."
-            echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
-            exit 0
-          fi
-         
-          echo "Resolving $HOST ..."
-          if ! nslookup "$HOST" >/dev/null 2>&1; then
-            echo "❌ DNS resolution failed for $HOST. Enabling demo mode."
-            echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
-            exit 0
-          fi
-          echo "✅ DNS OK"
-
-          echo "Testing HTTPS (HEAD)…"
-          curl -sS -I --max-time 15 "$URL_FOR_HOST" >/dev/null || true
-          
-      - name: Environment check
-        run: |
-          echo "Python: $(python --version)"
-          echo "Chrome: $(google-chrome --version)"
-          echo "Display: $DISPLAY"
-          echo "RMS_BASE_URL=${RMS_BASE_URL:-__empty__}"
-          echo "RMS_LOGIN_URL=${RMS_LOGIN_URL:-__empty__}"
-          echo "RMS_REPORTS_URL=${RMS_REPORTS_URL:-__empty__}"
-          echo "FORCE_DEMO=${FORCE_DEMO:-__empty__}"
 
       - name: Run validation
         run: |
