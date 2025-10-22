@@ -40,7 +40,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
-import smart_read_table
 import chardet
 import warnings
 
