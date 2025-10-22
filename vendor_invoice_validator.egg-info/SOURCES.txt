@@ -1,0 +1,9 @@
+pyproject.toml
+setup.py
+utils/__init__.py
+utils/file_readers.py
+utils/smart_reader.py
+vendor_invoice_validator.egg-info/PKG-INFO
+vendor_invoice_validator.egg-info/SOURCES.txt
+vendor_invoice_validator.egg-info/dependency_links.txt
+vendor_invoice_validator.egg-info/top_level.txt
