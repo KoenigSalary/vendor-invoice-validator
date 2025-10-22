@@ -204,6 +204,12 @@ class LogManager:
         self.logger = logging.getLogger(__name__)
         self.logger.info("Production logging system initialized")
 
+        import sys, pkgutil, utils
+        print(sys.path)
+        print([m.name for m in pkgutil.iter_modules(utils.__path__)])
+        import utils.file_readers as fr
+        print(hasattr(fr, "smart_read_table"))
+
 class DatabaseManager:
     """Production database manager with comprehensive error handling"""
 
