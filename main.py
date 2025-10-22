@@ -988,8 +988,21 @@ class ProductionInvoiceValidationSystem:
                         try:
                             df = smart_read_table(file_path)
                         except Exception as e:
-                            logger.error(f"Failed to process {os.path.basename(file_path)}: {e}")
+                            self.logger.error(f"Failed to process {os.path.basename(file_path)}: {e}")  # ✅ FIXED: Added 'self.'
                             continue
+                    
+                    # Add the processed file to the list
+                    processed_files.append(str(file_path))
+                
+                except Exception as e:
+                    self.logger.error(f"Error processing {file_path.name}: {e}")
+                    continue
+        
+            return processed_files
+        
+        except Exception as e:
+            self.logger.error(f"Critical error in process_local_files: {e}")
+            raise
 
                     # Clean and validate data
                     df = self.clean_dataframe(df)
