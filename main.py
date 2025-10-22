@@ -1906,7 +1906,7 @@ class ProductionInvoiceValidationSystem:
                                 drv.execute_script("arguments[0].scrollIntoView({block:'center'})", a)
                                 ActionChains(drv).key_down(Keys.CONTROL).click(a).key_up(Keys.CONTROL).perform()
                                 time.sleep(0.2)
-                                except Exception:
+                            except Exception:
                                 continue
                             
                         downloaded = _wait_for_downloads(before, timeout=180)
