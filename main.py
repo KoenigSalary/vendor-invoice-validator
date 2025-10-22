@@ -946,41 +946,42 @@ class ProductionInvoiceValidationSystem:
             self.logger.warning(f"PDF validation failed for {pdf_path}: {e}")
             return False
 
-    def process_local_files(self) -> List[str]:
-        """Process local invoice files with production-grade handling"""
-        processed_files = []
+def process_local_files(self) -> List[str]:
+    """Process local invoice files with production-grade handling"""
+    processed_files = []
 
-        try:
-            # Ensure demo data exists if no files found
-            self.create_demo_data_if_needed()
+    try:
+        # Ensure demo data exists if no files found
+        self.create_demo_data_if_needed()
 
-            downloads_dir = Path(config.DOWNLOADS_DIR)
+        downloads_dir = Path(config.DOWNLOADS_DIR)
 
-            # Find all supported files
-            file_patterns = ['*.xlsx', '*.xls', '*.csv', '*.tsv', '*.txt']
-            files_to_process = []
+        # Find all supported files
+        file_patterns = ['*.xlsx', '*.xls', '*.csv', '*.tsv', '*.txt']
+        files_to_process = []
 
-            for pattern in file_patterns:
-                files_to_process.extend(downloads_dir.glob(pattern))
+        for pattern in file_patterns:
+            files_to_process.extend(downloads_dir.glob(pattern))
 
-            if not files_to_process:
-                self.logger.warning("No files found to process after demo data creation")
-                return processed_files
+        if not files_to_process:
+            self.logger.warning("No files found to process after demo data creation")
+            return processed_files
 
-            self.logger.info(f"Found {len(files_to_process)} files to process")
+        self.logger.info(f"Found {len(files_to_process)} files to process")
 
-            for file_path in files_to_process:
-                try:
-                    self.logger.info(f"Processing production file: {file_path}")
+        for file_path in files_to_process:
+            try:
+                self.logger.info(f"Processing production file: {file_path}")
 
-                    # Process file with encoding detection
-                    if file_path.suffix.lower() in ['.csv', '.tsv', '.txt']:
-                        # Detect encoding
-                        with open(file_path, 'rb') as f:
-                            raw_data = f.read(10000)
-                            encoding_result = chardet.detect(raw_data)
-                            encoding = encoding_result['encoding'] or 'utf-8'
+                # Process file with encoding detection
+                if file_path.suffix.lower() in ['.csv', '.tsv', '.txt']:
+                    # Detect encoding
+                    with open(file_path, 'rb') as f:
+                        raw_data = f.read(10000)
+                        encoding_result = chardet.detect(raw_data)
+                        encoding = encoding_result['encoding'] or 'utf-8'
 
+<<<<<<< HEAD
                         delimiter = '\t' if file_path.suffix.lower() == '.tsv' else ','
                         df = pd.read_csv(file_path, encoding=encoding, delimiter=delimiter)
                     else:
@@ -1003,66 +1004,77 @@ class ProductionInvoiceValidationSystem:
         except Exception as e:
             self.logger.error(f"Critical error in process_local_files: {e}")
             raise
+=======
+                    delimiter = '\t' if file_path.suffix.lower() == '.tsv' else ','
+                    df = pd.read_csv(file_path, encoding=encoding, delimiter=delimiter)
+                else:
+                    # Excel files
+                    try:
+                        df = smart_read_table(file_path)
+                    except Exception as e:
+                        self.logger.error(f"Failed to process {os.path.basename(file_path)}: {e}")
+                        continue
+>>>>>>> f941ff6 (Fix: Resolve indentation errors and logger references in process_local_files)
 
-                    # Clean and validate data
-                    df = self.clean_dataframe(df)
-                    validation_results = self.validate_invoice_data(df)
+                # Clean and validate data
+                df = self.clean_dataframe(df)
+                validation_results = self.validate_invoice_data(df)
 
-                    if validation_results['valid']:
-                        # Process invoices
-                        processed_count = self.process_invoice_dataframe(df, str(file_path))
+                if validation_results['valid']:
+                    # Process invoices
+                    processed_count = self.process_invoice_dataframe(df, str(file_path))
 
-                        if processed_count > 0:
-                            processed_files.append(str(file_path))
-                            self.processing_results['successful'] += 1
+                    if processed_count > 0:
+                        processed_files.append(str(file_path))
+                        self.processing_results['successful'] += 1
 
-                            self.logger.info(f"Successfully processed {processed_count} invoices from {file_path.name}")
+                        self.logger.info(f"Successfully processed {processed_count} invoices from {file_path.name}")
 
-                            # Log successful processing
-                            self.db_manager.log_processing_event(
-                                self.session_id, "file_processing", "success",
-                                f"Processed {processed_count} invoices from {file_path.name}"
-                            )
-                        else:
-                            self.processing_results['failed'] += 1
-                            error_msg = f"No invoices processed from {file_path.name}"
-                            self.processing_results['errors'].append(error_msg)
-
-                            self.db_manager.log_processing_event(
-                                self.session_id, "file_processing", "failed", error_msg
-                            )
+                        # Log successful processing
+                        self.db_manager.log_processing_event(
+                            self.session_id, "file_processing", "success",
+                            f"Processed {processed_count} invoices from {file_path.name}"
+                        )
                     else:
                         self.processing_results['failed'] += 1
-                        error_msg = f"Validation failed for {file_path.name}: {validation_results['errors']}"
+                        error_msg = f"No invoices processed from {file_path.name}"
                         self.processing_results['errors'].append(error_msg)
-                        self.logger.error(error_msg)
 
                         self.db_manager.log_processing_event(
-                            self.session_id, "file_validation", "failed", error_msg
+                            self.session_id, "file_processing", "failed", error_msg
                         )
-
-                    # Update warnings
-                    if validation_results.get('warnings'):
-                        self.processing_results['warnings'].extend(validation_results['warnings'])
-
-                    self.processing_results['total_processed'] += processed_count
-
-                except Exception as e:
+                else:
                     self.processing_results['failed'] += 1
-                    error_msg = f"Failed to process {file_path.name}: {e}"
+                    error_msg = f"Validation failed for {file_path.name}: {validation_results['errors']}"
                     self.processing_results['errors'].append(error_msg)
                     self.logger.error(error_msg)
 
                     self.db_manager.log_processing_event(
-                        self.session_id, "file_processing", "error", error_msg
+                        self.session_id, "file_validation", "failed", error_msg
                     )
 
-        except Exception as e:
-            error_msg = f"Local file processing failed: {e}"
-            self.logger.error(error_msg)
-            self.processing_results['errors'].append(error_msg)
+                # Update warnings
+                if validation_results.get('warnings'):
+                    self.processing_results['warnings'].extend(validation_results['warnings'])
 
-        return processed_files
+                self.processing_results['total_processed'] += processed_count
+
+            except Exception as e:
+                self.processing_results['failed'] += 1
+                error_msg = f"Failed to process {file_path.name}: {e}"
+                self.processing_results['errors'].append(error_msg)
+                self.logger.error(error_msg)
+
+                self.db_manager.log_processing_event(
+                    self.session_id, "file_processing", "error", error_msg
+                )
+
+    except Exception as e:
+        error_msg = f"Local file processing failed: {e}"
+        self.logger.error(error_msg)
+        self.processing_results['errors'].append(error_msg)
+
+    return processed_files
 
     def clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         """Clean and standardize dataframe for production use."""
