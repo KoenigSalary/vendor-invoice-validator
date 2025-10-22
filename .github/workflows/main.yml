@@ -2,27 +2,32 @@ name: Invoice Validation System
 
 on:
   schedule:
-    - cron: '0 9 */4 * *'   # every 4 days @ 09:00 UTC
+    # Every 4 days @ 09:00 UTC (≈ 14:30 IST). Adjust if needed.
+    - cron: '0 9 */4 * *'
   workflow_dispatch:
   push:
     branches: [ main ]
     paths:
       - 'main.py'
+      - 'streamlit_app.py'
       - 'requirements.txt'
       - '.github/workflows/**'
+      - 'ui/**'
+      - 'validator/**'
+      - 'drivers/**'
+      - 'utils/**'
 
 jobs:
   validate-invoices:
-    # If you keep env-scoped secrets (e.g., "prod"), keep the next line.
-    # Remove it if you don't use Environments.
     environment: prod
-
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Clear old local test files (optional)
         run: rm -f downloads/test_data.* downloads/production_summary_*.xlsx || true
@@ -31,6 +36,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install system deps (Xvfb, curl, DNS utils)
         run: |
@@ -44,7 +57,13 @@ jobs:
           sudo apt-get -f install -y
           google-chrome --version
 
-      - name: Start Xvfb
+      # 🔧 Important: remove any preinstalled chromedriver to avoid version mismatch.
+      - name: Remove preinstalled chromedriver (force Selenium Manager)
+        run: |
+          sudo rm -f /usr/bin/chromedriver || true
+          which chromedriver || true
+
+      - name: Start Xvfb (headless display)
         run: |
           sudo Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
           echo "DISPLAY=:99" >> "$GITHUB_ENV"
@@ -53,6 +72,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          # keep chardet if your code imports it explicitly
           pip install chardet
 
       - name: Map secrets to env (including legacy names)
@@ -87,7 +107,7 @@ jobs:
           echo "HEADLESS_MODE=true" >> "$GITHUB_ENV"
           echo "GITHUB_ACTIONS=true" >> "$GITHUB_ENV"
 
-      - name: Normalize obvious RMS URL typos (https// → https://) right after mapping
+      - name: Normalize obvious RMS URL typos (https// → https://)
         shell: bash
         run: |
           for v in RMS_BASE_URL RMS_LOGIN_URL RMS_REPORTS_URL; do
@@ -112,46 +132,34 @@ jobs:
             fi
           fi
 
-      - name: DNS & HTTPS probe for RMS (graceful + normalize again)
+      - name: DNS & HTTPS probe for RMS (graceful)
         shell: bash
         run: |
           set -e
-
-          # Pick the first non-empty URL among BASE, LOGIN, REPORTS
           URL_FOR_HOST="${RMS_BASE_URL:-${RMS_LOGIN_URL:-${RMS_REPORTS_URL:-}}}"
-
-          # Normalize common mistakes again (defensive)
           URL_FOR_HOST="$(printf '%s' "$URL_FOR_HOST" | sed -E 's|^https//|https://|; s|^http//|http://|')"
-
           if [ -z "$URL_FOR_HOST" ]; then
-            echo "⚠️ No RMS URL found (RMS_BASE_URL/RMS_LOGIN_URL/RMS_REPORTS_URL). Enabling demo mode."
+            echo "⚠️ No RMS URL found. Enabling demo mode."
             echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
             exit 0
           fi
-
-          # Add scheme if missing
           if ! echo "$URL_FOR_HOST" | grep -Eq '^https?://'; then
             URL_FOR_HOST="https://$URL_FOR_HOST"
           fi
-
-          # Extract hostname safely (no heredoc)
           export URL_FOR_HOST
           HOST="$(python -c 'import os, urllib.parse as u; x=u.urlparse(os.environ.get("URL_FOR_HOST","")); print(x.hostname or "")')"
-
           if [ -z "$HOST" ]; then
             echo "❌ Could not parse host from URL ($URL_FOR_HOST). Enabling demo mode."
             echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
             exit 0
           fi
-
           echo "Resolving $HOST ..."
           if ! nslookup "$HOST" >/dev/null 2>&1; then
-            echo "❌ DNS resolution failed for $HOST. Enabling demo mode (internal host likely)."
+            echo "❌ DNS resolution failed for $HOST. Enabling demo mode."
             echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
             exit 0
           fi
           echo "✅ DNS OK"
-
           echo "Testing HTTPS (HEAD)…"
           curl -sS -I --max-time 15 "$URL_FOR_HOST" >/dev/null || true
 
