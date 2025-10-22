@@ -141,21 +141,30 @@ jobs:
           set -e
           URL_FOR_HOST="${RMS_BASE_URL:-${RMS_LOGIN_URL:-${RMS_REPORTS_URL:-}}}"
           URL_FOR_HOST="$(printf '%s' "$URL_FOR_HOST" | sed -E 's|^https//|https://|; s|^http//|http://|')"
+
           if [ -z "$URL_FOR_HOST" ]; then
             echo "⚠️ No RMS URL found. Enabling demo mode."
             echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
             exit 0
           fi
+          
+          # Ensure scheme
           if ! echo "$URL_FOR_HOST" | grep -Eq '^https?://'; then
             URL_FOR_HOST="https://$URL_FOR_HOST"
           fi
-          export URL_FOR_HOST
-          HOST="$(python -c 'import os, urllib.parse as u; x=u.urlparse(os.environ.get(\"URL_FOR_HOST\",\"\")); print(x.hostname or \"\")')"
+          
+          # Extract hostname in pure bash (no Python)
+          HOST="$URL_FOR_HOST"
+          HOST="${HOST#*://}"     # drop scheme
+          HOST="${HOST%%/*}"      # drop path
+          HOST="${HOST%%:*}"      # drop port
+          
           if [ -z "$HOST" ]; then
             echo "❌ Could not parse host from URL ($URL_FOR_HOST). Enabling demo mode."
             echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
             exit 0
           fi
+         
           echo "Resolving $HOST ..."
           if ! nslookup "$HOST" >/dev/null 2>&1; then
             echo "❌ DNS resolution failed for $HOST. Enabling demo mode."
@@ -163,9 +172,10 @@ jobs:
             exit 0
           fi
           echo "✅ DNS OK"
+
           echo "Testing HTTPS (HEAD)…"
           curl -sS -I --max-time 15 "$URL_FOR_HOST" >/dev/null || true
-
+          
       - name: Environment check
         run: |
           echo "Python: $(python --version)"
