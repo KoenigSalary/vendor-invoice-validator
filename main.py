@@ -14,7 +14,8 @@ except Exception as _e:
     print(f"[warn] PyMuPDF not available ({_e}). PDF parsing will be skipped.")
     
 import os
-import sys
+import sys, pkgutil, utils
+import utils.file_readers as fr
 import logging
 import sqlite3
 import pandas as pd
@@ -39,7 +40,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
-from utils.file_readers import smart_read_table
+import smart_read_table
 import chardet
 import warnings
 
@@ -162,14 +163,11 @@ class LogManager:
     
     def setup_logging(self):
         # Set up logging for the application
-        console_handler = logging.StreamHandler(sys.stdout)  # sys is now available
+        console_handler = logging.StreamHandler(sys.stdout)  # sys should be accessible now
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         console_handler.setFormatter(formatter)
         logging.getLogger().addHandler(console_handler)
         logging.getLogger().setLevel(logging.INFO)
-        # Root logger
-        root_logger = logging.getLogger()
-        root_logger.setLevel(logging.DEBUG if config.IS_GITHUB_ACTIONS else logging.INFO)
 
         # Clear existing handlers
         root_logger.handlers.clear()
@@ -196,11 +194,10 @@ class LogManager:
 
         self.logger = logging.getLogger(__name__)
         self.logger.info("Production logging system initialized")
-
-        import sys, pkgutil, utils
+        
         print(sys.path)
+        print(sys.version)
         print([m.name for m in pkgutil.iter_modules(utils.__path__)])
-        import utils.file_readers as fr
         print(hasattr(fr, "smart_read_table"))
 
 class DatabaseManager:
