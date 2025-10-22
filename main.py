@@ -39,6 +39,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+from utils.file_readers import smart_read_table
 import chardet
 import warnings
 
@@ -64,6 +65,9 @@ except ImportError as e:
 
 warnings.filterwarnings('ignore', category=UserWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
+
+from drivers.driver_factory import make_driver
+driver = make_driver(download_dir="downloads", page_load_strategy="eager")
 
 # Configuration with safe environment variable handling
 @dataclass
@@ -981,9 +985,10 @@ class ProductionInvoiceValidationSystem:
                     else:
                         # Excel files
                         try:
-                            df = pd.read_excel(file_path, engine='openpyxl')
-                        except:
-                            df = pd.read_excel(file_path, engine='xlrd')
+                            df = smart_read_table(file_path)
+                        except Exception as e:
+                            logger.error(f"Failed to process {os.path.basename(file_path)}: {e}")
+                            continue
 
                     # Clean and validate data
                     df = self.clean_dataframe(df)
