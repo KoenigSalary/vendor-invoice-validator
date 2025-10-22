@@ -980,8 +980,6 @@ def process_local_files(self) -> List[str]:
                         raw_data = f.read(10000)
                         encoding_result = chardet.detect(raw_data)
                         encoding = encoding_result['encoding'] or 'utf-8'
-
-<<<<<<< HEAD
                         delimiter = '\t' if file_path.suffix.lower() == '.tsv' else ','
                         df = pd.read_csv(file_path, encoding=encoding, delimiter=delimiter)
                     else:
@@ -1004,7 +1002,6 @@ def process_local_files(self) -> List[str]:
         except Exception as e:
             self.logger.error(f"Critical error in process_local_files: {e}")
             raise
-=======
                     delimiter = '\t' if file_path.suffix.lower() == '.tsv' else ','
                     df = pd.read_csv(file_path, encoding=encoding, delimiter=delimiter)
                 else:
@@ -1014,8 +1011,7 @@ def process_local_files(self) -> List[str]:
                     except Exception as e:
                         self.logger.error(f"Failed to process {os.path.basename(file_path)}: {e}")
                         continue
->>>>>>> f941ff6 (Fix: Resolve indentation errors and logger references in process_local_files)
-
+                        
                 # Clean and validate data
                 df = self.clean_dataframe(df)
                 validation_results = self.validate_invoice_data(df)
