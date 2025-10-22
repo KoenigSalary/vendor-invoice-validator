@@ -2,7 +2,7 @@ name: Invoice Validation System
 
 on:
   schedule:
-    # Every 4 days @ 09:00 UTC (≈ 14:30 IST). Adjust if needed.
+    # Every 4 days @ 09:00 UTC (≈ 14:30 IST)
     - cron: '0 9 */4 * *'
   workflow_dispatch:
   push:
@@ -57,7 +57,7 @@ jobs:
           sudo apt-get -f install -y
           google-chrome --version
 
-      # 🔧 Important: remove any preinstalled chromedriver to avoid version mismatch.
+      # 🔧 Remove preinstalled chromedriver so Selenium Manager picks the right one for this Chrome version
       - name: Remove preinstalled chromedriver (force Selenium Manager)
         run: |
           sudo rm -f /usr/bin/chromedriver || true
@@ -72,20 +72,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          # keep chardet if your code imports it explicitly
           pip install chardet
 
+      # ✅ Simpler one-liner to avoid YAML heredoc pitfalls
       - name: Verify critical imports
-      run: |
-        python - << 'PY'
-        import sys
-        try:
-          import fitz; import openpyxl
-        except Exception as e:
-          sys.exit("Missing package: " + str(e))
-        print("All critical imports OK")
-        PY
-        
+        run: python -c "import fitz, openpyxl; print('All critical imports OK')"
+
       - name: Map secrets to env (including legacy names)
         shell: bash
         run: |
@@ -158,7 +150,7 @@ jobs:
             URL_FOR_HOST="https://$URL_FOR_HOST"
           fi
           export URL_FOR_HOST
-          HOST="$(python -c 'import os, urllib.parse as u; x=u.urlparse(os.environ.get("URL_FOR_HOST","")); print(x.hostname or "")')"
+          HOST="$(python -c 'import os, urllib.parse as u; x=u.urlparse(os.environ.get(\"URL_FOR_HOST\",\"\")); print(x.hostname or \"\")')"
           if [ -z "$HOST" ]; then
             echo "❌ Could not parse host from URL ($URL_FOR_HOST). Enabling demo mode."
             echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
@@ -201,7 +193,7 @@ jobs:
             *.json
             downloads/**
             reports/**
-            snapshots/**
+            snapshots**
             logs/**
           if-no-files-found: warn
           retention-days: 30
