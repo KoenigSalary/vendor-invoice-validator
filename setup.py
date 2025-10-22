@@ -7,4 +7,4 @@ setup(
     install_requires=[
         # list of required dependencies
     ],
-)
+)    
