@@ -5,6 +5,11 @@ setup(
     version='0.1',
     packages=find_packages(),
     install_requires=[
-        # list of required dependencies
+        # Add your dependencies here
+        'pandas>=2.3.0',
+        'numpy>=1.26.0',
+        'openpyxl>=3.1.1',
+        'selenium>=4.21.0',
+        # Add more dependencies as needed
     ],
-)    
+)
