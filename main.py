@@ -1587,6 +1587,7 @@ class ProductionInvoiceValidationSystem:
           1) the grid export (Excel/XLS)
           2) invoice documents (PDF/JPG) after selecting header checkbox.
         Uses the exact element IDs you provided.
+        ENHANCED: Better timeout handling, retry logic, and error recovery.
         """
         files: List[str] = []
         if not getattr(self, "rms_enabled", False):
@@ -1602,13 +1603,13 @@ class ProductionInvoiceValidationSystem:
                 drv.execute_cdp_cmd("Page.setDownloadBehavior", payload)
             except Exception:
                 try:
-                    drv.execute_cdp("Page.setDownloadBehavior", payload)  # alt API
+                    drv.execute_cdp("Page.setDownloadBehavior", payload)
                 except Exception as e:
                     self.logger.warning(f"CDP downloads not enabled: {e}")
 
         def _snapshot() -> set:
             return {p.name for p in download_dir.glob("*")}
-            
+        
         def _new_completed_files(before: set) -> List[Path]:
             wanted = (".csv", ".xlsx", ".xls", ".pdf", ".jpg", ".jpeg")
             out: List[Path] = []
@@ -1629,6 +1630,56 @@ class ProductionInvoiceValidationSystem:
                 time.sleep(1)
             return _new_completed_files(before)
 
+        def click_with_retry(drv, element, max_attempts=3):
+            """Click element with multiple strategies and retry logic"""
+            for attempt in range(max_attempts):
+                try:
+                    # Scroll element into view
+                    drv.execute_script("arguments[0].scrollIntoView({block:'center', behavior:'smooth'});", element)
+                    time.sleep(1)
+                
+                    # Wait for element to be stable
+                    drv.execute_script("return document.readyState") == "complete"
+                
+                    # Try regular click
+                    element.click()
+                    self.logger.info(f"Click successful on attempt {attempt + 1}")
+                    return True
+                
+                except Exception as e:
+                    self.logger.warning(f"Click attempt {attempt + 1} failed: {str(e)[:100]}")
+                
+                    if attempt < max_attempts - 1:
+                        # Try JavaScript click as fallback
+                        try:
+                            drv.execute_script("arguments[0].click();", element)
+                            self.logger.info(f"JavaScript click successful on attempt {attempt + 1}")
+                            return True
+                        except Exception as js_e:
+                            self.logger.warning(f"JavaScript click also failed: {str(js_e)[:100]}")
+                            time.sleep(2)
+                            continue
+                    else:
+                        # Final attempt: force click via actions
+                        try:
+                            ActionChains(drv).move_to_element(element).click().perform()
+                            self.logger.info("ActionChains click successful")
+                            return True
+                        except Exception:
+                            raise e
+            return False
+
+        def take_debug_screenshot(drv, name: str):
+            """Take screenshot for debugging"""
+            try:
+                snapshot_dir = Path(config.SNAPSHOTS_DIR)
+                snapshot_dir.mkdir(exist_ok=True)
+                screenshot_path = snapshot_dir / f"{name}_{int(time.time())}.png"
+                drv.save_screenshot(str(screenshot_path))
+                self.logger.info(f"Debug screenshot saved: {screenshot_path}")
+            except Exception as e:
+                self.logger.warning(f"Screenshot failed: {e}")
+
         # Locators (from your HTML)
         LOGIN_USER      = (By.ID, "txtUser")
         LOGIN_PWD       = (By.ID, "txtPwd")
@@ -1643,55 +1694,71 @@ class ProductionInvoiceValidationSystem:
 
         try:
             drv = self.selenium_manager.get_driver()
-            wait = WebDriverWait(drv, int(getattr(config, "SELENIUM_TIMEOUT", 30)))
+        
+            # INCREASED TIMEOUT: 60 seconds instead of 30
+            timeout = int(getattr(config, "SELENIUM_TIMEOUT", 60))
+            wait = WebDriverWait(drv, timeout)
+        
             _enable_downloads(drv)
 
             login_url   = os.getenv("RMS_LOGIN_URL")   or getattr(config, "RMS_LOGIN_URL", None)
             reports_url = os.getenv("RMS_REPORTS_URL") or getattr(config, "RMS_REPORTS_URL", None)
+        
             if not login_url and not reports_url:
                 self.logger.error("No RMS URLs configured (RMS_LOGIN_URL / RMS_REPORTS_URL).")
                 return files
 
-            # If only one is set, use it and allow server to redirect between pages.
             target_login   = login_url   or reports_url
             target_reports = reports_url or login_url
 
             # --- 1) Login ---
             self.logger.info(f"Navigating to login: {target_login}")
             drv.get(target_login)
+            time.sleep(2)  # Let page settle
 
             user = wait.until(EC.visibility_of_element_located(LOGIN_USER))
             pwd  = wait.until(EC.visibility_of_element_located(LOGIN_PWD))
-            user.clear(); user.send_keys(os.getenv("RMS_USERNAME", ""))
-            pwd.clear();  pwd.send_keys(os.getenv("RMS_PASSWORD", ""))
+            user.clear()
+            user.send_keys(os.getenv("RMS_USERNAME", ""))
+            pwd.clear()
+            pwd.send_keys(os.getenv("RMS_PASSWORD", ""))
 
             try:
-                wait.until(EC.element_to_be_clickable(LOGIN_BTN)).click()
+                login_btn = wait.until(EC.element_to_be_clickable(LOGIN_BTN))
+                click_with_retry(drv, login_btn)
             except Exception:
                 drv.find_element(By.ID, "btnSubmit").submit()
+            
             wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            time.sleep(2)
 
             # --- 2) Invoice list page ---
             if target_reports:
                 self.logger.info(f"Navigating to invoice list: {target_reports}")
                 drv.get(target_reports)
+                time.sleep(2)
 
             # --- 3) Filters: from/to + combine + search ---
             def _set_input(locator, value: str):
                 el = wait.until(EC.element_to_be_clickable(locator))
-                drv.execute_script("arguments[0].focus();", el)
+                drv.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
+                time.sleep(0.5)
                 el.clear()
                 el.send_keys(value)
-                el.send_keys(Keys.ENTER)
+                el.send_keys(Keys.TAB)  # Changed from ENTER to TAB
+                time.sleep(0.5)
 
             if start_date:
                 try:
                     _set_input(DATE_FROM, start_date)
+                    self.logger.info(f"Set start date: {start_date}")
                 except Exception as e:
                     self.logger.warning(f"Could not set From date: {e}")
+                
             if end_date:
                 try:
                     _set_input(DATE_TO, end_date)
+                    self.logger.info(f"Set end date: {end_date}")
                 except Exception as e:
                     self.logger.warning(f"Could not set To date: {e}")
 
@@ -1699,124 +1766,187 @@ class ProductionInvoiceValidationSystem:
             try:
                 r = wait.until(EC.element_to_be_clickable(COMBINE_RADIO))
                 if not r.is_selected():
-                    r.click()
+                    click_with_retry(drv, r)
+                    self.logger.info("Combine radio selected")
             except Exception as e:
                 self.logger.info(f"Combine radio not set: {e}")
 
-            # Search
+            # --- CRITICAL FIX: Search button with enhanced error handling ---
             try:
-                wait.until(EC.element_to_be_clickable(SEARCH_BTN)).click()
+                self.logger.info("Attempting to click search button...")
+            
+                # Wait for search button with longer timeout
+                search_btn = wait.until(EC.element_to_be_clickable(SEARCH_BTN))
+            
+                # Ensure page is ready
+                drv.execute_script("return document.readyState")
+                time.sleep(1)
+            
+                # Click with retry logic
+                if not click_with_retry(drv, search_btn, max_attempts=3):
+                    raise Exception("All click attempts failed")
+            
+                self.logger.info("Search button clicked successfully")
+            
+                # Wait for results to load (increased timeout)
+                time.sleep(3)
+            
+                # Wait for results - try multiple indicators
+                result_found = False
+                for wait_time in [5, 10, 15]:
+                    try:
+                        WebDriverWait(drv, wait_time).until(
+                            EC.presence_of_element_located(HEADER_CHECKBOX)
+                        )
+                        result_found = True
+                        self.logger.info("Results loaded successfully")
+                        break
+                    except:
+                        try:
+                            WebDriverWait(drv, wait_time).until(
+                                EC.presence_of_element_located((By.XPATH, "//table//tr"))
+                            )
+                            result_found = True
+                            self.logger.info("Results table found")
+                            break
+                        except:
+                            if wait_time == 15:
+                                self.logger.warning("No results indicator found, continuing anyway")
+                                result_found = True
+                            else:
+                                continue
+            
+                if not result_found:
+                    take_debug_screenshot(drv, "search_no_results")
+                
             except Exception as e:
                 self.logger.error(f"Search click failed: {e}")
-
-            # Wait for results: header checkbox (or any table rows)
-            try:
-                wait.until(EC.presence_of_element_located(HEADER_CHECKBOX))
-            except Exception:
-                # as a fallback, wait for any grid rows under main content
-                wait.until(EC.presence_of_element_located((By.XPATH, "//table//tr")))
+                take_debug_screenshot(drv, "search_failed")
+                # Don't fail completely - continue to try export
+                self.logger.warning("Continuing despite search failure...")
 
             # --- 4) Export to Excel ---
             try:
+                self.logger.info("Attempting to export to Excel...")
                 export_el = wait.until(EC.element_to_be_clickable(EXPORT_LINK))
                 before = _snapshot()
-                drv.execute_script("arguments[0].click();", export_el)  # anchor does __doPostBack
-                for p in _wait_for_downloads(before, timeout=180):
+            
+                # Use JavaScript click for export (more reliable for postback)
+                drv.execute_script("arguments[0].click();", export_el)
+            
+                self.logger.info("Export clicked, waiting for download...")
+                downloaded = _wait_for_downloads(before, timeout=180)
+            
+                for p in downloaded:
                     if p.suffix.lower() in (".csv", ".xlsx", ".xls"):
                         files.append(str(p))
                         self.logger.info(f"Downloaded export: {p.name}")
+                    
             except Exception as e:
                 self.logger.error(f"Export to Excel failed: {e}")
+                take_debug_screenshot(drv, "export_failed")
 
-            # --- 5) Select all invoices and try bulk download of PDFs/JPGs ---
+            # --- 5) Select all invoices and download PDFs/JPGs ---
             try:
-                # select the header checkbox
+                # Select header checkbox
                 try:
                     hdr = wait.until(EC.element_to_be_clickable(HEADER_CHECKBOX))
                     if not hdr.is_selected():
-                        hdr.click()
-                    time.sleep(0.5)
+                        click_with_retry(drv, hdr)
+                        time.sleep(1)
+                    self.logger.info("Header checkbox selected")
                 except Exception as e:
                     self.logger.info(f"Header checkbox not available: {e}")
 
-                # Try common “Download” triggers (buttons/links)
+                # Try download buttons
                 candidates = [
-                    (By.XPATH, "//a[contains(.,'Download') or contains(.,'download') or contains(.,'ZIP') or contains(.,'Zip')]"),
-                    (By.XPATH, "//input[@type='button' and (contains(@value,'Download') or contains(@value,'ZIP') or contains(@value,'Zip'))]"),
-                    (By.XPATH, "//button[contains(.,'Download') or contains(.,'ZIP') or contains(.,'Zip')]"),
+                    (By.XPATH, "//a[contains(translate(., 'DOWNLOAD', 'download'), 'download') or contains(., 'ZIP') or contains(., 'Zip')]"),
+                    (By.XPATH, "//input[@type='button' and (contains(translate(@value, 'DOWNLOAD', 'download'), 'download') or contains(@value, 'ZIP'))]"),
+                    (By.XPATH, "//button[contains(translate(., 'DOWNLOAD', 'download'), 'download') or contains(., 'ZIP')]"),
                 ]
+            
                 clicked_any = False
                 for loc in candidates:
                     try:
                         btns = drv.find_elements(*loc)
                         for b in btns[:2]:
-                            drv.execute_script("arguments[0].scrollIntoView({block:'center'});", b)
-                            before = _snapshot()
                             try:
-                                drv.execute_script("arguments[0].click();", b)
+                                drv.execute_script("arguments[0].scrollIntoView({block:'center'});", b)
+                                before = _snapshot()
+                                click_with_retry(drv, b)
+                            
+                                downloaded = _wait_for_downloads(before, timeout=120)
+                                for p in downloaded:
+                                    if p.suffix.lower() in (".pdf", ".jpg", ".jpeg", ".zip"):
+                                        files.append(str(p))
+                                        clicked_any = True
+                                        self.logger.info(f"Downloaded: {p.name}")
                             except Exception:
-                                b.click()
-                            # collect any docs
-                            for p in _wait_for_downloads(before, timeout=120):
-                                if p.suffix.lower() in (".pdf", ".jpg", ".jpeg"):
-                                    files.append(str(p))
-                                    clicked_any = True
+                                continue
+                            
                         if clicked_any:
                             break
                     except Exception:
-                        pass
+                        continue
 
                 if not clicked_any:
-                    self.logger.info("No obvious bulk download control found. Attempting to click visible invoice document links.")
-                    # Fallback: click links that look like invoice documents
+                    self.logger.info("No bulk download found, trying individual invoice links...")
+                    # Fallback: individual links
                     links = drv.find_elements(
                         By.XPATH,
-                        "//a[contains(translate(@href,'PDFJGP','pdfjgp'),'.pdf') or "
-                        "     contains(translate(@href,'PDFJGP','pdfjgp'),'.jpg')]"
-                    )[:100]
+                        "//a[contains(translate(@href,'PDFJGP','pdfjgp'),'.pdf') or contains(translate(@href,'PDFJGP','pdfjgp'),'.jpg')]"
+                    )[:50]  # Limit to 50 to avoid timeout
+                
                     if links:
                         before = _snapshot()
-                        for a in links:
+                        for i, a in enumerate(links):
                             try:
+                                if i % 10 == 0:
+                                    self.logger.info(f"Processing link {i+1}/{len(links)}...")
                                 drv.execute_script("arguments[0].scrollIntoView({block:'center'})", a)
                                 ActionChains(drv).key_down(Keys.CONTROL).click(a).key_up(Keys.CONTROL).perform()
-                            except Exception:
-                                try: a.click()
-                                except Exception: pass
-                        for p in _wait_for_downloads(before, timeout=180):
+                                time.sleep(0.2)
+                                except Exception:
+                                continue
+                            
+                        downloaded = _wait_for_downloads(before, timeout=180)
+                        for p in downloaded:
                             if p.suffix.lower() in (".pdf", ".jpg", ".jpeg"):
                                 files.append(str(p))
 
             except Exception as e:
-                self.logger.warning(f"Invoice document download step skipped: {e}")
+                self.logger.warning(f"Invoice document download step failed: {e}")
+                take_debug_screenshot(drv, "doc_download_failed")
 
-            self.logger.info(f"RMS downloaded: {len(files)} file(s)")
-            return files
-
-        except Exception as e:
-            self.logger.error(f"RMS download failed: {e}")
-            return files
-
-            # 6) Bundle all invoice docs into a single ZIP for emailing
+            # --- 6) Bundle invoice docs ---
             try:
                 bundle = download_dir / "invoices_bundle.zip"
-                import zipfile
-                with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-                    for p in sorted(download_dir.glob("*")):
-                        if p.suffix.lower() in (".pdf", ".jpg", ".jpeg"):
+                doc_files = [p for p in download_dir.glob("*") if p.suffix.lower() in (".pdf", ".jpg", ".jpeg")]
+            
+                if doc_files:
+                    with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+                        for p in doc_files:
                             zf.write(p, arcname=p.name)
-                if bundle.exists():
-                    files.append(str(bundle))
-                    self.logger.info(f"Created bundle: {bundle}")
+                        
+                    if bundle.exists():
+                        files.append(str(bundle))
+                        self.logger.info(f"Created bundle with {len(doc_files)} documents: {bundle.name}")
             except Exception as e:
-                 self.logger.warning(f"Could not create invoices bundle: {e}")
+                self.logger.warning(f"Could not create invoices bundle: {e}")
 
-            self.logger.info(f"RMS downloaded: {len(files)} file(s)")
+            self.logger.info(f"RMS download completed: {len(files)} file(s)")
             return files
 
         except Exception as e:
             self.logger.error(f"RMS download failed: {e}")
+            try:
+                take_debug_screenshot(drv, "rms_fatal_error")
+            except:
+                pass
             return files
+        finally:
+            # Don't quit driver here - let it be reused or cleaned up later
+           pass
 
     # --------------------------------- Packaging ------------------------------------
 
