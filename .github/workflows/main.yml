@@ -75,6 +75,17 @@ jobs:
           # keep chardet if your code imports it explicitly
           pip install chardet
 
+      - name: Verify critical imports
+      run: |
+        python - << 'PY'
+        import sys
+        try:
+          import fitz; import openpyxl
+        except Exception as e:
+          sys.exit("Missing package: " + str(e))
+        print("All critical imports OK")
+        PY
+        
       - name: Map secrets to env (including legacy names)
         shell: bash
         run: |
