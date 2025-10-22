@@ -3,8 +3,16 @@
 Production Invoice Validation System - GitHub Actions Compatible
 Complete system with all functionality preserved and production-ready features
 """
-# FIXED: Removed PyPDF2 import conflict - using only PyMuPDF
-import fitz  # PyMuPDF
+# ---- PDF engine (optional) ---------------------------------------------------
+try:
+    import fitz  # PyMuPDF
+    PYMUPDF_OK = True
+except Exception as _e:
+    fitz = None
+    PYMUPDF_OK = False
+    # Do not crash if PDFs are optional in a given run
+    print(f"[warn] PyMuPDF not available ({_e}). PDF parsing will be skipped.")
+    
 import os
 import sys
 import logging
@@ -31,7 +39,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
-# FIXED: Using fitz for PDF reading instead of PyPDF2
 import chardet
 import warnings
 
@@ -52,10 +59,9 @@ try:
     )
     SELENIUM_AVAILABLE = True
 except ImportError as e:
-    print(f"Warning: Selenium not available: {e}")
+    print(f"[warn] Selenium not available: {e}")
     SELENIUM_AVAILABLE = False
 
-# Suppress warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 
