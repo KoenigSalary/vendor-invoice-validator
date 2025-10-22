@@ -10,10 +10,4 @@ PyMuPDF>=1.24.0
 requests>=2.32.0
 lxml>=5.2.0
 beautifulsoup4>=4.12.0
-<<<<<<< HEAD
-plotly>=5.22.0     
-=======
 plotly>=5.22.0
-# Remove or comment out: smart-read-table
->>>>>>> c006b73 (Fix requirements.txt - remove/fix smart-read-table)
-
