@@ -986,11 +986,20 @@ class ProductionInvoiceValidationSystem:
                     else:
                         # Excel files
                         try:
+                            # Try smart_read_table first
                             df = fr.smart_read_table(file_path)
                         except Exception as e:
-                            self.logger.error(f"Failed to process {os.path.basename(file_path)}: {e}")
-                            continue
-                        
+                            self.logger.warning(f"smart_read_table failed: {e}, trying pandas directly")
+                            try:
+                                # Fallback to pandas
+                                if file_path.suffix.lower() == '.xls':
+                                    df = pd.read_excel(file_path, engine='xlrd')
+                                else:
+                                    df = pd.read_excel(file_path, engine='openpyxl')
+                            except Exception as e2:
+                                self.logger.error(f"Failed to process {os.path.basename(file_path)}: {e2}")
+                                continue
+
                     # Clean and validate data
                     df = self.clean_dataframe(df)
                     validation_results = self.validate_invoice_data(df)
