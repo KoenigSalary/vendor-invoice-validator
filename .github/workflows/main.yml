@@ -109,9 +109,6 @@ jobs:
           echo "HEADLESS_MODE=true" >> "$GITHUB_ENV"
           echo "GITHUB_ACTIONS=true" >> "$GITHUB_ENV"
           
-          # Optional: Force demo mode (uncomment to use demo data only)
-          # echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
-
       - name: Create required directories
         run: |
           mkdir -p downloads logs snapshots reports
