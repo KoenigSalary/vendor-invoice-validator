@@ -77,6 +77,7 @@ jobs:
         shell: bash
         run: |
           # RMS credentials
+          echo "FORCE_DEMO=true" >> "$GITHUB_ENV"
           echo "RMS_USERNAME=${{ secrets.RMS_USER }}" >> "$GITHUB_ENV"
           echo "RMS_PASSWORD=${{ secrets.RMS_PASS }}" >> "$GITHUB_ENV"
           echo "RMS_USER=${{ secrets.RMS_USER }}" >> "$GITHUB_ENV"
