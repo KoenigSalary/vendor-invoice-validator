@@ -89,7 +89,7 @@ class Config:
     RMS_REPORTS_URL: str = os.getenv("RMS_REPORTS_URL", "")
 
     # Selenium settings
-    SELENIUM_TIMEOUT: int = 30
+    SELENIUM_TIMEOUT: int = 90
     SELENIUM_IMPLICIT_WAIT: int = 10
     SELENIUM_PAGE_LOAD_TIMEOUT: int = 60
 
