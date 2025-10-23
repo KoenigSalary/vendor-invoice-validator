@@ -602,7 +602,7 @@ class ProductionSeleniumManager:
         self.driver = webdriver.Chrome(options=self.options)
 
         try:
-            timeout = int(getattr(config, "SELENIUM_TIMEOUT", 30))
+            timeout = int(getattr(config, "SELENIUM_TIMEOUT", 90))
             self.driver.set_page_load_timeout(timeout)
         except Exception:
             pass
@@ -1696,7 +1696,7 @@ class ProductionInvoiceValidationSystem:
             drv = self.selenium_manager.get_driver()
         
             # INCREASED TIMEOUT: 60 seconds instead of 30
-            timeout = int(getattr(config, "SELENIUM_TIMEOUT", 60))
+            timeout = int(getattr(config, "SELENIUM_TIMEOUT", 90))
             wait = WebDriverWait(drv, timeout)
         
             _enable_downloads(drv)
