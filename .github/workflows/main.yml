@@ -48,6 +48,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y xvfb unzip curl dnsutils
 
+      - name: Install Chrome (stable)
         run: |
           wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo dpkg -i google-chrome-stable_current_amd64.deb || true
@@ -107,9 +108,6 @@ jobs:
           echo "HEADLESS_MODE=true" >> "$GITHUB_ENV"
           echo "GITHUB_ACTIONS=true" >> "$GITHUB_ENV"
           
-          # IMPORTANT: FORCE_DEMO is now FALSE to enable real RMS downloads
-          echo "FORCE_DEMO=false" >> "$GITHUB_ENV"
-
       - name: Create required directories
         run: |
           mkdir -p downloads logs snapshots reports
